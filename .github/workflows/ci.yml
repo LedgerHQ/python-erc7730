@@ -118,7 +118,7 @@ jobs:
       - name: Publish test reports
         timeout-minutes: 10
         if: always()
-        uses: pmeier/pytest-results-action@v0.6.0
+        uses: pmeier/pytest-results-action@v0.7.1
         with:
           path: tests/.tests.xml
           title: Test results
