@@ -57,7 +57,7 @@ jobs:
       - name: Pull request | Add author
         timeout-minutes: 5
         if: github.event_name == 'pull_request'
-        uses: toshimaru/auto-author-assign@v2.1.0
+        uses: toshimaru/auto-author-assign@v2.1.1
 
       - name: Pull request | Add labels
         timeout-minutes: 30
