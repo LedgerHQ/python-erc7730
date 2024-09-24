@@ -183,8 +183,8 @@ class Field(
 NestedFields.model_rebuild()
 
 
-class Screen(BaseLibraryModel):
-    pass
+class Screen(RootModel[dict[str, Any]]):
+    """Screen"""
 
 
 class Format(BaseLibraryModel):

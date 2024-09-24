@@ -28,6 +28,7 @@ dependencies = [
     "eth_hash",
     "rich",
     "typer",
+    "prettydiff",
 ]
 
 [project.urls]
