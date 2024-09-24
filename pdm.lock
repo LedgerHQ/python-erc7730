@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:472941541bc2c7cad2497becae7d4319d0d24bd45e43ab85e0cc36d78015260e"
+content_hash = "sha256:494f1581b64b1d7e745ffe2e4e22813054be8073203b816f00b374e176bcc2cf"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -445,7 +445,7 @@ name = "prettydiff"
 version = "0.1.0"
 requires_python = ">=3.6"
 summary = "Pretty JSON data diffs"
-groups = ["default", "dev"]
+groups = ["dev"]
 files = [
     {file = "prettydiff-0.1.0-py3-none-any.whl", hash = "sha256:253eea65c5c632219078dffcec5884260b805e200e3cbdb1039f45b2d2bc6d1e"},
     {file = "prettydiff-0.1.0.tar.gz", hash = "sha256:e0e5ffaa20ee7f8a0295732a954c2fbb2ff37471953f8ab8b0122cbe19497e55"},
