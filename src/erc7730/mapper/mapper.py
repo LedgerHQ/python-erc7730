@@ -51,7 +51,7 @@ def to_eip712_mapper(erc7730: ERC7730Descriptor) -> EIP712DAppDescriptor | list[
                     contract_address = context.eip712.deployments.root[0].address
                 else:
                     exceptions.append(Exception(f"verifying contract is None for {domain}"))
-        schema = dict[str, str]()
+        schema = dict[str, list[dict[str, str]]]()
         schs = context.eip712.schemas
         if schs is not None:
             for item in schs:
@@ -67,7 +67,12 @@ def to_eip712_mapper(erc7730: ERC7730Descriptor) -> EIP712DAppDescriptor | list[
                 if sch is not None:
                     for key in sch.types:
                         for d in sch.types[key]:
-                            schema[sch.primaryType + "." + key] = d.type
+                            nameTypes = list[dict[str, str]]()
+                            if schema.__contains__(sch.primaryType):
+                                nameTypes = schema[sch.primaryType]
+                            nameType = dict[str, str]()
+                            nameType[d.name] = d.type
+                            nameTypes.append(nameType)
         display = erc7730.display
         contracts = list[EIP712ContractDescriptor]()
         if display is not None:
