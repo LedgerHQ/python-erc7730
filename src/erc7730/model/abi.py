@@ -35,6 +35,8 @@ class Function(BaseLibraryModel):
     inputs: list[InputOutput] | None = None
     outputs: list[InputOutput] | None = None
     stateMutability: StateMutability | None = None
+    constant: bool | None = None
+    payable: bool | None = None
     gas: int | None = None
     signature: str | None = None
 
@@ -45,6 +47,8 @@ class Constructor(BaseLibraryModel):
     inputs: list[InputOutput] | None = None
     outputs: list[InputOutput] | None = None
     stateMutability: StateMutability | None = None
+    constant: bool | None = None
+    payable: bool | None = None
     gas: int | None = None
     signature: str | None = None
 
@@ -55,6 +59,8 @@ class Receive(BaseLibraryModel):
     inputs: list[InputOutput] | None = None
     outputs: list[InputOutput] | None = None
     stateMutability: StateMutability | None = None
+    constant: bool | None = None
+    payable: bool | None = None
     gas: int | None = None
     signature: str | None = None
 
@@ -65,6 +71,8 @@ class Fallback(BaseLibraryModel):
     inputs: list[InputOutput] | None = None
     outputs: list[InputOutput] | None = None
     stateMutability: StateMutability | None = None
+    constant: bool | None = None
+    payable: bool | None = None
     gas: int | None = None
     signature: str | None = None
 
