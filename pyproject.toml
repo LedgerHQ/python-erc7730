@@ -28,7 +28,6 @@ dependencies = [
     "eth_hash",
     "rich",
     "typer",
-    "prettydiff",
 ]
 
 [project.urls]
@@ -73,6 +72,7 @@ dev = [
     "ruff>=0.6.3",
     "ruff-lsp>=0.0.55",
     "prettydiff[terminal]>=0.1.0",
+    "prettydiff",
 ]
 
 [tool.pdm.version]
