@@ -1,6 +1,7 @@
 from pathlib import Path
 from erc7730.common.json import read_json_with_includes
 from erc7730.common.pydantic import json_file_from_model
+from erc7730.model.context import AbiJsonSchemaItem
 from erc7730.model.erc7730_descriptor import ERC7730Descriptor
 import pytest
 import glob
@@ -26,3 +27,14 @@ def test_from_erc7730(file: str) -> None:
         pytest.fail(f"Invalid schema for serialized data from {file}: {ex}")
     print_diff(json_from_model, original_dict_with_includes)
     assert json_from_model == original_dict_with_includes
+
+
+abi_item_json_str = '{"name":"approve","inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"}'
+
+
+def test_23_unset_attributes_must_not_be_serialized_as_set() -> None:
+    abi_item_json = json.loads(abi_item_json_str)
+    abi_item = AbiJsonSchemaItem.model_validate(abi_item_json, strict=False)
+    abi_item_json_str_deserialized = json_file_from_model(AbiJsonSchemaItem, abi_item)
+    print_diff(abi_item_json_str, abi_item_json_str_deserialized)
+    assert abi_item_json_str == abi_item_json_str_deserialized

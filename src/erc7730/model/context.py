@@ -82,8 +82,8 @@ class AbiJsonSchemaItem(BaseLibraryModel):
     outputs: Optional[list[AbiParameter]]
     stateMutability: Optional[StateMutability] = None
     type: Type
-    constant: Optional[bool] = None
-    payable: Optional[bool] = None
+    constant: bool | None = None
+    payable: bool | None = None
 
 
 class AbiJsonSchema(RootModel[list[AbiJsonSchemaItem]]):
