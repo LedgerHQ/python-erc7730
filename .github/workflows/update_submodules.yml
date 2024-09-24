@@ -1,0 +1,76 @@
+name: update submodules
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  repository_dispatch:
+    types: [submodules]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HEAD_BRANCH: "update_submodules"
+  BASE_BRANCH: "main"
+
+jobs:
+  update_submodules:
+    name: update submodules
+    runs-on: ledgerhq-shared-small
+    timeout-minutes: 60
+    steps:
+
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Fetch all branches
+        timeout-minutes: 10
+        run: git fetch origin +refs/heads/*:refs/remotes/origin/*
+
+      - name: Check if ${{ env.BASE_BRANCH }} branch exists
+        id: check_next_branch
+        run: |
+          if git show-ref --quiet refs/remotes/origin/${{ env.BASE_BRANCH }}; then
+            echo "${{ env.BASE_BRANCH }} branch already exists."
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "${{ env.BASE_BRANCH }} branch does not exist."
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create ${{ env.BASE_BRANCH }} branch if it doesn't exist
+        if: steps.check_next_branch.outputs.branch_exists == 'false'
+        run: |
+          git checkout -b ${{ env.BASE_BRANCH }}
+          git push origin ${{ env.BASE_BRANCH }}
+
+      - name: Update Submodules
+        id: submodules
+        uses: sgoudham/update-git-submodules@v2.1.1
+
+      - name: Get date
+        run: echo "CURRENT_DATE=$(date)" >> $GITHUB_ENV
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          commit-message: Update submodules
+          signoff: false
+          author: ${{ secrets.CI_BOT_USERNAME }} <${{ secrets.CI_BOT_USERNAME }}@users.noreply.github.com>
+          branch: ${{ env.HEAD_BRANCH }}
+          base: ${{ env.BASE_BRANCH }}
+          delete-branch: false
+          add-paths: |
+            inputs/*
+            outputs/*
+          title: 'chore: update submodules - ${{ env.CURRENT_DATE }}'
+          body: ${{ steps.submodules.outputs.prBody }}
+          labels: assets,automerge
+          draft: false

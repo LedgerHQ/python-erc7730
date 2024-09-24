@@ -13,3 +13,7 @@ sources:
 dependencies:
   - changed-files:
       - any-glob-to-any-file: ['pdm.lock']
+
+submodules:
+  - changed-files:
+      - any-glob-to-any-file: ['clear-signing-erc7730-registry']
