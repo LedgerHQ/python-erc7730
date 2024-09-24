@@ -33,23 +33,6 @@ jobs:
         timeout-minutes: 10
         run: git fetch origin +refs/heads/*:refs/remotes/origin/*
 
-      - name: Check if ${{ env.BASE_BRANCH }} branch exists
-        id: check_next_branch
-        run: |
-          if git show-ref --quiet refs/remotes/origin/${{ env.BASE_BRANCH }}; then
-            echo "${{ env.BASE_BRANCH }} branch already exists."
-            echo "branch_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "${{ env.BASE_BRANCH }} branch does not exist."
-            echo "branch_exists=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Create ${{ env.BASE_BRANCH }} branch if it doesn't exist
-        if: steps.check_next_branch.outputs.branch_exists == 'false'
-        run: |
-          git checkout -b ${{ env.BASE_BRANCH }}
-          git push origin ${{ env.BASE_BRANCH }}
-
       - name: Update Submodules
         id: submodules
         uses: sgoudham/update-git-submodules@v2.1.1
