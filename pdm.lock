@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:9855b9375c2874e2c76282e693aa240d33d606bed9bf11bc743f63b8f1699199"
+content_hash = "sha256:d47f875851ab8cc6af4d32a5b2e10493af190cfde848eb1f0440aee95908ff72"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -438,6 +438,33 @@ dependencies = [
 files = [
     {file = "pre_commit-3.8.0-py2.py3-none-any.whl", hash = "sha256:9a90a53bf82fdd8778d58085faf8d83df56e40dfe18f45b19446e26bf1b3a63f"},
     {file = "pre_commit-3.8.0.tar.gz", hash = "sha256:8bb6494d4a20423842e198980c9ecf9f96607a07ea29549e180eef9ae80fe7af"},
+]
+
+[[package]]
+name = "prettydiff"
+version = "0.1.0"
+requires_python = ">=3.6"
+summary = "Pretty JSON data diffs"
+groups = ["dev"]
+files = [
+    {file = "prettydiff-0.1.0-py3-none-any.whl", hash = "sha256:253eea65c5c632219078dffcec5884260b805e200e3cbdb1039f45b2d2bc6d1e"},
+    {file = "prettydiff-0.1.0.tar.gz", hash = "sha256:e0e5ffaa20ee7f8a0295732a954c2fbb2ff37471953f8ab8b0122cbe19497e55"},
+]
+
+[[package]]
+name = "prettydiff"
+version = "0.1.0"
+extras = ["terminal"]
+requires_python = ">=3.6"
+summary = "Pretty JSON data diffs"
+groups = ["dev"]
+dependencies = [
+    "colorama",
+    "prettydiff==0.1.0",
+]
+files = [
+    {file = "prettydiff-0.1.0-py3-none-any.whl", hash = "sha256:253eea65c5c632219078dffcec5884260b805e200e3cbdb1039f45b2d2bc6d1e"},
+    {file = "prettydiff-0.1.0.tar.gz", hash = "sha256:e0e5ffaa20ee7f8a0295732a954c2fbb2ff37471953f8ab8b0122cbe19497e55"},
 ]
 
 [[package]]

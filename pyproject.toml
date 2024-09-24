@@ -71,6 +71,7 @@ dev = [
     "pytest-datadir-ng>=1.1.1",
     "ruff>=0.6.3",
     "ruff-lsp>=0.0.55",
+    "prettydiff[terminal]>=0.1.0",
 ]
 
 [tool.pdm.version]

@@ -6,6 +6,7 @@ import pytest
 import glob
 import json
 from jsonschema import validate, exceptions
+from prettydiff import print_diff
 
 files = glob.glob("clear-signing-erc7730-registry/registry/*/*.json")
 with open("clear-signing-erc7730-registry/specs/erc7730-v1.schema.json", "r") as file:
@@ -23,4 +24,5 @@ def test_from_erc7730(file: str) -> None:
         validate(instance=json_from_model, schema=schema)
     except exceptions.ValidationError as ex:
         pytest.fail(f"Invalid schema for serialized data from {file}: {ex}")
+    print_diff(json_from_model, original_dict_with_includes)
     assert json_from_model == original_dict_with_includes
