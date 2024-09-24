@@ -1,6 +1,6 @@
 from enum import Enum
 from typing import ForwardRef, Union, Optional
-from pydantic import AnyUrl, RootModel, field_validator
+from pydantic import AnyUrl, RootModel, field_validator, Field
 from erc7730.model.base import BaseLibraryModel
 from erc7730.model.types import ContractAddress, Id
 
@@ -105,8 +105,8 @@ class ContractBinding(BaseLibraryModel):
 
 
 class ContractContext(ContractBinding):
-    id: Optional[Id] = None
+    id: Optional[Id] = Field(None, alias="$id")
 
 
 class EIP712Context(EIP712DomainBinding):
-    id: Optional[Id] = None
+    id: Optional[Id] = Field(None, alias="$id")

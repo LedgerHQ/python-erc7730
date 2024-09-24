@@ -21,6 +21,5 @@ class ERC7730Descriptor(BaseLibraryModel):
     )
     field_schema: Optional[str] = Field(None, alias="$schema")
     context: Optional[Union[ContractContext, EIP712Context]] = None
-    includes: Optional[str] = None
     metadata: Optional[Metadata] = None
     display: Optional[Display] = None

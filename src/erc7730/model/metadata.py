@@ -1,13 +1,12 @@
 from datetime import datetime
-from pydantic import AnyUrl
 from erc7730.model.base import BaseLibraryModel
 from typing import Union, Optional, Dict
 
 
 class OwnerInfo(BaseLibraryModel):
-    legalName: Optional[str] = None
+    legalName: str
     lastUpdate: Optional[datetime]
-    url: AnyUrl
+    url: str
 
 
 class TokenInfo(BaseLibraryModel):

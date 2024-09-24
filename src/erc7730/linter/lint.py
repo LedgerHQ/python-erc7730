@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
-from erc7730.common.pydantic import model_from_json_file
+from erc7730.common.pydantic import model_from_json_file_with_includes
 from erc7730.linter import ERC7730Linter
 from erc7730.linter.linter_base import MultiLinter
 from erc7730.linter.linter_transaction_type_classifier_ai import ClassifyTransactionTypeLinter
@@ -46,7 +46,7 @@ def lint_file(path: Path, linter: ERC7730Linter, out: ERC7730Linter.OutputAdder)
         out(output.model_copy(update={"file": path}))
 
     try:
-        descriptor = model_from_json_file(path, ERC7730Descriptor)
+        descriptor = model_from_json_file_with_includes(path, ERC7730Descriptor)
         descriptor = resolve_external_references(descriptor)
         linter.lint(descriptor, adder)
     except Exception as e:

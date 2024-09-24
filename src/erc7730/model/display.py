@@ -1,11 +1,11 @@
 from erc7730.model.base import BaseLibraryModel
 from erc7730.model.types import Id
 from typing import Annotated, Any, Dict, ForwardRef, Optional, Union
-from enum import StrEnum
+from enum import Enum
 from pydantic import Discriminator, RootModel, Field as PydanticField, Tag
 
 
-class Source(StrEnum):
+class Source(str, Enum):
     WALLET = "wallet"
     ENS = "ens"
     CONTRACT = "contract"
@@ -13,7 +13,7 @@ class Source(StrEnum):
     COLLECTION = "collection"
 
 
-class FieldFormat(StrEnum):
+class FieldFormat(str, Enum):
     RAW = "raw"
     ADDRESS_NAME = "addressName"
     CALL_DATA = "calldata"
@@ -42,7 +42,7 @@ class TokenAmountParameters(BaseLibraryModel):
     message: Optional[str] = None
 
 
-class DateEncoding(StrEnum):
+class DateEncoding(str, Enum):
     BLOCKHEIGHT = "blockheight"
     TIMESTAMP = "timestamp"
 
@@ -51,7 +51,7 @@ class DateParameters(BaseLibraryModel):
     encoding: DateEncoding
 
 
-class AddressNameType(StrEnum):
+class AddressNameType(str, Enum):
     WALLET = "wallet"
     EOA = "eoa"
     CONTRACT = "contract"
@@ -59,7 +59,7 @@ class AddressNameType(StrEnum):
     NFT = "nft"
 
 
-class AddressNameSources(StrEnum):
+class AddressNameSources(str, Enum):
     LOCAL = "local"
     ENS = "ens"
 
@@ -79,7 +79,7 @@ class NftNameParameters(BaseLibraryModel):
 
 
 class UnitParameters(BaseLibraryModel):
-    base: int
+    base: str
     decimals: Optional[int] = None
     prefix: Optional[bool] = None
 
@@ -88,19 +88,57 @@ class EnumParameters(BaseLibraryModel):
     field_ref: str = PydanticField(alias="$ref")
 
 
+def get_param_discriminator(v: Any) -> str | None:
+    if isinstance(v, dict):
+        if v.get("tokenPath") is not None:
+            return "token_amount"
+        if v.get("collectionPath") is not None:
+            return "nft_name"
+        if v.get("encoding") is not None:
+            return "date"
+        if v.get("base") is not None:
+            return "unit"
+        if v.get("$ref") is not None:
+            return "enum"
+        if v.get("type") is not None or v.get("sources") is not None:
+            return "address_name"
+        if v.get("selector") is not None or v.get("calleePath") is not None:
+            return "call_data"
+        return None
+    if getattr(v, "tokenPath", None) is not None:
+        return "token_amount"
+    if getattr(v, "encoding", None) is not None:
+        return "date"
+    if getattr(v, "collectionPath", None) is not None:
+        return "nft_name"
+    if getattr(v, "base", None) is not None:
+        return "unit"
+    if getattr(v, "$ref", None) is not None:
+        return "enum"
+    if getattr(v, "type", None) is not None:
+        return "address_name"
+    if getattr(v, "selector", None) is not None:
+        return "call_data"
+    return None
+
+
 class FieldDescription(BaseLibraryModel):
+    path: Optional[str] = None
     field_id: Optional[Id] = PydanticField(None, alias="$id")
     label: str
     format: FieldFormat
     params: Optional[
-        Union[
-            AddressNameParameters,
-            CallDataParameters,
-            TokenAmountParameters,
-            NftNameParameters,
-            DateParameters,
-            UnitParameters,
-            EnumParameters,
+        Annotated[
+            Union[
+                Annotated[AddressNameParameters, Tag("address_name")],
+                Annotated[CallDataParameters, Tag("call_data")],
+                Annotated[TokenAmountParameters, Tag("token_amount")],
+                Annotated[NftNameParameters, Tag("nft_name")],
+                Annotated[DateParameters, Tag("date")],
+                Annotated[UnitParameters, Tag("unit")],
+                Annotated[EnumParameters, Tag("enum")],
+            ],
+            Discriminator(get_param_discriminator),
         ]
     ] = None
 
@@ -109,15 +147,22 @@ class NestedFields(FieldsParent):
     fields: Optional[list[ForwardRef("Field")]] = None  # type: ignore
 
 
-def get_discriminator_value(v: Any) -> str:
+def get_discriminator_value(v: Any) -> str | None:
     if isinstance(v, dict):
-        if v.get("$ref") is not None:
-            return "reference"
         if v.get("label") is not None and v.get("format") is not None:
             return "field_description"
         if v.get("fields") is not None:
             return "nested_fields"
-    return ""
+        if v.get("$ref") is not None:
+            return "reference"
+        return None
+    if getattr(v, "label", None) is not None and getattr(v, "format") is not None:
+        return "field_description"
+    if getattr(v, "fields", None) is not None:
+        return "nested_fields"
+    if getattr(v, "ref", None) is not None:
+        return "reference"
+    return None
 
 
 class Field(

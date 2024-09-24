@@ -19,8 +19,6 @@ def resolve_external_references(descriptor: ERC7730Descriptor) -> ERC7730Descrip
 def _resolve_external_references_eip712(descriptor: ERC7730Descriptor) -> ERC7730Descriptor:
     schemas: list[EIP712JsonSchema | AnyUrl] = descriptor.context.eip712.schemas  # type:ignore
     schemas_resolved = []
-    if schemas is None:
-        raise ValueError("Missing EIP-712 message schemas")
     for schema in schemas:
         if isinstance(schemas, AnyUrl):
             resp = requests.get(_adapt_uri(schema))  # type:ignore
@@ -42,8 +40,6 @@ def _resolve_external_references_eip712(descriptor: ERC7730Descriptor) -> ERC773
 
 def _resolve_external_references_contract(descriptor: ERC7730Descriptor) -> ERC7730Descriptor:
     abis: AnyUrl | list[ABI] = descriptor.context.contract.abi  # type:ignore
-    if abis is None:
-        raise ValueError("Missing contract ABI")
     if isinstance(abis, AnyUrl):
         resp = requests.get(_adapt_uri(abis))  # type:ignore
         resp.raise_for_status()
