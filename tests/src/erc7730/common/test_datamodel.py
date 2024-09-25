@@ -46,7 +46,7 @@ display_json_str = '{"formats":{"Permit":{"screens":{"stax":[{"type":"propertyPa
 
 def test_22_screens_serialization_not_symmetric() -> None:
     display_json = json.loads(display_json_str)
-    display = Display.model_validate(display_json, strict=False)
+    display = Display.model_validate(display_json, strict=True)
     display_json_deserialized = json_file_from_model(Display, display)
     print_diff(display_json_str, display_json_deserialized)
     assert display_json_str == display_json_deserialized
