@@ -1,12 +1,14 @@
 import json
 from jsonschema import validate, exceptions
 from pathlib import Path
+
 from erc7730.common.pydantic import json_file_from_model
 from erc7730.model.erc7730_descriptor import ERC7730Descriptor
 from erc7730.mapper.mapper import to_eip712_mapper, to_erc7730_mapper
 from eip712 import EIP712DAppDescriptor
 import pytest
 import glob
+
 
 inputs = glob.glob("clear-signing-erc7730-registry/registry/*/eip712*.json")
 

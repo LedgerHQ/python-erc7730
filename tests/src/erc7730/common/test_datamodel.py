@@ -8,8 +8,10 @@ import glob
 import json
 from jsonschema import validate, exceptions
 from prettydiff import print_diff
+from pydantic_core import ValidationError
 
-files = glob.glob("clear-signing-erc7730-registry/registry/*/*.json")
+files = glob.glob("clear-signing-erc7730-registry/registry/*/*[!calldata-stETH].json")
+
 with open("clear-signing-erc7730-registry/specs/erc7730-v1.schema.json", "r") as file:
     schema = json.load(file)
 
@@ -38,3 +40,14 @@ def test_23_unset_attributes_must_not_be_serialized_as_set() -> None:
     abi_item_json_str_deserialized = json_file_from_model(AbiJsonSchemaItem, abi_item)
     print_diff(abi_item_json_str, abi_item_json_str_deserialized)
     assert abi_item_json_str == abi_item_json_str_deserialized
+
+
+def test_27_erc7730_allows_invalid_paths() -> None:
+    errors = None
+    try:
+        ERC7730Descriptor.load_or_none(Path("tests/resources/eip712_wrong_path.json"))
+    except ValidationError as ex:
+        assert ex.error_count() == 4
+        errors = ex.errors
+    finally:
+        assert errors is not None

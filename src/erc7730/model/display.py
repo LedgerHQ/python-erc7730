@@ -1,5 +1,5 @@
 from erc7730.model.base import BaseLibraryModel
-from erc7730.model.types import Id
+from erc7730.model.types import Id, Path
 from typing import Annotated, Any, Dict, ForwardRef, Optional, Union
 from enum import Enum
 from pydantic import Discriminator, RootModel, Field as PydanticField, Tag
@@ -123,7 +123,7 @@ def get_param_discriminator(v: Any) -> str | None:
 
 
 class FieldDescription(BaseLibraryModel):
-    path: Optional[str] = None
+    path: Optional[Path] = None
     field_id: Optional[Id] = PydanticField(None, alias="$id")
     label: str
     format: FieldFormat
