@@ -10,7 +10,7 @@ from jsonschema import validate, exceptions
 from prettydiff import print_diff
 from pydantic_core import ValidationError
 
-files = glob.glob("clear-signing-erc7730-registry/registry/*/*[!calldata-stETH].json")
+files = glob.glob("clear-signing-erc7730-registry/registry/*/*[!stETH].json")
 
 with open("clear-signing-erc7730-registry/specs/erc7730-v1.schema.json", "r") as file:
     schema = json.load(file)
