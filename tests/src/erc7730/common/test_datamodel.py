@@ -3,6 +3,7 @@ from erc7730.common.json import read_json_with_includes
 from erc7730.common.pydantic import json_file_from_model
 from erc7730.model.context import AbiJsonSchemaItem
 from erc7730.model.erc7730_descriptor import ERC7730Descriptor
+from erc7730.model.display import Display
 import pytest
 import glob
 import json
@@ -31,10 +32,8 @@ def test_from_erc7730(file: str) -> None:
     assert json_from_model == original_dict_with_includes
 
 
-abi_item_json_str = '{"name":"approve","inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"}'
-
-
 def test_23_unset_attributes_must_not_be_serialized_as_set() -> None:
+    abi_item_json_str = '{"name":"approve","inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"outputs":[{"name":"","type":"bool"}],"type":"function"}'
     abi_item_json = json.loads(abi_item_json_str)
     abi_item = AbiJsonSchemaItem.model_validate(abi_item_json, strict=False)
     abi_item_json_str_deserialized = json_file_from_model(AbiJsonSchemaItem, abi_item)
@@ -51,3 +50,12 @@ def test_27_erc7730_allows_invalid_paths() -> None:
         errors = ex.errors
     finally:
         assert errors is not None
+
+
+def test_22_screens_serialization_not_symmetric() -> None:
+    display_json_str = '{"formats":{"Permit":{"screens":{"stax":[{"type":"propertyPage","label":"DAI Permit","content":["spender","value","deadline"]}]}}}}'
+    display_json = json.loads(display_json_str)
+    display = Display.model_validate(display_json, strict=True)
+    display_json_deserialized = json_file_from_model(Display, display)
+    print_diff(display_json_str, display_json_deserialized)
+    assert display_json_str == display_json_deserialized
