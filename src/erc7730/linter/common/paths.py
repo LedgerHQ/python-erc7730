@@ -20,9 +20,9 @@ def compute_eip712_paths(schema: EIP712JsonSchema) -> set[str]:
         path: str, current_type: list[NameType], types: dict[str, list[NameType]], paths: set[str]
     ) -> None:
         for domain in current_type:
-            new_path = _append_path(path, domain.name)
-            type = domain.type
-            if domain.type.endswith(ARRAY_SUFFIX):
+            new_path = _append_path(path, domain["name"])
+            type = domain["type"]
+            if domain["type"].endswith(ARRAY_SUFFIX):
                 type = _remove_slicing(type)
                 new_path += ARRAY_SUFFIX
             if type in types:

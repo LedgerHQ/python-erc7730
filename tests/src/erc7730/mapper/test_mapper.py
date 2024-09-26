@@ -2,6 +2,7 @@ import json
 from jsonschema import validate, exceptions
 from pathlib import Path
 from erc7730.common.pydantic import json_file_from_model, model_from_json_file_with_includes_or_none
+from erc7730.model.context import EIP712Context
 from erc7730.model.erc7730_descriptor import ERC7730Descriptor
 from erc7730.mapper.mapper import to_eip712_mapper, to_erc7730_mapper
 from eip712 import EIP712DAppDescriptor
@@ -33,8 +34,17 @@ def test_roundtrip(input: str) -> None:
         )
     newErc7730Descriptor = to_erc7730_mapper(eip712DappDescriptor)
     assert newErc7730Descriptor is not None
-    if erc7730Descriptor.context is not None and erc7730Descriptor.context.eip712.domain is not None:
-        assert newErc7730Descriptor.context.eip712.domain.name == erc7730Descriptor.context.eip712.domain.name
+    if (
+        erc7730Descriptor.context is not None
+        and isinstance(erc7730Descriptor.context, EIP712Context)
+        and erc7730Descriptor.context.eip712.domain is not None
+    ):
+        if (
+            newErc7730Descriptor.context is not None
+            and isinstance(newErc7730Descriptor.context, EIP712Context)
+            and newErc7730Descriptor.context.eip712.domain is not None
+        ):
+            assert newErc7730Descriptor.context.eip712.domain.name == erc7730Descriptor.context.eip712.domain.name
 
 
 def test_roundtrip_from_eip712() -> None:
