@@ -126,7 +126,7 @@ class FieldDescription(BaseLibraryModel):
     path: Optional[Path] = None
     field_id: Optional[Id] = PydanticField(None, alias="$id")
     label: str
-    format: FieldFormat
+    format: Optional[FieldFormat]
     params: Optional[
         Annotated[
             Union[
@@ -156,7 +156,7 @@ def get_discriminator_value(v: Any) -> str | None:
         if v.get("$ref") is not None:
             return "reference"
         return None
-    if getattr(v, "label", None) is not None and getattr(v, "format") is not None:
+    if getattr(v, "label", None) is not None:
         return "field_description"
     if getattr(v, "fields", None) is not None:
         return "nested_fields"

@@ -5,14 +5,12 @@ from erc7730.model.base import BaseLibraryModel
 from erc7730.model.types import ContractAddress, Id
 
 
-class NameType(BaseLibraryModel):
-    name: str
-    type: str
+NameType = dict[str, str]
 
 
 class EIP712JsonSchema(BaseLibraryModel):
     primaryType: str
-    types: dict[str, list[NameType]]
+    types: dict[str, list[dict[str, str]]]
 
     @field_validator("types")
     @classmethod

@@ -1,0 +1,107 @@
+{
+  "blockchainName": "polygon",
+  "chainId": 137,
+  "contracts": [
+    {
+      "address": "0xf3cd476c3c4d3ac5ca2724767f269070ca09a043",
+      "contractName": "AugustusRFQ",
+      "messages": [
+        {
+          "mapper": {
+            "fields": [
+              {
+                "label": "Nonce and metadata",
+                "path": "nonceAndMeta"
+              },
+              {
+                "label": "Expiration time",
+                "path": "expiry"
+              },
+              {
+                "label": "Maker address",
+                "path": "maker"
+              },
+              {
+                "label": "Taker address",
+                "path": "taker"
+              },
+              {
+                "label": "Maker amount",
+                "path": "makerAmount",
+                "format": "amount",
+                "assetPath": "makerAsset"
+              },
+              {
+                "label": "Taker amount",
+                "path": "takerAmount",
+                "format": "amount",
+                "assetPath": "takerAsset"
+              },
+              {
+                "label": "Amount formatted from verifyingContract",
+                "path": "makerAmount",
+                "format": "amount"
+              }
+            ],
+            "label": "AugustusRFQ ERC20 order"
+          },
+          "schema": {
+            "EIP712Domain": [
+              {
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "name": "version",
+                "type": "string"
+              },
+              {
+                "name": "chainId",
+                "type": "uint256"
+              },
+              {
+                "name": "verifyingContract",
+                "type": "address"
+              }
+            ],
+            "Order": [
+              {
+                "name": "nonceAndMeta",
+                "type": "uint256"
+              },
+              {
+                "name": "expiry",
+                "type": "uint128"
+              },
+              {
+                "name": "makerAsset",
+                "type": "address"
+              },
+              {
+                "name": "takerAsset",
+                "type": "address"
+              },
+              {
+                "name": "maker",
+                "type": "address"
+              },
+              {
+                "name": "taker",
+                "type": "address"
+              },
+              {
+                "name": "makerAmount",
+                "type": "uint256"
+              },
+              {
+                "name": "takerAmount",
+                "type": "uint256"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "name": "ParaSwap"
+}

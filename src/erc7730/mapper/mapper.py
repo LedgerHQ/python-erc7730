@@ -31,69 +31,75 @@ def to_eip712_mapper(erc7730: ERC7730Descriptor) -> EIP712DAppDescriptor | list[
     exceptions = list[Exception]()
     context = erc7730.context
     if context is not None and isinstance(context, EIP712Context):
-        domain = context.eip712.domain
-        chain_id = None
-        contract_address = None
-        name = ""
-        if domain is not None and domain.name is not None:
-            name = domain.name
-        if domain is not None and domain.chainId is not None:
-            chain_id = domain.chainId
-            contract_address = domain.verifyingContract
-        if chain_id is None:
-            if context.eip712.deployments is not None and context.eip712.deployments.root.__len__() > 0:
-                chain_id = context.eip712.deployments.root[0].chainId
-            else:
-                exceptions.append(Exception(f"chain id is None for {domain}"))
-        if contract_address is None:
-            if domain is None or domain.verifyingContract is None:
-                if context.eip712.deployments is not None and context.eip712.deployments.root.__len__() > 0:
-                    contract_address = context.eip712.deployments.root[0].address
-                else:
-                    exceptions.append(Exception(f"verifying contract is None for {domain}"))
-        schema = dict[str, list[dict[str, str]]]()
-        schs = context.eip712.schemas
-        if schs is not None:
-            for item in schs:
-                sch = None
-                if isinstance(item, EIP712JsonSchema):
-                    sch = item
-                else:
+        erc7730schemasOrUrl = context.eip712.schemas
+        eip712schema = dict[str, list[dict[str, str]]]()
+        if erc7730schemasOrUrl is not None:
+            for schemaOrUrl in erc7730schemasOrUrl:
+                erc7730schema: EIP712JsonSchema | None = None
+                if isinstance(schemaOrUrl, AnyUrl):
                     try:
-                        response = requests.get(item.__str__())
-                        sch = model_from_json_bytes(response.content, model=EIP712JsonSchema)
+                        response = requests.get(schemaOrUrl.__str__())
+                        erc7730schema = model_from_json_bytes(response.content, model=EIP712JsonSchema)
                     except Exception as e:
                         exceptions.append(e)
-                if sch is not None:
-                    for key in sch.types:
-                        for d in sch.types[key]:
-                            nameTypes = list[dict[str, str]]()
-                            if schema.__contains__(sch.primaryType):
-                                nameTypes = schema[sch.primaryType]
-                            nameType = dict[str, str]()
-                            nameType[d.name] = d.type
-                            nameTypes.append(nameType)
-        display = erc7730.display
-        contracts = list[EIP712ContractDescriptor]()
-        if display is not None:
-            for key in display.formats:
-                format = display.formats[key]
-                messages = list[EIP712MessageDescriptor]()
-                eip712Fields = list[EIP712Field]()
-                if format.fields is not None:
-                    for field in format.fields:
-                        eip712Fields.extend(parseField(display, field))
-                messages.append(
-                    EIP712MessageDescriptor(schema=schema, mapper=EIP712Mapper(label=key, fields=eip712Fields))
-                )
-                if contract_address is not None:
-                    contracts.append(
-                        EIP712ContractDescriptor(address=contract_address, contractName=name, messages=messages)
-                    )
-        if chain_id is not None:
-            return EIP712DAppDescriptor(blockchainName="ethereum", chainId=chain_id, name=name, contracts=contracts)
+                else:
+                    erc7730schema = schemaOrUrl
+                if erc7730schema is not None:
+                    try:
+                        eip712schema = erc7730schema.types
+                    except Exception as e:
+                        exceptions.append(e)
+
+        if erc7730.display is not None:
+            messages = list[EIP712MessageDescriptor]()
+            if context.eip712.domain is not None:
+                chainId = context.eip712.domain.chainId
+                if chainId is None and context.eip712.deployments is not None:
+                    for deployment in context.eip712.deployments.root:
+                        if chainId is None and deployment.chainId is not None:
+                            chainId = deployment.chainId
+                contractAddress = context.eip712.domain.verifyingContract
+                if contractAddress is None and context.eip712.deployments is not None:
+                    for deployment in context.eip712.deployments.root:
+                        if contractAddress is None and deployment.address is not None:
+                            contractAddress = deployment.address
+                if chainId is not None:
+                    if chainId == 137:
+                        blockchainName = "polygon"
+                    else:
+                        blockchainName = "ethereum"
+                    name = ""
+                    if context.eip712.domain.name is not None:
+                        name = context.eip712.domain.name
+                    if contractAddress is not None:
+                        for lFormat in erc7730.display.formats:
+                            format = erc7730.display.formats[lFormat]
+                            eip712Fields = list[EIP712Field]()
+                            if format.fields is not None:
+                                for field in format.fields:
+                                    eip712Fields.extend(parseField(erc7730.display, field))
+                            mapper = EIP712Mapper(label=lFormat, fields=eip712Fields)
+                            messages.append(EIP712MessageDescriptor(schema=eip712schema, mapper=mapper))
+                        contracts = list[EIP712ContractDescriptor]()
+                        contractName = name
+                        if erc7730.metadata is not None and erc7730.metadata.owner is not None:
+                            contractName = erc7730.metadata.owner
+                        contracts.append(
+                            EIP712ContractDescriptor(
+                                address=contractAddress, contractName=contractName, messages=messages
+                            )
+                        )
+                        return EIP712DAppDescriptor(
+                            blockchainName=blockchainName, chainId=chainId, name=name, contracts=contracts
+                        )
+                    else:
+                        exceptions.append(Exception(f"verifying contract is None for {context.eip712.domain}"))
+                else:
+                    exceptions.append(Exception(f"no chain id for {erc7730}"))
+            else:
+                exceptions.append(Exception(f"domain not defined for {erc7730}"))
         else:
-            exceptions.append(Exception(f"no chain id for {erc7730}"))
+            exceptions.append(Exception(f"no display for {erc7730}"))
     else:
         exceptions.append(Exception(f"context for {erc7730} is None or is not EIP712"))
     return exceptions
@@ -143,8 +149,10 @@ def parseFieldDescription(field: FieldDescription) -> EIP712Field:
 
 def to_erc7730_mapper(eip712DappDescriptor: EIP712DAppDescriptor) -> ERC7730Descriptor:
     verifyingContract = None
+    contractName = eip712DappDescriptor.name
     if eip712DappDescriptor.contracts.__len__() > 0:
         verifyingContract = eip712DappDescriptor.contracts[0].address
+        contractName = eip712DappDescriptor.contracts[0].name
     domain = Domain(
         name=eip712DappDescriptor.name,
         version=None,
@@ -156,11 +164,20 @@ def to_erc7730_mapper(eip712DappDescriptor: EIP712DAppDescriptor) -> ERC7730Desc
     for contract in eip712DappDescriptor.contracts:
         types = dict[str, list[NameType]]()
         for message in contract.messages:
+            for primaryType in message.schema_:
+                if isinstance(primaryType, str):
+                    types[primaryType] = list[NameType]()
+                    eip712Types = message.schema_[primaryType]
+                    if isinstance(eip712Types, list):
+                        for eip712Type in eip712Types:
+                            if (
+                                isinstance(eip712Type, dict)
+                                and isinstance(eip712Type["name"], str)
+                                and isinstance(eip712Type["type"], str)
+                            ):
+                                types[primaryType].append({"name": eip712Type["name"], "type": eip712Type["type"]})
             mapper = message.mapper
-            namesTypes = list[NameType]()
             fields = list[Field]()
-            for key in message.schema_:
-                namesTypes.append(NameType(name=key, type=message.schema_[key]))
             for item in mapper.fields:
                 label = item.label
                 path = item.path
@@ -176,21 +193,21 @@ def to_erc7730_mapper(eip712DappDescriptor: EIP712DAppDescriptor) -> ERC7730Desc
 
                     case EIP712Format.DATETIME:
                         field = FieldDescription(label=label, format=FieldFormat.DATE, params=None, path=path)
-                    case _:
+                    case EIP712Format.RAW:
                         field = FieldDescription(label=label, format=FieldFormat.RAW, params=None, path=path)
+                    case _:
+                        field = FieldDescription(label=label, format=None, params=None, path=path)
                 fields.append(Field(root=field))
             formats[mapper.label] = Format(
-                id=None,
                 intent=None,
                 fields=fields,
                 required=None,
-                screens=None,  # type: ignore
+                screens=None,
             )
-            types[mapper.label] = namesTypes
             schemas.append(EIP712JsonSchema(primaryType=mapper.label, types=types))
 
     eip712 = EIP712(domain=domain, schemas=schemas)
     context = EIP712Context(eip712=eip712)
     display = Display(definitions=None, formats=formats)
-    metadata = Metadata(owner=None, info=None, token=None, constants=None, enums=None)
+    metadata = Metadata(owner=contractName, info=None, token=None, constants=None, enums=None)
     return ERC7730Descriptor(context=context, metadata=metadata, display=display)

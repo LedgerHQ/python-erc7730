@@ -1,14 +1,13 @@
 import json
 from jsonschema import validate, exceptions
 from pathlib import Path
-
-from erc7730.common.pydantic import json_file_from_model
+from erc7730.common.pydantic import json_file_from_model, model_from_json_file_with_includes_or_none
 from erc7730.model.erc7730_descriptor import ERC7730Descriptor
 from erc7730.mapper.mapper import to_eip712_mapper, to_erc7730_mapper
 from eip712 import EIP712DAppDescriptor
 import pytest
 import glob
-
+from prettydiff import print_diff
 
 inputs = glob.glob("clear-signing-erc7730-registry/registry/*/eip712*.json")
 
@@ -36,3 +35,23 @@ def test_roundtrip(input: str) -> None:
     assert newErc7730Descriptor is not None
     if erc7730Descriptor.context is not None and erc7730Descriptor.context.eip712.domain is not None:  # type: ignore
         assert newErc7730Descriptor.context.eip712.domain.name == erc7730Descriptor.context.eip712.domain.name  # type: ignore
+
+
+def test_roundtrip_from_eip712() -> None:
+    original_eip712 = model_from_json_file_with_includes_or_none(
+        Path("tests/resources/paraswap_eip712.json"), EIP712DAppDescriptor
+    )
+    assert original_eip712 is not None
+    assert isinstance(original_eip712, EIP712DAppDescriptor)
+    erc7730Descriptor = to_erc7730_mapper(original_eip712)
+    assert erc7730Descriptor is not None
+    assert isinstance(erc7730Descriptor, ERC7730Descriptor)
+    new_eip712 = to_eip712_mapper(erc7730Descriptor)
+    print(new_eip712)
+    assert isinstance(new_eip712, EIP712DAppDescriptor)
+    print_diff(original_eip712, new_eip712)
+    assert original_eip712 == new_eip712
+
+    """ address: str
+    name: str = Field(alias="contractName")
+    messages: List[EIP712MessageDescriptor]]"""
