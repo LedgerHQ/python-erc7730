@@ -33,8 +33,8 @@ def test_roundtrip(input: str) -> None:
         )
     newErc7730Descriptor = to_erc7730_mapper(eip712DappDescriptor)
     assert newErc7730Descriptor is not None
-    if erc7730Descriptor.context is not None and erc7730Descriptor.context.eip712.domain is not None:  # type: ignore
-        assert newErc7730Descriptor.context.eip712.domain.name == erc7730Descriptor.context.eip712.domain.name  # type: ignore
+    if erc7730Descriptor.context is not None and erc7730Descriptor.context.eip712.domain is not None:
+        assert newErc7730Descriptor.context.eip712.domain.name == erc7730Descriptor.context.eip712.domain.name
 
 
 def test_roundtrip_from_eip712() -> None:
@@ -51,7 +51,3 @@ def test_roundtrip_from_eip712() -> None:
     assert isinstance(new_eip712, EIP712DAppDescriptor)
     print_diff(original_eip712, new_eip712)
     assert original_eip712 == new_eip712
-
-    """ address: str
-    name: str = Field(alias="contractName")
-    messages: List[EIP712MessageDescriptor]]"""
