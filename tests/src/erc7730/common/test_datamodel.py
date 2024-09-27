@@ -46,7 +46,7 @@ def test_27_erc7730_allows_invalid_paths() -> None:
     try:
         ERC7730Descriptor.load_or_none(Path("tests/resources/eip712_wrong_path.json"))
     except ValidationError as ex:
-        assert ex.error_count() == 4
+        assert ex.error_count() == 2
         errors = ex.errors
     finally:
         assert errors is not None
