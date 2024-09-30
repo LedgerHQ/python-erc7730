@@ -126,14 +126,7 @@ def get_param_discriminator(v: Any) -> str | None:
         return "call_data"
     return None
 
-
-class FieldDescription(Model):
-    path: Path | None = None
-    field_id: Id | None = PydanticField(None, alias="$id")
-    label: str
-    format: FieldFormat | None
-    params: (
-        Annotated[
+FieldParameters = Annotated[
             Annotated[AddressNameParameters, Tag("address_name")]
             | Annotated[CallDataParameters, Tag("call_data")]
             | Annotated[TokenAmountParameters, Tag("token_amount")]
@@ -143,8 +136,14 @@ class FieldDescription(Model):
             | Annotated[EnumParameters, Tag("enum")],
             Discriminator(get_param_discriminator),
         ]
-        | None
-    ) = None
+
+
+class FieldDescription(Model):
+    id: Id | None = PydanticField(None, alias="$id")
+    path: Path
+    label: str
+    format: FieldFormat | None
+    params: FieldParameters | None = None
 
 
 class NestedFields(FieldsParent):
