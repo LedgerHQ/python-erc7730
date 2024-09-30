@@ -22,9 +22,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
     @classmethod
     def _validate_eip712_paths(cls, descriptor: ERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
         if (
-            descriptor.context is not None
-            and descriptor.display is not None
-            and isinstance(descriptor.context, EIP712Context)
+            isinstance(descriptor.context, EIP712Context)
             and descriptor.context.eip712.schemas is not None
         ):
             primary_types: set[str] = set()

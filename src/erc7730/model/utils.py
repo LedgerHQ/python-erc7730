@@ -45,7 +45,7 @@ def _resolve_external_references_eip712(descriptor: ERC7730Descriptor) -> ERC773
         schemas_resolved.append(schema_resolved)
     return descriptor.model_copy(
         update={
-            "context": descriptor.context.model_copy(  # type:ignore
+            "context": descriptor.context.model_copy(
                 update={"eip712": descriptor.context.eip712.model_copy(update={"schemas": schemas_resolved})}  # type:ignore
             )
         }
@@ -64,7 +64,7 @@ def _resolve_external_references_contract(descriptor: ERC7730Descriptor) -> ERC7
         abis_resolved = abis
     return descriptor.model_copy(
         update={
-            "context": descriptor.context.model_copy(  # type:ignore
+            "context": descriptor.context.model_copy(
                 update={"contract": descriptor.context.contract.model_copy(update={"abi": abis_resolved})}  # type:ignore
             )
         }

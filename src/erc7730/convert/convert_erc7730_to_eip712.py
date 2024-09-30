@@ -106,7 +106,7 @@ class ERC7730toEIP712Converter(FromERC7730Converter[EIP712DAppDescriptor]):
             messages.append(EIP712MessageDescriptor(schema=eip712_schema, mapper=mapper))
         contracts = list[EIP712ContractDescriptor]()
         contract_name = name
-        if descriptor.metadata is not None and descriptor.metadata.owner is not None:
+        if descriptor.metadata.owner is not None:
             contract_name = descriptor.metadata.owner
         contracts.append(
             EIP712ContractDescriptor(address=contract_address, contractName=contract_name, messages=messages)
