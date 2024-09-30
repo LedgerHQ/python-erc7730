@@ -47,7 +47,7 @@ class Deployments(RootModel[list[Deployment]]):
 
 class EIP712(Model):
     domain: Domain | None = None
-    schemas: list[EIP712JsonSchema | AnyUrl] | None = None
+    schemas: list[EIP712JsonSchema | AnyUrl]
     domainSeparator: str | None = None
     deployments: Deployments
 

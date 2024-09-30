@@ -10,7 +10,7 @@ def get_chain_ids(descriptor: ERC7730Descriptor) -> set[int] | None:
     """Get deployment chaind ids for a descriptor."""
     if (deployments := get_deployments(descriptor)) is None:
         return None
-    return {d.chainId for d in deployments.root if d.chainId is not None}
+    return {d.chainId for d in deployments.root}
 
 
 def get_deployments(descriptor: ERC7730Descriptor) -> Deployments | None:

@@ -38,7 +38,7 @@ class ERC7730toEIP712Converter(FromERC7730Converter[EIP712DAppDescriptor]):
         # FIXME to debug and split in smaller methods
 
         context = descriptor.context
-        if context is None or not isinstance(context, EIP712Context):
+        if not isinstance(context, EIP712Context):
             return error(
                 ERC7730Converter.Error(
                     level=ERC7730Converter.Error.Level.FATAL, message="context is None or is not EIP712"
@@ -46,26 +46,21 @@ class ERC7730toEIP712Converter(FromERC7730Converter[EIP712DAppDescriptor]):
             )
 
         eip712_schema = dict[str, list[NameType]]()
-        if (erc7730_schemas_or_url := context.eip712.schemas) is not None:
-            for schema_or_url in erc7730_schemas_or_url:
-                erc7730_schema: EIP712JsonSchema | None = None
-                if isinstance(schema_or_url, AnyUrl):
-                    try:
-                        response = requests.get(str(schema_or_url), timeout=10)
-                        erc7730_schema = model_from_json_bytes(response.content, model=EIP712JsonSchema)
-                    except Exception as e:
-                        return error(ERC7730Converter.Error(level=ERC7730Converter.Error.Level.FATAL, message=str(e)))
-                else:
-                    erc7730_schema = schema_or_url
-                if erc7730_schema is not None:
-                    try:
-                        eip712_schema = erc7730_schema.types
-                    except Exception as e:
-                        return error(ERC7730Converter.Error(level=ERC7730Converter.Error.Level.FATAL, message=str(e)))
-        if descriptor.display is None:
-            return error(
-                ERC7730Converter.Error(level=ERC7730Converter.Error.Level.FATAL, message="display is undefined")
-            )
+        for schema_or_url in context.eip712.schemas:
+            erc7730_schema: EIP712JsonSchema | None = None
+            if isinstance(schema_or_url, AnyUrl):
+                try:
+                    response = requests.get(str(schema_or_url), timeout=10)
+                    erc7730_schema = model_from_json_bytes(response.content, model=EIP712JsonSchema)
+                except Exception as e:
+                    return error(ERC7730Converter.Error(level=ERC7730Converter.Error.Level.FATAL, message=str(e)))
+            else:
+                erc7730_schema = schema_or_url
+            if erc7730_schema is not None:
+                try:
+                    eip712_schema = erc7730_schema.types
+                except Exception as e:
+                    return error(ERC7730Converter.Error(level=ERC7730Converter.Error.Level.FATAL, message=str(e)))
 
         messages = list[EIP712MessageDescriptor]()
         if context.eip712.domain is None:
@@ -76,13 +71,11 @@ class ERC7730toEIP712Converter(FromERC7730Converter[EIP712DAppDescriptor]):
         chain_id = context.eip712.domain.chainId
         if chain_id is None and context.eip712.deployments is not None:
             for deployment in context.eip712.deployments.root:
-                if chain_id is None and deployment.chainId is not None:
-                    chain_id = deployment.chainId
+                chain_id = deployment.chainId
         contract_address = context.eip712.domain.verifyingContract
         if contract_address is None and context.eip712.deployments is not None:
             for deployment in context.eip712.deployments.root:
-                if contract_address is None and deployment.address is not None:
-                    contract_address = deployment.address
+                contract_address = deployment.address
         if chain_id is None:
             return error(
                 ERC7730Converter.Error(level=ERC7730Converter.Error.Level.FATAL, message="chain id is undefined")

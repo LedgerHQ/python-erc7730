@@ -126,16 +126,17 @@ def get_param_discriminator(v: Any) -> str | None:
         return "call_data"
     return None
 
+
 FieldParameters = Annotated[
-            Annotated[AddressNameParameters, Tag("address_name")]
-            | Annotated[CallDataParameters, Tag("call_data")]
-            | Annotated[TokenAmountParameters, Tag("token_amount")]
-            | Annotated[NftNameParameters, Tag("nft_name")]
-            | Annotated[DateParameters, Tag("date")]
-            | Annotated[UnitParameters, Tag("unit")]
-            | Annotated[EnumParameters, Tag("enum")],
-            Discriminator(get_param_discriminator),
-        ]
+    Annotated[AddressNameParameters, Tag("address_name")]
+    | Annotated[CallDataParameters, Tag("call_data")]
+    | Annotated[TokenAmountParameters, Tag("token_amount")]
+    | Annotated[NftNameParameters, Tag("nft_name")]
+    | Annotated[DateParameters, Tag("date")]
+    | Annotated[UnitParameters, Tag("unit")]
+    | Annotated[EnumParameters, Tag("enum")],
+    Discriminator(get_param_discriminator),
+]
 
 
 class FieldDescription(Model):

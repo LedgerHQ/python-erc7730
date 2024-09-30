@@ -21,10 +21,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
 
     @classmethod
     def _validate_eip712_paths(cls, descriptor: ERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
-        if (
-            isinstance(descriptor.context, EIP712Context)
-            and descriptor.context.eip712.schemas is not None
-        ):
+        if isinstance(descriptor.context, EIP712Context) and descriptor.context.eip712.schemas is not None:
             primary_types: set[str] = set()
             for schema in descriptor.context.eip712.schemas:
                 if isinstance(schema, EIP712JsonSchema):

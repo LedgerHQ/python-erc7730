@@ -9,7 +9,7 @@ from eip712 import (
 from pydantic import AnyUrl
 
 from erc7730.convert import ERC7730Converter, ToERC7730Converter
-from erc7730.model.context import EIP712, Domain, EIP712Context, EIP712JsonSchema, NameType
+from erc7730.model.context import EIP712, Deployment, Deployments, Domain, EIP712Context, EIP712JsonSchema, NameType
 from erc7730.model.descriptor import ERC7730Descriptor
 from erc7730.model.display import (
     Display,
@@ -20,6 +20,7 @@ from erc7730.model.display import (
     TokenAmountParameters,
 )
 from erc7730.model.metadata import Metadata
+from erc7730.model.types import ContractAddress
 
 
 @final
@@ -29,11 +30,19 @@ class EIP712toERC7730Converter(ToERC7730Converter[EIP712DAppDescriptor]):
     @override
     def convert(self, descriptor: EIP712DAppDescriptor, error: ERC7730Converter.ErrorAdder) -> ERC7730Descriptor | None:
         # FIXME this code flattens all messages in first contract
-        verifying_contract = None
+        verifying_contract: ContractAddress | None = None
         contract_name = descriptor.name
         if len(descriptor.contracts) > 0:
             verifying_contract = descriptor.contracts[0].address  # FIXME
             contract_name = descriptor.contracts[0].name  # FIXME
+
+        if verifying_contract is None:
+            return error(
+                ERC7730Converter.Error(
+                    level=ERC7730Converter.Error.Level.FATAL, message="verifying_contract is undefined"
+                )
+            )
+
         formats = dict[str, Format]()
         schemas = list[EIP712JsonSchema | AnyUrl]()
         for contract in descriptor.contracts:
@@ -66,6 +75,7 @@ class EIP712toERC7730Converter(ToERC7730Converter[EIP712DAppDescriptor]):
                             verifyingContract=verifying_contract,
                         ),
                         schemas=schemas,
+                        deployments=Deployments([Deployment(chainId=descriptor.chain_id, address=verifying_contract)]),
                     )
                 )
             ),
