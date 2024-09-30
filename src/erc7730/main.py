@@ -1,18 +1,24 @@
 from pathlib import Path
-from typing import Annotated, List
+from typing import Annotated
 
-import typer
+from eip712 import EIP712DAppDescriptor
+from typer import Argument, Exit, Option, Typer
 
-from rich import print as rprint
+from erc7730.common.pydantic import model_from_json_file_with_includes
+from erc7730.convert.convert import convert_to_file_and_print_errors
+from erc7730.convert.convert_eip712_to_erc7730 import EIP712toERC7730Converter
+from erc7730.convert.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
+from erc7730.lint.lint import lint_all_and_print_errors
+from erc7730.model.descriptor import ERC7730Descriptor
 
-app = typer.Typer(
+app = Typer(
     name="erc7730",
     no_args_is_help=True,
     help="""
     ERC-7730 tool.
     """,
 )
-convert_app = typer.Typer(
+convert_app = Typer(
     name="convert",
     no_args_is_help=True,
     short_help="Commands to convert descriptor files.",
@@ -31,38 +37,11 @@ app.add_typer(convert_app)
     """,
 )
 def lint(
-    paths: Annotated[List[Path], typer.Argument(help="The files or directory paths to lint")],
-    gha: Annotated[bool, typer.Option(help="Enable Github annotations output")] = False,
+    paths: Annotated[list[Path], Argument(help="The files or directory paths to lint")],
+    gha: Annotated[bool, Option(help="Enable Github annotations output")] = False,
 ) -> None:
-    from erc7730.linter.lint import lint_all
-    from erc7730.linter import ERC7730Linter
-
-    outputs = lint_all(paths)
-
-    for output in outputs:
-        p = output.file.name if output.file is not None else "unknown file"
-        if gha:
-            msg = output.message.replace("\n", "%0A")
-            match output.level:
-                case ERC7730Linter.Output.Level.INFO:
-                    print(f"::notice file={output.file},title={output.title}::{msg}")
-                case ERC7730Linter.Output.Level.WARNING:
-                    print(f"::warning file={output.file},title={output.title}::{msg}")
-                case ERC7730Linter.Output.Level.ERROR:
-                    print(f"::error file={output.file},title={output.title}::{msg}")
-        else:
-            match output.level:
-                case ERC7730Linter.Output.Level.INFO:
-                    rprint(f"[blue]{p}: {output.level.name}: {output.title}[/blue]\n    {output.message}")
-                case ERC7730Linter.Output.Level.WARNING:
-                    rprint(f"[yellow]{p}: {output.level.name}: {output.title}[/yellow]\n    {output.message}")
-                case ERC7730Linter.Output.Level.ERROR:
-                    rprint(f"[red]{p}: {output.level.name}: {output.title}[/red]\n    {output.message}")
-
-    if not outputs:
-        rprint("[green]no issues found ✅[/green]")
-
-    raise typer.Exit(1 if outputs else 0)
+    if not lint_all_and_print_errors(paths, gha):
+        raise Exit(1)
 
 
 @convert_app.command(
@@ -73,11 +52,15 @@ def lint(
     """,
 )
 def convert_eip712_to_erc7730(
-    input_eip712_path: Annotated[Path, typer.Argument(help="The input EIP-712 file path")],
-    output_erc7730_path: Annotated[Path, typer.Argument(help="The output ERC-7730 file path")],
+    input_eip712_path: Annotated[Path, Argument(help="The input EIP-712 file path")],
+    output_erc7730_path: Annotated[Path, Argument(help="The output ERC-7730 file path")],
 ) -> None:
-    # TODO BACK-7687: implement conversion from EIP-712 to ERC-7730 descriptors
-    raise NotImplementedError()
+    if not convert_to_file_and_print_errors(
+        input_descriptor=model_from_json_file_with_includes(input_eip712_path, EIP712DAppDescriptor),
+        output_file=output_erc7730_path,
+        converter=EIP712toERC7730Converter(),
+    ):
+        raise Exit(1)
 
 
 @convert_app.command(
@@ -88,11 +71,15 @@ def convert_eip712_to_erc7730(
     """,
 )
 def convert_erc7730_to_eip712(
-    input_erc7730_path: Annotated[Path, typer.Argument(help="The input ERC-7730 file path")],
-    output_eip712_path: Annotated[Path, typer.Argument(help="The output EIP-712 file path")],
+    input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
+    output_eip712_path: Annotated[Path, Argument(help="The output EIP-712 file path")],
 ) -> None:
-    # TODO BACK-7686: implement conversion from ERC-7730 to EIP-712 descriptors
-    raise NotImplementedError()
+    if not convert_to_file_and_print_errors(
+        input_descriptor=ERC7730Descriptor.load(input_erc7730_path),
+        output_file=output_eip712_path,
+        converter=ERC7730toEIP712Converter(),
+    ):
+        raise Exit(1)
 
 
 if __name__ == "__main__":

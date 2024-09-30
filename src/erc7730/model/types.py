@@ -1,4 +1,5 @@
 from typing import Annotated as Ann
+
 from pydantic import Field
 
 Id = Ann[str, Field(min_length=1)]

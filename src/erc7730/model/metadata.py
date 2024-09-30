@@ -1,23 +1,25 @@
 from datetime import datetime
-from erc7730.model.base import BaseLibraryModel
-from typing import Union, Optional, Dict
+
+from erc7730.model.base import Model
+
+# ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class OwnerInfo(BaseLibraryModel):
+class OwnerInfo(Model):
     legalName: str
-    lastUpdate: Optional[datetime]
+    lastUpdate: datetime | None
     url: str
 
 
-class TokenInfo(BaseLibraryModel):
+class TokenInfo(Model):
     name: str
     ticker: str
     decimals: int
 
 
-class Metadata(BaseLibraryModel):
-    owner: Optional[str] = None
-    info: Optional[OwnerInfo] = None
-    token: Optional[TokenInfo] = None
-    constants: Optional[Dict[str, str]] = None
-    enums: Optional[Dict[str, Union[str, Dict[str, str]]]] = None
+class Metadata(Model):
+    owner: str | None = None
+    info: OwnerInfo | None = None
+    token: TokenInfo | None = None
+    constants: dict[str, str] | None = None
+    enums: dict[str, str | dict[str, str]] | None = None

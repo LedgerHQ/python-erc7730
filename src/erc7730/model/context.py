@@ -1,60 +1,66 @@
 from enum import Enum
-from typing import ForwardRef, Union, Optional
-from pydantic import AnyUrl, RootModel, field_validator, Field
-from erc7730.model.base import BaseLibraryModel
+from typing import ForwardRef
+
+from pydantic import AnyUrl, Field, RootModel, field_validator
+
+from erc7730.model.base import Model
 from erc7730.model.types import ContractAddress, Id
 
+# ruff: noqa: N815 - camel case field names are tolerated to match schema
 
-NameType = dict[str, str]
+
+class NameType(Model):
+    name: str
+    type: str
 
 
-class EIP712JsonSchema(BaseLibraryModel):
+class EIP712JsonSchema(Model):
     primaryType: str
-    types: dict[str, list[dict[str, str]]]
+    types: dict[str, list[NameType]]
 
-    @field_validator("types")
     @classmethod
+    @field_validator("types")
     def validate_types(cls, value: dict[str, list[NameType]]) -> dict[str, list[NameType]]:
-        # validate that EIP712Domain with expected values
+        # TODO validate that EIP712Domain matches with expected values
         return value
 
 
-class EIP712Schema(BaseLibraryModel):
-    eip712Schema: Union[AnyUrl, EIP712JsonSchema]
+class EIP712Schema(Model):
+    eip712Schema: AnyUrl | EIP712JsonSchema
 
 
-class Domain(BaseLibraryModel):
-    name: Optional[str] = None
-    version: Optional[str] = None
-    chainId: Optional[int] = None
-    verifyingContract: Optional[ContractAddress] = None
+class Domain(Model):
+    name: str | None = None
+    version: str | None = None
+    chainId: int | None = None
+    verifyingContract: ContractAddress | None = None
 
 
-class Deployment(BaseLibraryModel):
-    chainId: Optional[int] = None
-    address: Optional[str] = None
+class Deployment(Model):
+    chainId: int | None = None
+    address: str | None = None
 
 
 class Deployments(RootModel[list[Deployment]]):
     """deployments"""
 
 
-class EIP712(BaseLibraryModel):
-    domain: Optional[Domain] = None
-    schemas: Optional[list[Union[EIP712JsonSchema, AnyUrl]]] = None
-    domainSeparator: Optional[str] = None
-    deployments: Optional[Deployments] = None
+class EIP712(Model):
+    domain: Domain | None = None
+    schemas: list[EIP712JsonSchema | AnyUrl] | None = None
+    domainSeparator: str | None = None
+    deployments: Deployments | None = None
 
 
-class EIP712DomainBinding(BaseLibraryModel):
+class EIP712DomainBinding(Model):
     eip712: EIP712
 
 
-class AbiParameter(BaseLibraryModel):
+class AbiParameter(Model):
     name: str
     type: str
-    internalType: Optional[str] = None
-    components: Optional[list[ForwardRef("AbiParameter")]] = None  # type: ignore
+    internalType: str | None = None
+    components: list[ForwardRef("AbiParameter")] | None = None  # type: ignore
 
 
 AbiParameter.model_rebuild()
@@ -74,11 +80,11 @@ class Type(Enum):
     fallback = "fallback"
 
 
-class AbiJsonSchemaItem(BaseLibraryModel):
+class AbiJsonSchemaItem(Model):
     name: str
     inputs: list[AbiParameter]
-    outputs: Optional[list[AbiParameter]]
-    stateMutability: Optional[StateMutability] = None
+    outputs: list[AbiParameter] | None
+    stateMutability: StateMutability | None = None
     type: Type
     constant: bool | None = None
     payable: bool | None = None
@@ -88,25 +94,25 @@ class AbiJsonSchema(RootModel[list[AbiJsonSchemaItem]]):
     """abi json schema"""
 
 
-class Factory(BaseLibraryModel):
+class Factory(Model):
     deployments: Deployments
     deployEvent: str
 
 
-class Contract(BaseLibraryModel):
-    abi: Optional[Union[AnyUrl, AbiJsonSchema]] = None
-    deployments: Optional[Deployments] = None
-    addressMatcher: Optional[AnyUrl] = None
-    factory: Optional[Factory] = None
+class Contract(Model):
+    abi: AnyUrl | AbiJsonSchema | None = None
+    deployments: Deployments | None = None
+    addressMatcher: AnyUrl | None = None
+    factory: Factory | None = None
 
 
-class ContractBinding(BaseLibraryModel):
+class ContractBinding(Model):
     contract: Contract
 
 
 class ContractContext(ContractBinding):
-    id: Optional[Id] = Field(None, alias="$id")
+    id: Id | None = Field(None, alias="$id")
 
 
 class EIP712Context(EIP712DomainBinding):
-    id: Optional[Id] = Field(None, alias="$id")
+    id: Id | None = Field(None, alias="$id")

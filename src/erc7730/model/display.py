@@ -1,15 +1,20 @@
-from erc7730.model.base import BaseLibraryModel
-from erc7730.model.types import Id, Path
-from typing import Annotated, Any, Dict, ForwardRef, Optional, Union
 from enum import Enum
-from pydantic import Discriminator, RootModel, Field as PydanticField, Tag
+from typing import Annotated, Any, ForwardRef
+
+from pydantic import Discriminator, RootModel, Tag
+from pydantic import Field as PydanticField
+
+from erc7730.model.base import Model
+from erc7730.model.types import Id, Path
+
+# ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
 class Source(str, Enum):
     WALLET = "wallet"
     ENS = "ens"
     CONTRACT = "contract"
-    TOKEN = "token"
+    TOKEN = "token"  # nosec B105 - bandit false positive
     COLLECTION = "collection"
 
 
@@ -18,7 +23,7 @@ class FieldFormat(str, Enum):
     ADDRESS_NAME = "addressName"
     CALL_DATA = "calldata"
     AMOUNT = "amount"
-    TOKEN_AMOUNT = "tokenAmount"
+    TOKEN_AMOUNT = "tokenAmount"  # nosec B105 - bandit false positive
     NFT_NAME = "nftName"
     DATE = "date"
     DURATION = "duration"
@@ -26,20 +31,20 @@ class FieldFormat(str, Enum):
     ENUM = "enum"
 
 
-class FieldsParent(BaseLibraryModel):
+class FieldsParent(Model):
     path: str
 
 
 class Reference(FieldsParent):
     ref: str = PydanticField(alias="$ref")
-    params: Optional[dict[str, str]] = None
+    params: dict[str, str] | None = None
 
 
-class TokenAmountParameters(BaseLibraryModel):
+class TokenAmountParameters(Model):
     tokenPath: str
-    nativeCurrencyAddress: Optional[str] = None
-    threshold: Optional[str] = None
-    message: Optional[str] = None
+    nativeCurrencyAddress: str | None = None
+    threshold: str | None = None
+    message: str | None = None
 
 
 class DateEncoding(str, Enum):
@@ -47,7 +52,7 @@ class DateEncoding(str, Enum):
     TIMESTAMP = "timestamp"
 
 
-class DateParameters(BaseLibraryModel):
+class DateParameters(Model):
     encoding: DateEncoding
 
 
@@ -55,7 +60,7 @@ class AddressNameType(str, Enum):
     WALLET = "wallet"
     EOA = "eoa"
     CONTRACT = "contract"
-    TOKEN = "token"
+    TOKEN = "token"  # nosec B105 - bandit false positive
     NFT = "nft"
 
 
@@ -64,27 +69,27 @@ class AddressNameSources(str, Enum):
     ENS = "ens"
 
 
-class AddressNameParameters(BaseLibraryModel):
-    type: Optional[AddressNameType] = None
-    sources: Optional[list[AddressNameSources]] = None
+class AddressNameParameters(Model):
+    type: AddressNameType | None = None
+    sources: list[AddressNameSources] | None = None
 
 
-class CallDataParameters(BaseLibraryModel):
-    selector: Optional[str] = None
-    calleePath: Optional[str] = None
+class CallDataParameters(Model):
+    selector: str | None = None
+    calleePath: str | None = None
 
 
-class NftNameParameters(BaseLibraryModel):
+class NftNameParameters(Model):
     collectionPath: str
 
 
-class UnitParameters(BaseLibraryModel):
+class UnitParameters(Model):
     base: str
-    decimals: Optional[int] = None
-    prefix: Optional[bool] = None
+    decimals: int | None = None
+    prefix: bool | None = None
 
 
-class EnumParameters(BaseLibraryModel):
+class EnumParameters(Model):
     field_ref: str = PydanticField(alias="$ref")
 
 
@@ -122,29 +127,28 @@ def get_param_discriminator(v: Any) -> str | None:
     return None
 
 
-class FieldDescription(BaseLibraryModel):
-    path: Optional[Path] = None
-    field_id: Optional[Id] = PydanticField(None, alias="$id")
+class FieldDescription(Model):
+    path: Path | None = None
+    field_id: Id | None = PydanticField(None, alias="$id")
     label: str
-    format: Optional[FieldFormat]
-    params: Optional[
+    format: FieldFormat | None
+    params: (
         Annotated[
-            Union[
-                Annotated[AddressNameParameters, Tag("address_name")],
-                Annotated[CallDataParameters, Tag("call_data")],
-                Annotated[TokenAmountParameters, Tag("token_amount")],
-                Annotated[NftNameParameters, Tag("nft_name")],
-                Annotated[DateParameters, Tag("date")],
-                Annotated[UnitParameters, Tag("unit")],
-                Annotated[EnumParameters, Tag("enum")],
-            ],
+            Annotated[AddressNameParameters, Tag("address_name")]
+            | Annotated[CallDataParameters, Tag("call_data")]
+            | Annotated[TokenAmountParameters, Tag("token_amount")]
+            | Annotated[NftNameParameters, Tag("nft_name")]
+            | Annotated[DateParameters, Tag("date")]
+            | Annotated[UnitParameters, Tag("unit")]
+            | Annotated[EnumParameters, Tag("enum")],
             Discriminator(get_param_discriminator),
         ]
-    ] = None
+        | None
+    ) = None
 
 
 class NestedFields(FieldsParent):
-    fields: Optional[list[ForwardRef("Field")]] = None  # type: ignore
+    fields: list[ForwardRef("Field")] | None = None  # type: ignore
 
 
 def get_discriminator_value(v: Any) -> str | None:
@@ -168,11 +172,9 @@ def get_discriminator_value(v: Any) -> str | None:
 class Field(
     RootModel[
         Annotated[
-            Union[
-                Annotated[Reference, Tag("reference")],
-                Annotated[FieldDescription, Tag("field_description")],
-                Annotated[NestedFields, Tag("nested_fields")],
-            ],
+            Annotated[Reference, Tag("reference")]
+            | Annotated[FieldDescription, Tag("field_description")]
+            | Annotated[NestedFields, Tag("nested_fields")],
             Discriminator(get_discriminator_value),
         ]
     ]
@@ -187,14 +189,14 @@ class Screen(RootModel[dict[str, Any]]):
     """Screen"""
 
 
-class Format(BaseLibraryModel):
-    field_id: Optional[Id] = PydanticField(None, alias="$id")
-    intent: Optional[Union[str, Dict[str, str]]] = None
-    fields: Optional[list[Field]] = None
-    required: Optional[list[str]] = None
-    screens: Optional[dict[str, list[Screen]]] = None
+class Format(Model):
+    field_id: Id | None = PydanticField(None, alias="$id")
+    intent: str | dict[str, str] | None = None
+    fields: list[Field] | None = None
+    required: list[str] | None = None
+    screens: dict[str, list[Screen]] | None = None
 
 
-class Display(BaseLibraryModel):
-    definitions: Optional[dict[str, FieldDescription]] = None
+class Display(Model):
+    definitions: dict[str, FieldDescription] | None = None
     formats: dict[str, Format]

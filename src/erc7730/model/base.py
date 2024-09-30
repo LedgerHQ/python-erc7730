@@ -1,12 +1,11 @@
 from pydantic import BaseModel, ConfigDict
 
 
-class BaseLibraryModel(BaseModel):
+class Model(BaseModel):
     model_config = ConfigDict(
         strict=True,
         frozen=True,
-        extra="ignore",
-        revalidate_instances="always",
+        extra="forbid",
         validate_default=True,
         validate_return=True,
         use_enum_values=True,

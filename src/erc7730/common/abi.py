@@ -1,6 +1,8 @@
 from dataclasses import dataclass
-from erc7730.model.abi import ABI, Function, Component, InputOutput
+
 from eth_hash.auto import keccak
+
+from erc7730.model.abi import ABI, Component, Function, InputOutput
 
 
 def _append_path(root: str, path: str) -> str:

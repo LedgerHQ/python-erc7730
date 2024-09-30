@@ -3,7 +3,9 @@ from typing import Annotated, Literal, Self
 
 from pydantic import Field
 
-from erc7730.model.base import BaseLibraryModel
+from erc7730.model.base import Model
+
+# ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
 class StateMutability(StrEnum):
@@ -13,14 +15,14 @@ class StateMutability(StrEnum):
     payable = "payable"
 
 
-class Component(BaseLibraryModel):
+class Component(Model):
     name: str
     type: str
     internalType: str | None = None
     components: list[Self] | None = None
 
 
-class InputOutput(BaseLibraryModel):
+class InputOutput(Model):
     name: str
     type: str
     internalType: str | None = None
@@ -29,7 +31,7 @@ class InputOutput(BaseLibraryModel):
     unit: str | None = None
 
 
-class Function(BaseLibraryModel):
+class Function(Model):
     type: Literal["function"] = "function"
     name: str | None = None
     inputs: list[InputOutput] | None = None
@@ -41,7 +43,7 @@ class Function(BaseLibraryModel):
     signature: str | None = None
 
 
-class Constructor(BaseLibraryModel):
+class Constructor(Model):
     type: Literal["constructor"] = "constructor"
     name: str | None = None
     inputs: list[InputOutput] | None = None
@@ -53,7 +55,7 @@ class Constructor(BaseLibraryModel):
     signature: str | None = None
 
 
-class Receive(BaseLibraryModel):
+class Receive(Model):
     type: Literal["receive"] = "receive"
     name: str | None = None
     inputs: list[InputOutput] | None = None
@@ -65,7 +67,7 @@ class Receive(BaseLibraryModel):
     signature: str | None = None
 
 
-class Fallback(BaseLibraryModel):
+class Fallback(Model):
     type: Literal["fallback"] = "fallback"
     name: str | None = None
     inputs: list[InputOutput] | None = None
@@ -77,7 +79,7 @@ class Fallback(BaseLibraryModel):
     signature: str | None = None
 
 
-class Event(BaseLibraryModel):
+class Event(Model):
     type: Literal["event"] = "event"
     name: str
     inputs: list[InputOutput]
@@ -85,7 +87,7 @@ class Event(BaseLibraryModel):
     signature: str | None = None
 
 
-class Error(BaseLibraryModel):
+class Error(Model):
     type: Literal["error"] = "error"
     name: str
     inputs: list[InputOutput]

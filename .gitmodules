@@ -1,3 +1,6 @@
 [submodule "clear-signing-erc7730-registry"]
-	path = clear-signing-erc7730-registry
+	path = tests/registries/clear-signing-erc7730-registry
 	url = https://github.com/LedgerHQ/clear-signing-erc7730-registry
+[submodule "ledger-asset-dapps"]
+	path = tests/registries/ledger-asset-dapps
+	url = https://github.com/LedgerHQ/ledger-asset-dapps

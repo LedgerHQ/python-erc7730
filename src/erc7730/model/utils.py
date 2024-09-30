@@ -1,11 +1,25 @@
-from typing import Type
-
+import requests
 from pydantic import AnyUrl, RootModel
 
-from erc7730.model.context import EIP712Context, ContractContext, EIP712JsonSchema
 from erc7730.model.abi import ABI
-from erc7730.model.erc7730_descriptor import ERC7730Descriptor
-import requests
+from erc7730.model.context import ContractContext, Deployments, EIP712Context, EIP712JsonSchema
+from erc7730.model.descriptor import ERC7730Descriptor
+
+
+def get_chain_ids(descriptor: ERC7730Descriptor) -> set[int] | None:
+    """Get deployment chaind ids for a descriptor."""
+    if (deployments := get_deployments(descriptor)) is None:
+        return None
+    return {d.chainId for d in deployments.root if d.chainId is not None}
+
+
+def get_deployments(descriptor: ERC7730Descriptor) -> Deployments | None:
+    """Get deployments section for a descriptor."""
+    if isinstance(context := descriptor.context, EIP712Context):
+        return context.eip712.deployments
+    if isinstance(context := descriptor.context, ContractContext):
+        return context.contract.deployments
+    raise ValueError(f"Invalid context type {type(descriptor.context)}")
 
 
 def resolve_external_references(descriptor: ERC7730Descriptor) -> ERC7730Descriptor:
@@ -21,9 +35,9 @@ def _resolve_external_references_eip712(descriptor: ERC7730Descriptor) -> ERC773
     schemas_resolved = []
     for schema in schemas:
         if isinstance(schemas, AnyUrl):
-            resp = requests.get(_adapt_uri(schema))  # type:ignore
+            resp = requests.get(_adapt_uri(schema), timeout=10)  # type:ignore
             resp.raise_for_status()
-            model: Type[RootModel[EIP712JsonSchema]] = RootModel[EIP712JsonSchema]
+            model: type[RootModel[EIP712JsonSchema]] = RootModel[EIP712JsonSchema]
             json = resp.json()
             schema_resolved = model.model_validate(json).root
         else:
@@ -41,12 +55,11 @@ def _resolve_external_references_eip712(descriptor: ERC7730Descriptor) -> ERC773
 def _resolve_external_references_contract(descriptor: ERC7730Descriptor) -> ERC7730Descriptor:
     abis: AnyUrl | list[ABI] = descriptor.context.contract.abi  # type:ignore
     if isinstance(abis, AnyUrl):
-        resp = requests.get(_adapt_uri(abis))  # type:ignore
+        resp = requests.get(_adapt_uri(abis), timeout=10)  # type:ignore
         resp.raise_for_status()
         json = resp.json()
-        model: Type[RootModel[list[ABI]]] = RootModel[list[ABI]]
+        model: type[RootModel[list[ABI]]] = RootModel[list[ABI]]
         abis_resolved = model.model_validate(json).root
-        pass
     else:
         abis_resolved = abis
     return descriptor.model_copy(
