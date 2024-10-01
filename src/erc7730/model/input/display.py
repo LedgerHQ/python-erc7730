@@ -87,7 +87,7 @@ class InputFieldDescription(Model):
 
 
 class InputNestedFields(InputFieldsBase):
-    fields: list[ForwardRef("InputField")]
+    fields: list[ForwardRef("InputField")]  # type: ignore
 
 
 def get_field_discriminator(v: Any) -> str | None:

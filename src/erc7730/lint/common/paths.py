@@ -65,9 +65,8 @@ def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
         else:
             paths.data_paths.add(_append_path(root, path))
 
-    def append_paths(path: str, fields: ResolvedField | None) -> None:
-        if fields is not None:
-            field = fields.root
+    def append_paths(path: str, field: ResolvedField | None) -> None:
+        if field is not None:
             match field:
                 case ResolvedFieldDescription():
                     add_path(path, field.label)

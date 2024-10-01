@@ -1,6 +1,6 @@
 from typing import Annotated, Any, ForwardRef
 
-from pydantic import Discriminator, RootModel, Tag
+from pydantic import Discriminator, Tag
 from pydantic import Field as PydanticField
 
 from erc7730.model.base import Model
@@ -82,7 +82,7 @@ class ResolvedFieldDescription(Model):
 
 
 class ResolvedNestedFields(ResolvedFieldsBase):
-    fields: list[ForwardRef("ResolvedField")]
+    fields: list[ForwardRef("ResolvedField")]  # type: ignore
 
 
 def get_field_discriminator(v: Any) -> str | None:
@@ -99,17 +99,11 @@ def get_field_discriminator(v: Any) -> str | None:
     return None
 
 
-class ResolvedField(
-    RootModel[
-        Annotated[
-            Annotated[ResolvedFieldDescription, Tag("field_description")]
-            | Annotated[ResolvedNestedFields, Tag("nested_fields")],
-            Discriminator(get_field_discriminator),
-        ]
-    ]
-):
-    """Field"""
-
+ResolvedField = Annotated[
+    Annotated[ResolvedFieldDescription, Tag("field_description")]
+    | Annotated[ResolvedNestedFields, Tag("nested_fields")],
+    Discriminator(get_field_discriminator),
+]
 
 ResolvedNestedFields.model_rebuild()
 

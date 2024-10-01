@@ -48,8 +48,10 @@ class ERC7730Converter(ABC, Generic[InputType, OutputType]):
     class ErrorAdder(ABC):
         """ERC7730Converter output sink."""
 
+        @abstractmethod
         def warning(self, message: str) -> None:
             raise NotImplementedError()
 
+        @abstractmethod
         def error(self, message: str) -> None:
             raise NotImplementedError()

@@ -152,7 +152,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         cls, schema: EIP712JsonSchema | AnyUrl, error: ERC7730Converter.ErrorAdder
     ) -> EIP712JsonSchema | None:
         if isinstance(schema, AnyUrl):
-            resp = requests.get(cls._adapt_uri(abis), timeout=10)  # type:ignore
+            resp = requests.get(cls._adapt_uri(schema), timeout=10)  # type:ignore
             resp.raise_for_status()
             return EIP712JsonSchema.model_validate(resp.json())
 
@@ -163,16 +163,18 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_display(cls, display: InputDisplay, error: ERC7730Converter.ErrorAdder) -> ResolvedDisplay | None:
-        definitions = (
-            {key: cls._convert_field_description(value, error) for key, value in display.definitions.items()}
-            if display.definitions is not None
-            else None
-        )
+        if display.definitions is None:
+            definitions = None
+        else:
+            definitions = {}
+            for definition_key, definition in display.definitions.items():
+                if (resolved_definition := cls._convert_field_description(definition, error)) is not None:
+                    definitions[definition_key] = resolved_definition
 
-        formats = {key: cls._convert_format(value, error) for key, value in display.formats.items()}
-
-        if formats is None:
-            return None
+        formats = {}
+        for format_key, format in display.formats.items():
+            if (resolved_format := cls._convert_format(format, error)) is not None:
+                formats[format_key] = resolved_format
 
         return ResolvedDisplay(definitions=definitions, formats=formats)
 
@@ -207,18 +209,21 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if isinstance(params, UnitParameters):
             return params
         if isinstance(params, InputEnumParameters):
-            return params
+            return cls._convert_enum_parameters(params, error)
         return error.error(f"Invalid field parameters type: {type(params)}")
 
     @classmethod
     def _convert_enum_parameters(
         cls, params: InputEnumParameters, error: ERC7730Converter.ErrorAdder
     ) -> ResolvedEnumParameters | None:
-        return ResolvedEnumParameters(ref=params.ref)  # TODO must inline here
+        return ResolvedEnumParameters.model_validate({"$ref": params.ref})  # TODO must inline here
 
     @classmethod
     def _convert_format(cls, format: InputFormat, error: ERC7730Converter.ErrorAdder) -> ResolvedFormat | None:
         fields = cls._convert_fields(format.fields, error)
+
+        if fields is None:
+            return None
 
         return ResolvedFormat(
             # FIXME id=format.id,
@@ -253,6 +258,9 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         cls, fields: InputNestedFields, error: ERC7730Converter.ErrorAdder
     ) -> ResolvedNestedFields | None:
         resolved_fields = cls._convert_fields(fields.fields, error)
+
+        if resolved_fields is None:
+            return None
 
         return ResolvedNestedFields(path=fields.path, fields=resolved_fields)
 

@@ -105,13 +105,23 @@ def lint_file(path: Path, linter: ERC7730Linter, out: ERC7730Linter.OutputAdder)
 
 
 def _output_adapter(out: ERC7730Linter.OutputAdder) -> ERC7730Converter.ErrorAdder:
-    def adder(error: ERC7730Converter.Error) -> None:
-        out(
-            ERC7730Linter.Output(
-                title="Resolution error",
-                message=error.message,
-                level=ERC7730Converter.Error.Level.WARNING,
+    class ErrorAdder(ERC7730Converter.ErrorAdder):
+        def warning(self, message: str) -> None:
+            out(
+                ERC7730Linter.Output(
+                    title="Resolution error",
+                    message=message,
+                    level=ERC7730Linter.Output.Level.WARNING,
+                )
             )
-        )
 
-    return adder
+        def error(self, message: str) -> None:
+            out(
+                ERC7730Linter.Output(
+                    title="Resolution error",
+                    message=message,
+                    level=ERC7730Linter.Output.Level.ERROR,
+                )
+            )
+
+    return ErrorAdder()

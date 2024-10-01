@@ -104,12 +104,11 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
     @classmethod
     def parse_field(cls, display: ResolvedDisplay, field: ResolvedField) -> list[EIP712Field]:
         output = list[EIP712Field]()
-        field_root = field.root
-        if isinstance(field_root, ResolvedNestedFields):
-            for f in field_root.fields:
+        if isinstance(field, ResolvedNestedFields):
+            for f in field.fields:
                 output.extend(cls.parse_field(display, field=f))
         else:
-            output.append(cls.convert_field(field_root))
+            output.append(cls.convert_field(field))
         return output
 
     @classmethod
