@@ -1,3 +1,12 @@
+"""
+Module implementing an object model for ERC-7730 resolved descriptors.
+
+This model represents descriptors after resolution phase:
+ - URLs have been fetched
+ - References have been inlined
+ - Selectors have been converted to 4 bytes form
+"""
+
 from pathlib import Path
 from typing import Optional
 
@@ -9,16 +18,21 @@ from erc7730.common.pydantic import (
     model_to_json_str,
 )
 from erc7730.model.base import Model
-from erc7730.model.context import ContractContext, EIP712Context
-from erc7730.model.display import Display
 from erc7730.model.metadata import Metadata
+from erc7730.model.resolved.context import ResolvedContractContext, ResolvedEIP712Context
+from erc7730.model.resolved.display import ResolvedDisplay
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class ERC7730Descriptor(Model):
+class ResolvedERC7730Descriptor(Model):
     """
     An ERC7730 Clear Signing descriptor.
+
+    This model represents descriptors after resolution phase:
+     - URLs have been fetched
+     - References have been inlined
+     - Selectors have been converted to 4 bytes form
 
     Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs
 
@@ -26,12 +40,12 @@ class ERC7730Descriptor(Model):
     """
 
     schema_: str | None = Field(None, alias="$schema")
-    context: ContractContext | EIP712Context
+    context: ResolvedContractContext | ResolvedEIP712Context
     metadata: Metadata
-    display: Display
+    display: ResolvedDisplay
 
     @classmethod
-    def load(cls, path: Path) -> "ERC7730Descriptor":
+    def load(cls, path: Path) -> "ResolvedERC7730Descriptor":
         """
         Load an ERC7730 descriptor from a JSON file.
 
@@ -39,10 +53,10 @@ class ERC7730Descriptor(Model):
         :return: validated in-memory representation of descriptor
         :raises Exception: if the file does not exist or has validation errors
         """
-        return model_from_json_file_with_includes(path, ERC7730Descriptor)
+        return model_from_json_file_with_includes(path, ResolvedERC7730Descriptor)
 
     @classmethod
-    def load_or_none(cls, path: Path) -> Optional["ERC7730Descriptor"]:
+    def load_or_none(cls, path: Path) -> Optional["ResolvedERC7730Descriptor"]:
         """
         Load an ERC7730 descriptor from a JSON file.
 
@@ -50,7 +64,7 @@ class ERC7730Descriptor(Model):
         :return: validated in-memory representation of descriptor, or None if file does not exist
         :raises Exception: if the file has validation errors
         """
-        return model_from_json_file_with_includes_or_none(path, ERC7730Descriptor)
+        return model_from_json_file_with_includes_or_none(path, ResolvedERC7730Descriptor)
 
     def to_json_string(self) -> str:
         """

@@ -1,13 +1,13 @@
 import pytest
 from eip712 import EIP712DAppDescriptor
 
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.input.descriptor import InputERC7730Descriptor
 from tests.assertions import assert_model_json_schema
 from tests.files import ERC7730_SCHEMA, LEGACY_REGISTRY
 from tests.io import load_json_file
 
 
-def assert_valid_erc_7730(descriptor: ERC7730Descriptor) -> None:
+def assert_valid_erc_7730(descriptor: InputERC7730Descriptor) -> None:
     """Assert descriptor serializes to a JSON that passes JSON schema validation."""
     assert_model_json_schema(descriptor, ERC7730_SCHEMA)
 

@@ -4,7 +4,7 @@ from enum import IntEnum, auto
 
 from pydantic import BaseModel, FilePath
 
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 
 
 class ERC7730Linter(ABC):
@@ -16,7 +16,7 @@ class ERC7730Linter(ABC):
     """
 
     @abstractmethod
-    def lint(self, descriptor: ERC7730Descriptor, out: "OutputAdder") -> None:
+    def lint(self, descriptor: ERC7730InputDescriptor, out: "OutputAdder") -> None:
         raise NotImplementedError()
 
     class Output(BaseModel):

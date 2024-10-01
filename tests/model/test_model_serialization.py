@@ -7,7 +7,7 @@ from pydantic import ValidationError
 from erc7730.common.json import read_json_with_includes
 from erc7730.common.pydantic import model_from_json_str, model_to_json_str
 from erc7730.model.context import AbiJsonSchemaItem
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 from erc7730.model.display import Display
 from tests.assertions import assert_dict_equals
 from tests.cases import path_id
@@ -18,13 +18,13 @@ from tests.schemas import assert_valid_erc_7730
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_schema(input_file: Path) -> None:
     """Test model serializes to JSON that matches the schema."""
-    assert_valid_erc_7730(ERC7730Descriptor.load(input_file))
+    assert_valid_erc_7730(ERC7730InputDescriptor.load(input_file))
 
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_round_trip(input_file: Path) -> None:
     """Test model serializes back to same JSON."""
-    actual = json.loads(ERC7730Descriptor.load(input_file).to_json_string())
+    actual = json.loads(ERC7730InputDescriptor.load(input_file).to_json_string())
     expected = read_json_with_includes(input_file)
     assert_dict_equals(expected, actual)
 
@@ -68,4 +68,4 @@ def test_22_screens_serialization_not_symmetric() -> None:
 @pytest.mark.raises(exception=ValidationError)
 def test_invalid_paths() -> None:
     """Test deserialization does not allow invalid paths."""
-    ERC7730Descriptor.load(TEST_RESOURCES / "eip712_wrong_path.json")
+    ERC7730InputDescriptor.load(TEST_RESOURCES / "eip712_wrong_path.json")

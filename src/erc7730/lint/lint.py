@@ -9,7 +9,7 @@ from erc7730.lint.lint_base import MultiLinter
 from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
 from erc7730.lint.lint_validate_abi import ValidateABILinter
 from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinter
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 from erc7730.model.utils import resolve_external_references
 
 
@@ -91,7 +91,7 @@ def lint_file(path: Path, linter: ERC7730Linter, out: ERC7730Linter.OutputAdder)
         out(output.model_copy(update={"file": path}))
 
     try:
-        descriptor = ERC7730Descriptor.load(path)
+        descriptor = ERC7730InputDescriptor.load(path)
         descriptor = resolve_external_references(descriptor)
         linter.lint(descriptor, adder)
     except Exception as e:

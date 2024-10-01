@@ -1,3 +1,10 @@
+"""
+Object model for ERC-7730 descriptors `metadata` section.
+
+Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs
+JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/master/specs/erc7730-v1.schema.json
+"""
+
 from datetime import datetime
 
 from erc7730.model.base import Model

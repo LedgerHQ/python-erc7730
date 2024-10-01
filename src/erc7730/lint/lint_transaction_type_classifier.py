@@ -7,7 +7,7 @@ from erc7730.lint.classifier import TxClass
 from erc7730.lint.classifier.abi_classifier import ABIClassifier
 from erc7730.lint.classifier.eip712_classifier import EIP712Classifier
 from erc7730.model.context import ContractContext, EIP712Context, EIP712JsonSchema
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 from erc7730.model.display import Display, Format
 
 
@@ -19,7 +19,7 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
+    def lint(self, descriptor: ERC7730InputDescriptor, out: ERC7730Linter.OutputAdder) -> None:
         if descriptor.context is None:
             return None
         if (tx_class := self._determine_tx_class(descriptor)) is None:
@@ -38,7 +38,7 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
             out(linter_output)
 
     @classmethod
-    def _determine_tx_class(cls, descriptor: ERC7730Descriptor) -> TxClass | None:
+    def _determine_tx_class(cls, descriptor: ERC7730InputDescriptor) -> TxClass | None:
         if isinstance(descriptor.context, EIP712Context):
             classifier = EIP712Classifier()
             if descriptor.context.eip712.schemas is not None:

@@ -29,5 +29,3 @@ ERC7730_SCHEMA = load_json_file(ERC7730_SCHEMA_PATH)
 # legacy registry resources
 LEGACY_REGISTRY = TEST_REGISTRIES / "ledger-asset-dapps"
 LEGACY_EIP712_DESCRIPTORS = sorted(list(LEGACY_REGISTRY.rglob("**/eip712.json")))
-LEGACY_EIP712_SCHEMA_PATH = LEGACY_REGISTRY / "ethereum" / "eip712.schema.json"
-LEGACY_EIP712_SCHEMA = load_json_file(LEGACY_EIP712_SCHEMA_PATH)

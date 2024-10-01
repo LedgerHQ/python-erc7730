@@ -1,3 +1,9 @@
+"""
+Object model for Solidity ABIs.
+
+See https://docs.soliditylang.org/en/latest/abi-spec.html
+"""
+
 from enum import StrEnum
 from typing import Annotated, Literal, Self
 

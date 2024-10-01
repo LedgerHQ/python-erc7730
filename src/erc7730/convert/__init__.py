@@ -5,7 +5,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 
 InputType = TypeVar("InputType", bound=BaseModel)
 OutputType = TypeVar("OutputType", bound=BaseModel)
@@ -52,9 +52,9 @@ class ERC7730Converter(ABC, Generic[InputType, OutputType]):
     """ERC7730Converter output sink."""
 
 
-class FromERC7730Converter(ERC7730Converter[ERC7730Descriptor, OutputType], ABC):
+class FromERC7730Converter(ERC7730Converter[ERC7730InputDescriptor, OutputType], ABC):
     """Converter from ERC-7730 to another format."""
 
 
-class ToERC7730Converter(ERC7730Converter[InputType, ERC7730Descriptor], ABC):
+class ToERC7730Converter(ERC7730Converter[InputType, ERC7730InputDescriptor], ABC):
     """Converter from another format to ERC-7730."""

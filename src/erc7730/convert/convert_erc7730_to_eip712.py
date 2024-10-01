@@ -15,7 +15,7 @@ from erc7730.common.ledger import ledger_network_id
 from erc7730.common.pydantic import model_from_json_bytes
 from erc7730.convert import ERC7730Converter, FromERC7730Converter
 from erc7730.model.context import EIP712Context, EIP712JsonSchema, NameType
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 from erc7730.model.display import (
     CallDataParameters,
     Display,
@@ -34,7 +34,9 @@ class ERC7730toEIP712Converter(FromERC7730Converter[EIP712DAppDescriptor]):
     """Converts ERC-7730 descriptor to Ledger legacy EIP-712 descriptor."""
 
     @override
-    def convert(self, descriptor: ERC7730Descriptor, error: ERC7730Converter.ErrorAdder) -> EIP712DAppDescriptor | None:
+    def convert(
+        self, descriptor: ERC7730InputDescriptor, error: ERC7730Converter.ErrorAdder
+    ) -> EIP712DAppDescriptor | None:
         # FIXME to debug and split in smaller methods
 
         context = descriptor.context

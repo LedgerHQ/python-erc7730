@@ -10,7 +10,7 @@ from pydantic import AnyUrl
 
 from erc7730.convert import ERC7730Converter, ToERC7730Converter
 from erc7730.model.context import EIP712, Deployment, Deployments, Domain, EIP712Context, EIP712JsonSchema, NameType
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 from erc7730.model.display import (
     Display,
     Field,
@@ -28,7 +28,9 @@ class EIP712toERC7730Converter(ToERC7730Converter[EIP712DAppDescriptor]):
     """Converts Ledger legacy EIP-712 descriptor to ERC-7730 descriptor."""
 
     @override
-    def convert(self, descriptor: EIP712DAppDescriptor, error: ERC7730Converter.ErrorAdder) -> ERC7730Descriptor | None:
+    def convert(
+        self, descriptor: EIP712DAppDescriptor, error: ERC7730Converter.ErrorAdder
+    ) -> ERC7730InputDescriptor | None:
         # FIXME this code flattens all messages in first contract
         verifying_contract: ContractAddress | None = None
         contract_name = descriptor.name
@@ -64,7 +66,7 @@ class EIP712toERC7730Converter(ToERC7730Converter[EIP712DAppDescriptor]):
                     screens=None,
                 )
 
-        return ERC7730Descriptor(
+        return ERC7730InputDescriptor(
             context=(
                 EIP712Context(
                     eip712=EIP712(

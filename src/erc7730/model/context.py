@@ -1,8 +1,6 @@
-from enum import Enum
-from typing import ForwardRef
-
 from pydantic import AnyUrl, Field, RootModel, field_validator
 
+from erc7730.model.abi import ABI
 from erc7730.model.base import Model
 from erc7730.model.types import ContractAddress, Id
 
@@ -56,51 +54,13 @@ class EIP712DomainBinding(Model):
     eip712: EIP712
 
 
-class AbiParameter(Model):
-    name: str
-    type: str
-    internalType: str | None = None
-    components: list[ForwardRef("AbiParameter")] | None = None  # type: ignore
-
-
-AbiParameter.model_rebuild()
-
-
-class StateMutability(Enum):
-    pure = "pure"
-    view = "view"
-    nonpayable = "nonpayable"
-    payable = "payable"
-
-
-class Type(Enum):
-    function = "function"
-    constructor = "constructor"
-    receive = "receive"
-    fallback = "fallback"
-
-
-class AbiJsonSchemaItem(Model):
-    name: str
-    inputs: list[AbiParameter]
-    outputs: list[AbiParameter] | None
-    stateMutability: StateMutability | None = None
-    type: Type
-    constant: bool | None = None
-    payable: bool | None = None
-
-
-class AbiJsonSchema(RootModel[list[AbiJsonSchemaItem]]):
-    """abi json schema"""
-
-
 class Factory(Model):
     deployments: Deployments
     deployEvent: str
 
 
 class Contract(Model):
-    abi: AnyUrl | AbiJsonSchema
+    abi: AnyUrl | list[ABI]
     deployments: Deployments
     addressMatcher: AnyUrl | None = None
     factory: Factory | None = None

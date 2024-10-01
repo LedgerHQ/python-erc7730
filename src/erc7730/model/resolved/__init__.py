@@ -1,5 +1,5 @@
 """
-Package implementing an object model for ERC-7730 input descriptors.
+Package implementing an object model for ERC-7730 resolved descriptors.
 
 This model represents descriptors after resolution phase:
  - URLs have been fetched

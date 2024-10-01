@@ -1,3 +1,10 @@
+"""
+Base types for ERC-7730 descriptors.
+
+Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs
+JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/master/specs/erc7730-v1.schema.json
+"""
+
 from typing import Annotated as Ann
 
 from pydantic import Field

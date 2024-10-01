@@ -7,7 +7,7 @@ from erc7730.common.pydantic import model_from_json_file_with_includes
 from erc7730.convert.convert import convert_and_print_errors
 from erc7730.convert.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.input.descriptor import InputERC7730Descriptor
 from tests.assertions import assert_model_json_equals
 from tests.cases import path_id
 from tests.files import ERC7730_EIP712_DESCRIPTORS, LEGACY_EIP712_DESCRIPTORS
@@ -15,7 +15,7 @@ from tests.files import ERC7730_EIP712_DESCRIPTORS, LEGACY_EIP712_DESCRIPTORS
 
 @pytest.mark.parametrize("input_file", ERC7730_EIP712_DESCRIPTORS, ids=path_id)
 def test_roundtrip_from_erc7730(input_file: Path) -> None:
-    input_erc7730_descriptor = ERC7730Descriptor.load(input_file)
+    input_erc7730_descriptor = InputERC7730Descriptor.load(input_file)
     legacy_eip712_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730toEIP712Converter())
     assert legacy_eip712_descriptor is not None
     output_erc7730_descriptor = convert_and_print_errors(legacy_eip712_descriptor, EIP712toERC7730Converter())

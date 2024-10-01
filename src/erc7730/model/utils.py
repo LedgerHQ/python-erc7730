@@ -1,19 +1,23 @@
+"""
+Utilities for manipulating ERC-7730 descriptors.
+"""
+
 import requests
 from pydantic import AnyUrl, RootModel
 
 from erc7730.model.abi import ABI
 from erc7730.model.context import ContractContext, Deployments, EIP712Context, EIP712JsonSchema
-from erc7730.model.descriptor import ERC7730Descriptor
+from erc7730.model.descriptor import ERC7730InputDescriptor
 
 
-def get_chain_ids(descriptor: ERC7730Descriptor) -> set[int] | None:
+def get_chain_ids(descriptor: ERC7730InputDescriptor) -> set[int] | None:
     """Get deployment chaind ids for a descriptor."""
     if (deployments := get_deployments(descriptor)) is None:
         return None
     return {d.chainId for d in deployments.root}
 
 
-def get_deployments(descriptor: ERC7730Descriptor) -> Deployments | None:
+def get_deployments(descriptor: ERC7730InputDescriptor) -> Deployments | None:
     """Get deployments section for a descriptor."""
     if isinstance(context := descriptor.context, EIP712Context):
         return context.eip712.deployments
@@ -22,7 +26,7 @@ def get_deployments(descriptor: ERC7730Descriptor) -> Deployments | None:
     raise ValueError(f"Invalid context type {type(descriptor.context)}")
 
 
-def resolve_external_references(descriptor: ERC7730Descriptor) -> ERC7730Descriptor:
+def resolve_external_references(descriptor: ERC7730InputDescriptor) -> ERC7730InputDescriptor:
     if isinstance(descriptor.context, EIP712Context):
         return _resolve_external_references_eip712(descriptor)
     if isinstance(descriptor.context, ContractContext):
@@ -30,7 +34,7 @@ def resolve_external_references(descriptor: ERC7730Descriptor) -> ERC7730Descrip
     raise ValueError("Invalid context type")
 
 
-def _resolve_external_references_eip712(descriptor: ERC7730Descriptor) -> ERC7730Descriptor:
+def _resolve_external_references_eip712(descriptor: ERC7730InputDescriptor) -> ERC7730InputDescriptor:
     schemas: list[EIP712JsonSchema | AnyUrl] = descriptor.context.eip712.schemas  # type:ignore
     schemas_resolved = []
     for schema in schemas:
@@ -52,7 +56,7 @@ def _resolve_external_references_eip712(descriptor: ERC7730Descriptor) -> ERC773
     )
 
 
-def _resolve_external_references_contract(descriptor: ERC7730Descriptor) -> ERC7730Descriptor:
+def _resolve_external_references_contract(descriptor: ERC7730InputDescriptor) -> ERC7730InputDescriptor:
     abis: AnyUrl | list[ABI] = descriptor.context.contract.abi  # type:ignore
     if isinstance(abis, AnyUrl):
         resp = requests.get(_adapt_uri(abis), timeout=10)  # type:ignore

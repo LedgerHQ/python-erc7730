@@ -1,7 +1,19 @@
+"""
+Base model for library, using pydantic.
+
+See https://docs.pydantic.dev
+"""
+
 from pydantic import BaseModel, ConfigDict
 
 
 class Model(BaseModel):
+    """
+    Base model for library, using pydantic.
+
+    See https://docs.pydantic.dev
+    """
+
     model_config = ConfigDict(
         strict=True,
         frozen=True,
