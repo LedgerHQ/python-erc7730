@@ -3,7 +3,7 @@ from typing import final, override
 from erc7730.common.abi import compute_signature, get_functions
 from erc7730.common.client.etherscan import get_contract_abis
 from erc7730.lint import ERC7730Linter
-from erc7730.model.context import ContractContext, EIP712Context
+from erc7730.model.resolved.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
 
@@ -17,18 +17,18 @@ class ValidateABILinter(ERC7730Linter):
 
     @override
     def lint(self, descriptor: ResolvedERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
-        if isinstance(descriptor.context, EIP712Context):
+        if isinstance(descriptor.context, ResolvedEIP712Context):
             return self._validate_eip712_schemas(descriptor.context, out)
-        if isinstance(descriptor.context, ContractContext):
+        if isinstance(descriptor.context, ResolvedContractContext):
             return self._validate_contract_abis(descriptor.context, out)
         raise ValueError("Invalid context type")
 
     @classmethod
-    def _validate_eip712_schemas(cls, context: EIP712Context, out: ERC7730Linter.OutputAdder) -> None:
+    def _validate_eip712_schemas(cls, context: ResolvedEIP712Context, out: ERC7730Linter.OutputAdder) -> None:
         pass  # not implemented
 
     @classmethod
-    def _validate_contract_abis(cls, context: ContractContext, out: ERC7730Linter.OutputAdder) -> None:
+    def _validate_contract_abis(cls, context: ResolvedContractContext, out: ERC7730Linter.OutputAdder) -> None:
         if not isinstance(context.contract.abi, list):
             raise ValueError("Contract ABIs should have been resolved")
 

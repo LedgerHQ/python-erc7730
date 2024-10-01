@@ -5,11 +5,11 @@ from erc7730.model.abi import ABI
 
 
 @final
-class ABIClassifier(Classifier[ABI]):
+class ABIClassifier(Classifier[list[ABI]]):
     """Given an ABI, classify the transaction type with some predefined ruleset.
     (not implemented)
     """
 
     @override
-    def classify(self, schema: ABI) -> TxClass | None:
+    def classify(self, schema: list[ABI]) -> TxClass | None:
         pass

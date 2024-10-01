@@ -1,8 +1,7 @@
-from pydantic import AnyUrl, Field, RootModel, field_validator
+from pydantic import AnyUrl, RootModel, field_validator
 
-from erc7730.model.abi import ABI
 from erc7730.model.base import Model
-from erc7730.model.types import ContractAddress, Id
+from erc7730.model.types import ContractAddress
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
@@ -43,36 +42,6 @@ class Deployments(RootModel[list[Deployment]]):
     """deployments"""
 
 
-class EIP712(Model):
-    domain: Domain | None = None
-    schemas: list[EIP712JsonSchema | AnyUrl]
-    domainSeparator: str | None = None
-    deployments: Deployments
-
-
-class EIP712DomainBinding(Model):
-    eip712: EIP712
-
-
 class Factory(Model):
     deployments: Deployments
     deployEvent: str
-
-
-class Contract(Model):
-    abi: AnyUrl | list[ABI]
-    deployments: Deployments
-    addressMatcher: AnyUrl | None = None
-    factory: Factory | None = None
-
-
-class ContractBinding(Model):
-    contract: Contract
-
-
-class ContractContext(ContractBinding):
-    id: Id | None = Field(None, alias="$id")
-
-
-class EIP712Context(EIP712DomainBinding):
-    id: Id | None = Field(None, alias="$id")

@@ -13,7 +13,7 @@ class TxClass(StrEnum):
     WITHDRAW = auto()
 
 
-Schema = TypeVar("Schema", ABI, EIP712JsonSchema)
+Schema = TypeVar("Schema", list[ABI], EIP712JsonSchema)
 
 
 class Classifier(ABC, Generic[Schema]):

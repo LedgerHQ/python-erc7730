@@ -1,6 +1,5 @@
 from typing import assert_never, final, override
 
-import requests
 from eip712 import (
     EIP712ContractDescriptor,
     EIP712DAppDescriptor,
@@ -9,18 +8,16 @@ from eip712 import (
     EIP712Mapper,
     EIP712MessageDescriptor,
 )
-from pydantic import AnyUrl
 
 from erc7730.common.ledger import ledger_network_id
-from erc7730.common.pydantic import model_from_json_bytes
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import EIP712Context, EIP712JsonSchema, NameType
 from erc7730.model.display import (
     CallDataParameters,
     FieldFormat,
     NftNameParameters,
     TokenAmountParameters,
 )
+from erc7730.model.resolved.context import ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
     ResolvedDisplay,
@@ -41,25 +38,10 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
         # FIXME to debug and split in smaller methods
 
         context = descriptor.context
-        if not isinstance(context, EIP712Context):
+        if not isinstance(context, ResolvedEIP712Context):
             return error.error("context is None or is not EIP712")
 
-        eip712_schema = dict[str, list[NameType]]()
-        for schema_or_url in context.eip712.schemas:
-            erc7730_schema: EIP712JsonSchema | None = None
-            if isinstance(schema_or_url, AnyUrl):
-                try:
-                    response = requests.get(str(schema_or_url), timeout=10)
-                    erc7730_schema = model_from_json_bytes(response.content, model=EIP712JsonSchema)
-                except Exception as e:
-                    return error.error(str(e))
-            else:
-                erc7730_schema = schema_or_url
-            if erc7730_schema is not None:
-                try:
-                    eip712_schema = erc7730_schema.types
-                except Exception as e:
-                    return error.error(str(e))
+        schemas = context.eip712.schemas
 
         messages = list[EIP712MessageDescriptor]()
         if context.eip712.domain is None:
@@ -87,7 +69,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
                 for field in format.fields:
                     eip712_fields.extend(self.parse_field(descriptor.display, field))
             mapper = EIP712Mapper(label=format_label, fields=eip712_fields)
-            messages.append(EIP712MessageDescriptor(schema=eip712_schema, mapper=mapper))
+            messages.append(EIP712MessageDescriptor(schema=schemas[0].types, mapper=mapper))
         contracts = list[EIP712ContractDescriptor]()
         contract_name = name
         if descriptor.metadata.owner is not None:
