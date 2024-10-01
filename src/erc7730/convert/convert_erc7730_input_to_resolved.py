@@ -59,11 +59,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if context is None or display is None:
             return None
 
-        return ResolvedERC7730Descriptor(
-            # FIXME schema_=descriptor.schema_,
-            context=context,
-            metadata=descriptor.metadata,
-            display=display,
+        return ResolvedERC7730Descriptor.model_validate(
+            {"$schema": descriptor.schema_, "context": context, "metadata": descriptor.metadata, "display": display}
         )
 
     @classmethod
@@ -184,12 +181,14 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     ) -> ResolvedFieldDescription | None:
         params = cls._convert_field_parameters(definition.params, error) if definition.params is not None else None
 
-        return ResolvedFieldDescription(
-            # FIXME id=definition.id,
-            path=definition.path,
-            label=definition.label,
-            format=FieldFormat(definition.format) if definition.format is not None else None,
-            params=params,
+        return ResolvedFieldDescription.model_validate(
+            {
+                "$id": definition.id,
+                "path": definition.path,
+                "label": definition.label,
+                "format": FieldFormat(definition.format) if definition.format is not None else None,
+                "params": params,
+            }
         )
 
     @classmethod
@@ -225,12 +224,14 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if fields is None:
             return None
 
-        return ResolvedFormat(
-            # FIXME id=format.id,
-            intent=format.intent,
-            fields=fields,
-            required=format.required,
-            screens=format.screens,
+        return ResolvedFormat.model_validate(
+            {
+                "$id": format.id,
+                "intent": format.intent,
+                "fields": fields,
+                "required": format.required,
+                "screens": format.screens,
+            }
         )
 
     @classmethod
