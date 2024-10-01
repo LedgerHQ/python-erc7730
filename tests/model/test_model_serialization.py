@@ -53,6 +53,7 @@ def test_22_screens_serialization_not_symmetric() -> None:
         "{"
         '"formats":{'
         '"Permit":{'
+        '"fields": [],'
         '"screens":{'
         '"stax":[{"type":"propertyPage","label":"DAI Permit","content":["spender","value","deadline"]}]'
         "}"
