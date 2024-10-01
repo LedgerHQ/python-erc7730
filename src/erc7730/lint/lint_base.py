@@ -1,7 +1,7 @@
 from typing import final, override
 
 from erc7730.lint import ERC7730Linter
-from erc7730.model.descriptor import ERC7730InputDescriptor
+from erc7730.model.descriptor import InputERC7730Descriptor
 
 
 @final
@@ -12,6 +12,6 @@ class MultiLinter(ERC7730Linter):
         self.lints = linters
 
     @override
-    def lint(self, descriptor: ERC7730InputDescriptor, out: ERC7730Linter.OutputAdder) -> None:
+    def lint(self, descriptor: InputERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
         for linter in self.lints:
             linter.lint(descriptor, out)

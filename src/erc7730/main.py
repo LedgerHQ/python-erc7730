@@ -9,7 +9,7 @@ from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
 from erc7730.lint.lint import lint_all_and_print_errors
-from erc7730.model.descriptor import ERC7730InputDescriptor
+from erc7730.model.descriptor import InputERC7730Descriptor
 
 app = Typer(
     name="erc7730",
@@ -75,7 +75,7 @@ def convert_erc7730_to_eip712(
     output_eip712_path: Annotated[Path, Argument(help="The output EIP-712 file path")],
 ) -> None:
     if not convert_to_file_and_print_errors(
-        input_descriptor=ERC7730InputDescriptor.load(input_erc7730_path),
+        input_descriptor=InputERC7730Descriptor.load(input_erc7730_path),
         output_file=output_eip712_path,
         converter=ERC7730toEIP712Converter(),
     ):

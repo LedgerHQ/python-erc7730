@@ -4,13 +4,14 @@ from pathlib import Path
 from rich import print
 
 from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
+from erc7730.convert import ERC7730Converter
+from erc7730.convert.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.lint_base import MultiLinter
 from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
 from erc7730.lint.lint_validate_abi import ValidateABILinter
 from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinter
-from erc7730.model.descriptor import ERC7730InputDescriptor
-from erc7730.model.utils import resolve_external_references
+from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
 def lint_all_and_print_errors(
@@ -91,12 +92,26 @@ def lint_file(path: Path, linter: ERC7730Linter, out: ERC7730Linter.OutputAdder)
         out(output.model_copy(update={"file": path}))
 
     try:
-        descriptor = ERC7730InputDescriptor.load(path)
-        descriptor = resolve_external_references(descriptor)
-        linter.lint(descriptor, adder)
+        input_descriptor = InputERC7730Descriptor.load(path)
+        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, _output_adapter(adder))
+        if resolved_descriptor is not None:
+            linter.lint(resolved_descriptor, adder)
     except Exception as e:
         out(
             ERC7730Linter.Output(
-                file=path, title="Failed to parse", message=str(e), level=ERC7730Linter.Output.Level.ERROR
+                file=path, title="Failed to parse descriptor", message=str(e), level=ERC7730Linter.Output.Level.ERROR
             )
         )
+
+
+def _output_adapter(out: ERC7730Linter.OutputAdder) -> ERC7730Converter.ErrorAdder:
+    def adder(error: ERC7730Converter.Error) -> None:
+        out(
+            ERC7730Linter.Output(
+                title="Resolution error",
+                message=error.message,
+                level=ERC7730Converter.Error.Level.WARNING,
+            )
+        )
+
+    return adder

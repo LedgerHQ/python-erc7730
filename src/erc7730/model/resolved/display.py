@@ -19,12 +19,12 @@ from erc7730.model.types import Id, Path
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class ResolvedFieldsParent(Model):
+class ResolvedFieldsBase(Model):
     path: str
 
 
 class ResolvedEnumParameters(Model):
-    field_ref: str = PydanticField(alias="$ref")
+    ref: str = PydanticField(alias="$ref")  # TODO must be inlined here
 
 
 def get_param_discriminator(v: Any) -> str | None:
@@ -81,8 +81,8 @@ class ResolvedFieldDescription(Model):
     params: ResolvedFieldParameters | None = None
 
 
-class ResolvedNestedFields(ResolvedFieldsParent):
-    fields: list[ForwardRef("Field")] | None = None  # type: ignore
+class ResolvedNestedFields(ResolvedFieldsBase):
+    fields: list[ForwardRef("ResolvedField")]
 
 
 def get_field_discriminator(v: Any) -> str | None:
@@ -99,7 +99,7 @@ def get_field_discriminator(v: Any) -> str | None:
     return None
 
 
-class Field(
+class ResolvedField(
     RootModel[
         Annotated[
             Annotated[ResolvedFieldDescription, Tag("field_description")]
@@ -115,9 +115,9 @@ ResolvedNestedFields.model_rebuild()
 
 
 class ResolvedFormat(Model):
-    field_id: Id | None = PydanticField(None, alias="$id")
+    id: Id | None = PydanticField(None, alias="$id")
     intent: str | dict[str, str] | None = None
-    fields: list[Field] | None = None
+    fields: list[ResolvedField]
     required: list[str] | None = None
     screens: dict[str, list[Screen]] | None = None
 

@@ -29,7 +29,7 @@ class InputReference(InputFieldsBase):
 
 
 class InputEnumParameters(Model):
-    field_ref: str = PydanticField(alias="$ref")
+    ref: str = PydanticField(alias="$ref")
 
 
 def get_param_discriminator(v: Any) -> str | None:
@@ -87,7 +87,7 @@ class InputFieldDescription(Model):
 
 
 class InputNestedFields(InputFieldsBase):
-    fields: list[ForwardRef("InputField")] | None = None  # type: ignore
+    fields: list[ForwardRef("InputField")]
 
 
 def get_field_discriminator(v: Any) -> str | None:
@@ -125,9 +125,9 @@ InputNestedFields.model_rebuild()
 
 
 class InputFormat(Model):
-    field_id: Id | None = PydanticField(None, alias="$id")
+    id: Id | None = PydanticField(None, alias="$id")
     intent: str | dict[str, str] | None = None
-    fields: list[InputField] | None = None
+    fields: list[InputField]
     required: list[str] | None = None
     screens: dict[str, list[Screen]] | None = None
 

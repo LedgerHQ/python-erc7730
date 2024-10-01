@@ -4,7 +4,7 @@ from erc7730.common.abi import compute_paths, compute_selector
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.common.paths import compute_eip712_paths, compute_format_paths
 from erc7730.model.context import ContractContext, EIP712Context, EIP712JsonSchema
-from erc7730.model.descriptor import ERC7730InputDescriptor
+from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
 
 @final
@@ -15,12 +15,12 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ERC7730InputDescriptor, out: ERC7730Linter.OutputAdder) -> None:
+    def lint(self, descriptor: ResolvedERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
         self._validate_eip712_paths(descriptor, out)
         self._validate_abi_paths(descriptor, out)
 
     @classmethod
-    def _validate_eip712_paths(cls, descriptor: ERC7730InputDescriptor, out: ERC7730Linter.OutputAdder) -> None:
+    def _validate_eip712_paths(cls, descriptor: ResolvedERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
         if isinstance(descriptor.context, EIP712Context) and descriptor.context.eip712.schemas is not None:
             primary_types: set[str] = set()
             for schema in descriptor.context.eip712.schemas:
@@ -84,7 +84,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     )
 
     @classmethod
-    def _validate_abi_paths(cls, descriptor: ERC7730InputDescriptor, out: ERC7730Linter.OutputAdder) -> None:
+    def _validate_abi_paths(cls, descriptor: ResolvedERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
         if (
             descriptor.context is not None
             and descriptor.display is not None

@@ -1,7 +1,13 @@
 from dataclasses import dataclass
 
 from erc7730.model.context import EIP712JsonSchema, NameType
-from erc7730.model.display import Field, FieldDescription, Format, NestedFields, Reference, TokenAmountParameters
+from erc7730.model.resolved.display import (
+    ResolvedField,
+    ResolvedFieldDescription,
+    ResolvedFormat,
+    ResolvedNestedFields,
+    TokenAmountParameters,
+)
 
 ARRAY_SUFFIX = "[]"
 
@@ -45,7 +51,7 @@ class FormatPaths:
     container_paths: set[str]  # References to values in the container
 
 
-def compute_format_paths(format: Format) -> FormatPaths:
+def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
     """Compute the sets of paths referred in an ERC7730 Format."""
     paths = FormatPaths(data_paths=set(), format_paths=set(), container_paths=set())
 
@@ -59,17 +65,15 @@ def compute_format_paths(format: Format) -> FormatPaths:
         else:
             paths.data_paths.add(_append_path(root, path))
 
-    def append_paths(path: str, fields: Field | None) -> None:
+    def append_paths(path: str, fields: ResolvedField | None) -> None:
         if fields is not None:
             field = fields.root
             match field:
-                case Reference():
-                    pass  # FIXME
-                case FieldDescription():
+                case ResolvedFieldDescription():
                     add_path(path, field.label)
                     if field.params and isinstance(field.params, TokenAmountParameters):  # FIXME model is not correct
                         add_path(path, _remove_slicing(field.params.tokenPath))
-                case NestedFields():
+                case ResolvedNestedFields():
                     append_paths(_append_path(path, field.path), field.fields)  # type: ignore
 
     if format.fields is not None:

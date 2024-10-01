@@ -4,6 +4,8 @@ Module implementing an object model for ERC-7730 resolved descriptors.
 This model represents descriptors after resolution phase:
  - URLs have been fetched
  - References have been inlined
+ - Constants have been inlined
+ - Enums have been inlined
  - Selectors have been converted to 4 bytes form
 """
 
@@ -32,6 +34,8 @@ class ResolvedERC7730Descriptor(Model):
     This model represents descriptors after resolution phase:
      - URLs have been fetched
      - References have been inlined
+     - Constants have been inlined
+     - Enums have been inlined
      - Selectors have been converted to 4 bytes form
 
     Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs

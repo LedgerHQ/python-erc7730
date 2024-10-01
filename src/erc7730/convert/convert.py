@@ -38,13 +38,20 @@ def convert_and_print_errors(
     """
     errors: list[ERC7730Converter.Error] = []
 
-    result = converter.convert(input_descriptor, errors.append)
+    class ErrorAdder(ERC7730Converter.ErrorAdder):
+        def warning(self, message: str) -> None:
+            errors.append(ERC7730Converter.Error(level=ERC7730Converter.Error.Level.WARNING, message=message))
+
+        def error(self, message: str) -> None:
+            errors.append(ERC7730Converter.Error(level=ERC7730Converter.Error.Level.ERROR, message=message))
+
+    result = converter.convert(input_descriptor, ErrorAdder())
 
     for error in errors:
         match error.level:
-            case ERC7730Converter.Error.Level.ERROR:
+            case ERC7730Converter.Error.Level.WARNING:
                 print(f"[yellow][bold]{error.level}: [/bold]{error.message}[/yellow]")
-            case ERC7730Converter.Error.Level.FATAL:
+            case ERC7730Converter.Error.Level.ERROR:
                 print(f"[red][bold]{error.level}: [/bold]{error.message}[/red]")
 
     return result
