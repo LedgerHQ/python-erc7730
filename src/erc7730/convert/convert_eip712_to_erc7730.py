@@ -8,6 +8,7 @@ from eip712 import (
 )
 from pydantic import AnyUrl
 
+from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.model.context import Deployment, Domain, EIP712JsonSchema, NameType
 from erc7730.model.display import (
@@ -29,12 +30,14 @@ from erc7730.model.types import ContractAddress
 
 @final
 class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC7730Descriptor]):
-    """Converts Ledger legacy EIP-712 descriptor to ERC-7730 descriptor."""
+    """
+    Converts Ledger legacy EIP-712 descriptor to ERC-7730 descriptor.
+
+    Generates 1 output ERC-7730 descriptor per contract, as ERC-7730 descriptors only represent 1 contract.
+    """
 
     @override
-    def convert(
-        self, descriptor: EIP712DAppDescriptor, error: ERC7730Converter.ErrorAdder
-    ) -> InputERC7730Descriptor | None:
+    def convert(self, descriptor: EIP712DAppDescriptor, out: OutputAdder) -> dict[str, InputERC7730Descriptor] | None:
         # FIXME this code flattens all messages in first contract.
         #  converter must be changed to output a list[InputERC7730Descriptor]
         #  1 output InputERC7730Descriptor per input contract
@@ -46,7 +49,7 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
             contract_name = descriptor.contracts[0].name  # FIXME
 
         if verifying_contract is None:
-            return error.error("verifying_contract is undefined")
+            return out.error("verifying_contract is undefined")
 
         formats = dict[str, InputFormat]()
         schemas = list[EIP712JsonSchema | AnyUrl]()
@@ -69,7 +72,7 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
                     screens=None,
                 )
 
-        return InputERC7730Descriptor(
+        descriptor = InputERC7730Descriptor(
             context=InputEIP712Context(
                 eip712=InputEIP712(
                     domain=Domain(
@@ -94,6 +97,10 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
                 formats=formats,
             ),
         )
+
+        # TODO
+        descriptors: dict[str, InputERC7730Descriptor] = {}
+        return descriptors
 
     @classmethod
     def _convert_field(cls, field: EIP712Field) -> InputFieldDescription | InputReference | InputNestedFields:

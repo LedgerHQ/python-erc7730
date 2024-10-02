@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
-from collections.abc import Callable
-from enum import IntEnum, auto
 
-from pydantic import BaseModel, FilePath
-
+from erc7730.common.output import OutputAdder
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
 
@@ -16,25 +13,5 @@ class ERC7730Linter(ABC):
     """
 
     @abstractmethod
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: "OutputAdder") -> None:
+    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         raise NotImplementedError()
-
-    class Output(BaseModel):
-        """ERC7730Linter output notice/warning/error."""
-
-        class Level(IntEnum):
-            """ERC7730Linter output level."""
-
-            INFO = auto()
-            WARNING = auto()
-            ERROR = auto()
-
-        file: FilePath | None = None
-        line: int | None = None
-        title: str
-        message: str
-        level: Level = Level.ERROR
-
-    # TODO: use same kind of interface as converter to make it easier
-    OutputAdder = Callable[[Output], None]
-    """ERC7730Linter output sink."""

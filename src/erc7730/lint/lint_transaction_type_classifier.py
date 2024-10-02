@@ -1,5 +1,6 @@
 from typing import final, override
 
+from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.classifier import TxClass
 from erc7730.lint.classifier.abi_classifier import ABIClassifier
@@ -17,23 +18,16 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
+    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         if descriptor.context is None:
             return None
         if (tx_class := self._determine_tx_class(descriptor)) is None:
             # could not determine transaction type
             return None
-        out(
-            ERC7730Linter.Output(
-                title="Transaction type: ", message=str(tx_class), level=ERC7730Linter.Output.Level.INFO
-            )
-        )
+        out.info(title="Transaction type: ", message=str(tx_class))
         if (display := descriptor.display) is None:
             return None
-        display_format_checker: DisplayFormatChecker = DisplayFormatChecker(tx_class, display)
-        linter_outputs = display_format_checker.check()
-        for linter_output in linter_outputs:
-            out(linter_output)
+        DisplayFormatChecker(tx_class, display).check(out)
 
     @classmethod
     def _determine_tx_class(cls, descriptor: ResolvedERC7730Descriptor) -> TxClass | None:
@@ -61,43 +55,32 @@ class DisplayFormatChecker:
         self.tx_class = tx_class
         self.display = display
 
-    def check(self) -> list[ERC7730Linter.Output]:
-        res: list[ERC7730Linter.Output] = []
+    def check(self, out: OutputAdder) -> None:
         match self.tx_class:
             case TxClass.PERMIT:
                 formats = self.display.formats
                 fields = self._get_all_displayed_fields(formats)
                 if not self._fields_contain("spender", fields):
-                    res.append(
-                        ERC7730Linter.Output(
-                            title="Missing spender in displayed fields",
-                            message="",
-                            level=ERC7730Linter.Output.Level.ERROR,
-                        )
+                    out.error(
+                        title="Missing spender in displayed fields",
+                        message="",
                     )
                 if not self._fields_contain("amount", fields):
-                    res.append(
-                        ERC7730Linter.Output(
-                            title="Missing amount in displayed fields",
-                            message="",
-                            level=ERC7730Linter.Output.Level.ERROR,
-                        )
+                    out.error(
+                        title="Missing amount in displayed fields",
+                        message="",
                     )
                 if (
                     not self._fields_contain("valid until", fields)
                     and not self._fields_contain("expiry", fields)
                     and not self._fields_contain("expiration", fields)
                 ):
-                    res.append(
-                        ERC7730Linter.Output(
-                            title="Field not displayed",
-                            message="Missing expiration date in displayed fields for permit",
-                            level=ERC7730Linter.Output.Level.ERROR,
-                        )
+                    out.error(
+                        title="Field not displayed",
+                        message="Missing expiration date in displayed fields for permit",
                     )
             case _:
                 pass
-        return res
 
     @classmethod
     def _get_all_displayed_fields(cls, formats: dict[str, ResolvedFormat]) -> set[str]:

@@ -2,6 +2,7 @@ from typing import final, override
 
 from erc7730.common.abi import compute_signature, get_functions
 from erc7730.common.client.etherscan import get_contract_abis
+from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
 from erc7730.model.resolved.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
@@ -16,7 +17,7 @@ class ValidateABILinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: ERC7730Linter.OutputAdder) -> None:
+    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor.context, ResolvedEIP712Context):
             return self._validate_eip712_schemas(descriptor.context, out)
         if isinstance(descriptor.context, ResolvedContractContext):
@@ -24,11 +25,11 @@ class ValidateABILinter(ERC7730Linter):
         raise ValueError("Invalid context type")
 
     @classmethod
-    def _validate_eip712_schemas(cls, context: ResolvedEIP712Context, out: ERC7730Linter.OutputAdder) -> None:
+    def _validate_eip712_schemas(cls, context: ResolvedEIP712Context, out: OutputAdder) -> None:
         pass  # not implemented
 
     @classmethod
-    def _validate_contract_abis(cls, context: ResolvedContractContext, out: ERC7730Linter.OutputAdder) -> None:
+    def _validate_contract_abis(cls, context: ResolvedContractContext, out: OutputAdder) -> None:
         if not isinstance(context.contract.abi, list):
             raise ValueError("Contract ABIs should have been resolved")
 
@@ -42,30 +43,19 @@ class ValidateABILinter(ERC7730Linter):
             descriptor_abis = get_functions(context.contract.abi)
 
             if reference_abis.proxy:
-                out(
-                    ERC7730Linter.Output(
-                        title="Proxy contract",
-                        message="Contract ABI on Etherscan is likely to be a proxy, validation skipped",
-                        level=ERC7730Linter.Output.Level.INFO,
-                    )
+                return out.info(
+                    title="Proxy contract",
+                    message="Contract ABI on Etherscan is likely to be a proxy, validation skipped",
                 )
-                return
 
             for selector, abi in descriptor_abis.functions.items():
                 if selector not in reference_abis.functions:
-                    out(
-                        ERC7730Linter.Output(
-                            title="Missing function",
-                            message=f"Function `{selector}/{compute_signature(abi)}` is not defined in Etherscan ABI",
-                            level=ERC7730Linter.Output.Level.ERROR,
-                        )
+                    out.error(
+                        title="Missing function",
+                        message=f"Function `{selector}/{compute_signature(abi)}` is not defined in Etherscan ABI",
                     )
-                else:
-                    if descriptor_abis.functions[selector] != reference_abis.functions[selector]:
-                        out(
-                            ERC7730Linter.Output(
-                                title="Function mismatch",
-                                message=f"Function `{selector}/{compute_signature(abi)}` does not match Etherscan ABI",
-                                level=ERC7730Linter.Output.Level.WARNING,
-                            )
-                        )
+                elif descriptor_abis.functions[selector] != reference_abis.functions[selector]:
+                    out.warning(
+                        title="Function mismatch",
+                        message=f"Function `{selector}/{compute_signature(abi)}` does not match Etherscan ABI",
+                    )

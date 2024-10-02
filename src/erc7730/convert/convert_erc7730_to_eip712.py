@@ -10,7 +10,9 @@ from eip712 import (
 )
 
 from erc7730.common.ledger import ledger_network_id
+from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
+from erc7730.model.context import Deployment, NameType
 from erc7730.model.display import (
     FieldFormat,
     TokenAmountParameters,
@@ -26,50 +28,40 @@ from erc7730.model.resolved.display import (
 
 @final
 class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP712DAppDescriptor]):
-    """Converts ERC-7730 descriptor to Ledger legacy EIP-712 descriptor."""
+    """
+    Converts ERC-7730 descriptor to Ledger legacy EIP-712 descriptor.
+
+    Generates 1 output EIP712DAppDescriptor per chain id, as EIP-712 descriptors are chain-specific.
+    """
 
     @override
     def convert(
-        self, descriptor: ResolvedERC7730Descriptor, error: ERC7730Converter.ErrorAdder
-    ) -> EIP712DAppDescriptor | None:
+        self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+    ) -> dict[str, EIP712DAppDescriptor] | None:
         # note: model_construct() needs to be used here due to bad conception of EIP-712 library,
         # which adds computed fields on validation
 
-        # FIXME to debug and split in smaller methods
-
-        # FIXME this converter must be changed to output a list[EIP712DAppDescriptor]
-        #  1 output EIP712DAppDescriptor per chain id
-
         context = descriptor.context
         if not isinstance(context, ResolvedEIP712Context):
-            return error.error("context is not EIP712")
+            return out.error("context is not EIP712")
 
-        schemas = context.eip712.schemas
-
-        if (domain := context.eip712.domain) is None:
-            return error.error("domain is undefined")
-
-        chain_id = domain.chainId
-        contract_address = domain.verifyingContract
-
-        name = ""
-        if domain.name is not None:
+        if (domain := context.eip712.domain) is not None and domain.name is not None:
             name = domain.name
+        elif descriptor.metadata.owner is not None:
+            name = descriptor.metadata.owner
+        else:
+            return out.error("name is undefined")
 
-        for deployment in context.eip712.deployments:
-            if chain_id is not None and contract_address is not None:
-                break
-            chain_id = deployment.chainId
-            contract_address = deployment.address
+        output_schema: dict[str, list[NameType]] = {}
+        for schema in context.eip712.schemas:
+            for type_, fields in schema.types.items():
+                if type_ in output_schema:
+                    return out.error(f"Descriptor schemas have colliding types (eg: {type_})")
+                output_schema[type_] = fields
 
-        if chain_id is None:
-            return error.error("chain id is undefined")
-        if contract_address is None:
-            return error.error("verifying contract is undefined")
-
-        messages = [
+        messages: list[EIP712MessageDescriptor] = [
             EIP712MessageDescriptor.model_construct(
-                schema=schemas[0].types,  # FIXME
+                schema=output_schema,
                 mapper=EIP712Mapper.model_construct(
                     label=format_label,
                     fields=[out_field for in_field in format.fields for out_field in self.convert_field(in_field)],
@@ -78,20 +70,32 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
             for format_label, format in descriptor.display.formats.items()
         ]
 
-        contract_name = name
-        if descriptor.metadata.owner is not None:
-            contract_name = descriptor.metadata.owner
-        contracts = [
-            EIP712ContractDescriptor.model_construct(
-                address=contract_address.lower(), contractName=contract_name, messages=messages
-            )
-        ]
+        descriptors: dict[str, EIP712DAppDescriptor] = {}
+        for deployment in context.eip712.deployments:
+            if (output_descriptor := self._build_network_descriptor(deployment, name, messages, out)) is not None:
+                descriptors[str(deployment.chainId)] = output_descriptor
+        return descriptors
 
-        if (network := ledger_network_id(chain_id)) is None:
-            return error.error(f"network id {chain_id} not supported")
+    @classmethod
+    def _build_network_descriptor(
+        cls,
+        deployment: Deployment,
+        name: str,
+        messages: list[EIP712MessageDescriptor],
+        out: OutputAdder,
+    ) -> EIP712DAppDescriptor | None:
+        if (network := ledger_network_id(deployment.chainId)) is None:
+            return out.error(f"network id {deployment.chainId} not supported")
 
         return EIP712DAppDescriptor.model_construct(
-            blockchainName=network, chainId=chain_id, name=name, contracts=contracts
+            blockchainName=network,
+            chainId=deployment.chainId,
+            name=name,
+            contracts=[
+                EIP712ContractDescriptor.model_construct(
+                    address=deployment.address.lower(), contractName=name, messages=messages
+                )
+            ],
         )
 
     @classmethod
