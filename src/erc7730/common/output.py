@@ -165,13 +165,14 @@ class GithubAnnotationsAdder(OutputAdder):
             case _:
                 assert_never(level)
 
-        log = f"::{lvl}{level.name} "
+        log = f"::{lvl} "
         if file is not None:
             log += f"file={file}"
         if line is not None:
             log += f",line={line}"
         if title is not None:
             log += f",title={title}"
-        log = f"::{message.replace("\n", "%0A")}"
+        message_formatted = message.replace("\n", "%0A")
+        log += f"::{message_formatted}"
 
         builtin_print(log)

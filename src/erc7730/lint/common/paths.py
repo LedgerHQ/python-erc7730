@@ -69,7 +69,7 @@ def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
         if field is not None:
             match field:
                 case ResolvedFieldDescription():
-                    add_path(path, field.label)
+                    add_path(path, field.path)
                     if field.params and isinstance(field.params, TokenAmountParameters):  # FIXME model is not correct
                         add_path(path, _remove_slicing(field.params.tokenPath))
                 case ResolvedNestedFields():
