@@ -12,7 +12,7 @@ from eip712 import (
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, NameType
+from erc7730.model.context import Deployment, EIP712JsonSchema, NameType
 from erc7730.model.display import (
     FieldFormat,
     TokenAmountParameters,
@@ -51,23 +51,22 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
         if (contract_name := descriptor.metadata.owner) is None:
             return out.error("metadata.owner is not defined")
 
-        output_schema: dict[str, list[NameType]] = {}
-        for schema in context.eip712.schemas:
-            for type_, fields in schema.types.items():
-                if (existing_fields := output_schema.get(type_)) is not None and fields != existing_fields:
-                    return out.error(f"Descriptor schemas have colliding types (eg: {type_})")
-                output_schema[type_] = fields
+        messages: list[EIP712MessageDescriptor] = []
+        for primary_type, format in descriptor.display.formats.items():
+            schema = self._get_schema(primary_type, context.eip712.schemas, out)
 
-        messages: list[EIP712MessageDescriptor] = [
-            EIP712MessageDescriptor.model_construct(
-                schema=output_schema,
-                mapper=EIP712Mapper.model_construct(
-                    label=format_label,
-                    fields=[out_field for in_field in format.fields for out_field in self.convert_field(in_field)],
-                ),
+            if schema is None:
+                continue
+
+            messages.append(
+                EIP712MessageDescriptor.model_construct(
+                    schema=schema,
+                    mapper=EIP712Mapper.model_construct(
+                        label=primary_type,
+                        fields=[out_field for in_field in format.fields for out_field in self.convert_field(in_field)],
+                    ),
+                )
             )
-            for format_label, format in descriptor.display.formats.items()
-        ]
 
         descriptors: dict[str, EIP712DAppDescriptor] = {}
         for deployment in context.eip712.deployments:
@@ -98,6 +97,15 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
                 )
             ],
         )
+
+    @classmethod
+    def _get_schema(
+        cls, primary_type: str, schemas: list[EIP712JsonSchema], out: OutputAdder
+    ) -> dict[str, list[NameType]] | None:
+        for schema in schemas:
+            if schema.primaryType == primary_type:
+                return schema.types
+        return out.error(f"schema for type {primary_type} not found")
 
     @classmethod
     def convert_field(cls, field: ResolvedField) -> list[EIP712Field]:
