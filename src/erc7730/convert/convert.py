@@ -21,14 +21,15 @@ def convert_to_file_and_print_errors(
     if (output_descriptor := convert_and_print_errors(input_descriptor, converter)) is not None:
         if isinstance(output_descriptor, dict):
             for identifier, descriptor in output_descriptor.items():
-                output_file = output_file.with_suffix(f"_{identifier}")
-                model_to_json_file(output_file, descriptor)
+                descriptor_file = output_file.with_suffix(f".{identifier}{output_file.suffix}")
+                model_to_json_file(descriptor_file, descriptor)
+                print(f"[green]generated {descriptor_file} ✅[/green]")
         else:
             model_to_json_file(output_file, output_descriptor)
-        print("[green]Output descriptor file generated ✅[/green]")
+            print(f"[green]generated {output_file} ✅[/green]")
         return True
 
-    print("[red]Conversion failed ❌[/red]")
+    print("[red]conversion failed ❌[/red]")
     return False
 
 
