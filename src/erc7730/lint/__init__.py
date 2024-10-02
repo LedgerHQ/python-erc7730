@@ -35,5 +35,6 @@ class ERC7730Linter(ABC):
         message: str
         level: Level = Level.ERROR
 
+    # TODO: use same kind of interface as converter to make it easier
     OutputAdder = Callable[[Output], None]
     """ERC7730Linter output sink."""

@@ -1,9 +1,11 @@
 from enum import Enum
 from typing import Any
 
+from pydantic import Field as PydanticField
 from pydantic import RootModel
 
 from erc7730.model.base import Model
+from erc7730.model.types import Id
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
@@ -80,3 +82,14 @@ class UnitParameters(Model):
 
 class Screen(RootModel[dict[str, Any]]):
     """Screen"""
+
+
+class FieldsBase(Model):
+    path: str
+
+
+class FormatBase(Model):
+    id: Id | None = PydanticField(None, alias="$id")
+    intent: str | dict[str, str] | None = None
+    required: list[str] | None = None
+    screens: dict[str, list[Screen]] | None = None

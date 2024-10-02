@@ -1,4 +1,4 @@
-from pydantic import AnyUrl, RootModel, field_validator
+from pydantic import AnyUrl, field_validator
 
 from erc7730.model.base import Model
 from erc7730.model.types import ContractAddress
@@ -35,13 +35,9 @@ class Domain(Model):
 
 class Deployment(Model):
     chainId: int
-    address: str
-
-
-class Deployments(RootModel[list[Deployment]]):
-    """deployments"""
+    address: ContractAddress
 
 
 class Factory(Model):
-    deployments: Deployments
+    deployments: list[Deployment]
     deployEvent: str

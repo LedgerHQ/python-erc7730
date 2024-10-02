@@ -21,6 +21,7 @@ from erc7730.model.input.display import (
     InputDisplay,
     InputEnumParameters,
     InputField,
+    InputFieldDefinition,
     InputFieldDescription,
     InputFieldParameters,
     InputFormat,
@@ -38,6 +39,7 @@ from erc7730.model.resolved.display import (
     ResolvedDisplay,
     ResolvedEnumParameters,
     ResolvedField,
+    ResolvedFieldDefinition,
     ResolvedFieldDescription,
     ResolvedFieldParameters,
     ResolvedFormat,
@@ -165,7 +167,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         else:
             definitions = {}
             for definition_key, definition in display.definitions.items():
-                if (resolved_definition := cls._convert_field_description(definition, error)) is not None:
+                if (resolved_definition := cls._convert_field_definition(definition, error)) is not None:
                     definitions[definition_key] = resolved_definition
 
         formats = {}
@@ -174,6 +176,21 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 formats[format_key] = resolved_format
 
         return ResolvedDisplay(definitions=definitions, formats=formats)
+
+    @classmethod
+    def _convert_field_definition(
+        cls, definition: InputFieldDefinition, error: ERC7730Converter.ErrorAdder
+    ) -> ResolvedFieldDefinition | None:
+        params = cls._convert_field_parameters(definition.params, error) if definition.params is not None else None
+
+        return ResolvedFieldDefinition.model_validate(
+            {
+                "$id": definition.id,
+                "label": definition.label,
+                "format": FieldFormat(definition.format) if definition.format is not None else None,
+                "params": params,
+            }
+        )
 
     @classmethod
     def _convert_field_description(
@@ -246,12 +263,12 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_field(cls, field: InputField, error: ERC7730Converter.ErrorAdder) -> ResolvedField | None:
-        if isinstance(field.root, InputReference):
-            raise NotImplementedError()  # TODO
-        if isinstance(field.root, InputFieldDescription):
-            return cls._convert_field_description(field.root, error)
-        if isinstance(field.root, InputNestedFields):
-            return cls._convert_nested_fields(field.root, error)
+        if isinstance(field, InputReference):
+            return cls._convert_reference(field, error)
+        if isinstance(field, InputFieldDescription):
+            return cls._convert_field_description(field, error)
+        if isinstance(field, InputNestedFields):
+            return cls._convert_nested_fields(field, error)
         return error.error(f"Invalid field type: {type(field)}")
 
     @classmethod
@@ -264,6 +281,10 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             return None
 
         return ResolvedNestedFields(path=fields.path, fields=resolved_fields)
+
+    @classmethod
+    def _convert_reference(cls, reference: InputReference, error: ERC7730Converter.ErrorAdder) -> ResolvedField | None:
+        raise NotImplementedError()  # TODO
 
     @classmethod
     def _adapt_uri(cls, url: AnyUrl) -> AnyUrl:

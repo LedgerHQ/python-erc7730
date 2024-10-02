@@ -97,6 +97,8 @@ def lint_file(path: Path, linter: ERC7730Linter, out: ERC7730Linter.OutputAdder)
         if resolved_descriptor is not None:
             linter.lint(resolved_descriptor, adder)
     except Exception as e:
+        # TODO unwrap pydantic validation errors here to provide more user-friendly error messages
+
         out(
             ERC7730Linter.Output(
                 file=path, title="Failed to parse descriptor", message=str(e), level=ERC7730Linter.Output.Level.ERROR

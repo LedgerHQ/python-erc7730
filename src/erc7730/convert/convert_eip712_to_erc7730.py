@@ -9,14 +9,20 @@ from eip712 import (
 from pydantic import AnyUrl
 
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, Deployments, Domain, EIP712JsonSchema, NameType
+from erc7730.model.context import Deployment, Domain, EIP712JsonSchema, NameType
 from erc7730.model.display import (
     FieldFormat,
     TokenAmountParameters,
 )
 from erc7730.model.input.context import InputEIP712, InputEIP712Context
 from erc7730.model.input.descriptor import InputERC7730Descriptor
-from erc7730.model.input.display import InputDisplay, InputField, InputFieldDescription, InputFormat
+from erc7730.model.input.display import (
+    InputDisplay,
+    InputFieldDescription,
+    InputFormat,
+    InputNestedFields,
+    InputReference,
+)
 from erc7730.model.metadata import Metadata
 from erc7730.model.types import ContractAddress
 
@@ -29,7 +35,10 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
     def convert(
         self, descriptor: EIP712DAppDescriptor, error: ERC7730Converter.ErrorAdder
     ) -> InputERC7730Descriptor | None:
-        # FIXME this code flattens all messages in first contract
+        # FIXME this code flattens all messages in first contract.
+        #  converter must be changed to output a list[InputERC7730Descriptor]
+        #  1 output InputERC7730Descriptor per input contract
+
         verifying_contract: ContractAddress | None = None
         contract_name = descriptor.name
         if len(descriptor.contracts) > 0:
@@ -52,7 +61,7 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
                         types=schema,
                     )
                 )
-                fields = [InputField(self._convert_field(field)) for field in mapper.fields]
+                fields = [self._convert_field(field) for field in mapper.fields]
                 formats[mapper.label] = InputFormat(
                     intent=None,  # FIXME
                     fields=fields,
@@ -70,7 +79,7 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
                         verifyingContract=verifying_contract,
                     ),
                     schemas=schemas,
-                    deployments=Deployments([Deployment(chainId=descriptor.chain_id, address=verifying_contract)]),
+                    deployments=[Deployment(chainId=descriptor.chain_id, address=verifying_contract)],
                 )
             ),
             metadata=Metadata(
@@ -87,7 +96,7 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
         )
 
     @classmethod
-    def _convert_field(cls, field: EIP712Field) -> InputFieldDescription:
+    def _convert_field(cls, field: EIP712Field) -> InputFieldDescription | InputReference | InputNestedFields:
         match field.format:
             case EIP712Format.AMOUNT if field.assetPath is not None:
                 return InputFieldDescription(

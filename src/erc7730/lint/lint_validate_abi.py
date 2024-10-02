@@ -34,7 +34,7 @@ class ValidateABILinter(ERC7730Linter):
 
         if (deployments := context.contract.deployments) is None:
             return
-        for deployment in deployments.root:
+        for deployment in deployments:
             if (abis := get_contract_abis(deployment.chainId, deployment.address)) is None:
                 continue
 
