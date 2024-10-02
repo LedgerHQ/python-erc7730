@@ -66,7 +66,7 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
                     )
                 ),
                 metadata=Metadata(
-                    owner=descriptor.name,
+                    owner=contract.name,
                     info=None,
                     token=None,
                     constants=None,

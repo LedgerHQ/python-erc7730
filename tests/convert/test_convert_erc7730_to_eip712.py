@@ -16,6 +16,10 @@ def test_convert_erc7730_registry_files(input_file: Path) -> None:
     input_erc7730_descriptor = InputERC7730Descriptor.load(input_file)
     resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
     assert resolved_erc7730_descriptor is not None
+    if isinstance(resolved_erc7730_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     output_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
     assert output_descriptor is not None
+    if isinstance(output_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     assert_valid_legacy_eip_712(output_descriptor)

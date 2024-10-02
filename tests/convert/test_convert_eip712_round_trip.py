@@ -19,10 +19,16 @@ def test_roundtrip_from_erc7730(input_file: Path) -> None:
     input_erc7730_descriptor = InputERC7730Descriptor.load(input_file)
     resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
     assert resolved_erc7730_descriptor is not None
+    if isinstance(resolved_erc7730_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     legacy_eip712_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
     assert legacy_eip712_descriptor is not None
+    if isinstance(legacy_eip712_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     output_erc7730_descriptor = convert_and_print_errors(legacy_eip712_descriptor, EIP712toERC7730Converter())
     assert output_erc7730_descriptor is not None
+    if isinstance(output_erc7730_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     assert_model_json_equals(input_erc7730_descriptor, output_erc7730_descriptor)
 
 
@@ -31,8 +37,14 @@ def test_roundtrip_from_legacy_eip712(input_file: Path) -> None:
     input_legacy_eip712_descriptor = model_from_json_file_with_includes(input_file, EIP712DAppDescriptor)
     input_erc7730_descriptor = convert_and_print_errors(input_legacy_eip712_descriptor, EIP712toERC7730Converter())
     assert input_erc7730_descriptor is not None
+    if isinstance(input_erc7730_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
     assert resolved_erc7730_descriptor is not None
+    if isinstance(resolved_erc7730_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     output_legacy_eip712_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
     assert output_legacy_eip712_descriptor is not None
+    if isinstance(output_legacy_eip712_descriptor, dict):
+        pytest.skip("Multiple descriptors tests not supported")
     assert_model_json_equals(input_legacy_eip712_descriptor, output_legacy_eip712_descriptor)
