@@ -45,6 +45,12 @@ def convert_and_print_errors(
     result = converter.convert(input_descriptor, ConsoleOutputAdder())
 
     if isinstance(result, dict):
-        return result[next(iter(result))]
+        match len(result):
+            case 0:
+                return None
+            case 1:
+                return next(iter(result.values()))
+            case _:
+                return result
 
     return result
