@@ -55,7 +55,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
         output_schema: dict[str, list[NameType]] = {}
         for schema in context.eip712.schemas:
             for type_, fields in schema.types.items():
-                if type_ in output_schema:
+                if (existing_fields := output_schema.get(type_)) is not None and fields != existing_fields:
                     return out.error(f"Descriptor schemas have colliding types (eg: {type_})")
                 output_schema[type_] = fields
 

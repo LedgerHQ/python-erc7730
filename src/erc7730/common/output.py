@@ -119,7 +119,7 @@ class ConsoleOutputAdder(OutputAdder):
             log += f" line {line}"
         if title is not None:
             log += f": {title}"
-        log = f"[/{color}]: {message}"
+        log += f"[/{color}]: {message}"
 
         print(log)
 
