@@ -9,10 +9,33 @@ from typing import Annotated
 
 from pydantic import Field
 
-Id = Annotated[str, Field(title="TODO", description="TODO", min_length=1)]
-
-ContractAddress = Annotated[
-    str, Field(title="TODO", description="TODO", min_length=0, max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
+Id = Annotated[
+    str,
+    Field(
+        title="Id",
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a"
+        "reference in device specific sections.",
+        min_length=1,
+    ),
 ]
 
-Path = Annotated[str, Field(title="TODO", description="TODO", pattern=r"^[a-zA-Z0-9.\[\]_@\$\#]+")]
+ContractAddress = Annotated[
+    str,
+    Field(
+        title="Contract Address",
+        description="An Ethereum contract address.",
+        min_length=0,  # FIXME constraints
+        max_length=64,  # FIXME constraints
+        pattern=r"^[a-zA-Z0-9_\-]+$",  # FIXME constraints
+    ),
+]
+
+Path = Annotated[
+    str,
+    Field(
+        title="Path",
+        description="A path referencing values in the serialized structured data, the format specification file or in"
+        "the container",
+        pattern=r"^[a-zA-Z0-9.\[\]_@\$\#]+",
+    ),
+]

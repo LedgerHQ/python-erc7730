@@ -9,18 +9,6 @@ from erc7730.model.types import Id
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class Source(str, Enum):
-    """
-    TODO
-    """
-
-    WALLET = "wallet"
-    ENS = "ens"
-    CONTRACT = "contract"
-    TOKEN = "token"  # nosec B105 - bandit false positive
-    COLLECTION = "collection"
-
-
 class FieldFormat(str, Enum):
     """
     The format of the field, that will be used to format the field value in a human readable way.
@@ -117,23 +105,36 @@ class DateParameters(Model):
 
 class AddressNameType(str, Enum):
     """
-    TODO
+    The type of address to display. Restrict allowable sources of names and MAY lead to additional checks from wallets.
     """
 
     WALLET = "wallet"
+    """Address is an account controlled by the wallet."""
+
     EOA = "eoa"
+    """Address is an Externally Owned Account."""
+
     CONTRACT = "contract"
+    """Address is a well known smartcontract."""
+
     TOKEN = "token"  # nosec B105 - bandit false positive
-    NFT = "nft"
+    """Address is a well known ERC-20 token."""
+
+    COLLECTION = "collection"
+    """Address is a well known NFT collection."""
 
 
 class AddressNameSources(str, Enum):
     """
-    TODO
+    Trusted Source for names.
     """
 
     LOCAL = "local"
+    """Address MAY be replaced with a local name trusted by user. Wallets MAY consider that local setting for sources
+    is always valid."""
+
     ENS = "ens"
+    """Address MAY be replaced with an associated ENS domain."""
 
 
 class AddressNameParameters(Model):
@@ -150,7 +151,7 @@ class AddressNameParameters(Model):
 
     sources: list[AddressNameSources] | None = Field(
         default=None,
-        title="TODO",
+        title="Trusted Sources",
         description="Trusted Sources for names, in order of preferences. See specification for more details on sources"
         "values.",
     )
@@ -216,10 +217,14 @@ class Screen(RootModel[dict[str, Any]]):
 
 class FieldsBase(Model):
     """
-    TODO
+    A field formatter, containing formatting information of a single field in a message.
     """
 
-    path: str = Field(title="TODO", description="TODO")
+    path: str = Field(
+        title="Path",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used to"
+        "extract the field value from the structured data.",
+    )
 
 
 SimpleIntent = Annotated[
@@ -241,7 +246,7 @@ ComplexIntent = Annotated[
 
 class FormatBase(Model):
     """
-    TODO
+    A structured data format specification, containing formatting information of fields in a single type of message.
     """
 
     id: Id | None = Field(

@@ -68,7 +68,7 @@ InputFieldParameters = Annotated[
 
 class InputFieldDefinition(Model):
     """
-    TODO
+    A field formatter, containing formatting information of a single field in a message.
     """
 
     id: Id | None = Field(
@@ -84,24 +84,34 @@ class InputFieldDefinition(Model):
         description="The label of the field, that will be displayed to the user in front of the formatted field value.",
     )
 
-    format: FieldFormat | None = Field(title="TODO", description="TODO")
+    format: FieldFormat | None = Field(
+        title="Field Format",
+        description="The format of the field, that will be used to format the field value in a human readable way.",
+    )
 
-    params: InputFieldParameters | None = Field(default=None, title="TODO", description="TODO")
+    params: InputFieldParameters | None = Field(
+        default=None,
+        title="Format Parameters",
+        description="Format specific parameters that are used to format the field value in a human readable way.",
+    )
 
 
 class InputFieldDescription(InputFieldDefinition, FieldsBase):
     """
-    TODO
+    A field formatter, containing formatting information of a single field in a message.
     """
 
 
 class InputNestedFields(FieldsBase):
     """
-    TODO
+    A single set of field formats, allowing recursivity in the schema.
+
+    Used to group whole definitions for structures for instance. This allows nesting definitions of formats, but note
+    that support for deep nesting will be device dependent.
     """
 
     fields: list[ForwardRef("InputField")] = Field(  # type: ignore
-        title="TODO", description="TODO"
+        title="Fields", description="Nested fields formats."
     )
 
 
@@ -118,17 +128,29 @@ InputNestedFields.model_rebuild()
 
 class InputFormat(FormatBase):
     """
-    TODO
+    A structured data format specification, containing formatting information of fields in a single type of message.
     """
 
-    fields: list[InputField] = Field(title="TODO", description="TODO")
+    fields: list[InputField] = Field(
+        title="Field Formats set", description="An array containing the ordered definitions of fields formats."
+    )
 
 
 class InputDisplay(Model):
     """
-    TODO
+    Display Formatting Info Section.
     """
 
-    definitions: dict[str, InputFieldDefinition] | None = Field(default=None, title="TODO", description="TODO")
+    definitions: dict[str, InputFieldDefinition] | None = Field(
+        default=None,
+        title="Common Formatter Definitions",
+        description="A set of definitions that can be used to share formatting information between multiple messages /"
+        "functions. The definitions can be referenced by the key name in an internal path.",
+    )
 
-    formats: dict[str, InputFormat] = Field(title="TODO", description="TODO")
+    formats: dict[str, InputFormat] = Field(
+        title="List of field formats",
+        description="The list includes formatting info for each field of a structure. This list is indexed by a key"
+        "identifying uniquely the message's type in the abi. For smartcontracts, it is the selector of the"
+        "function or its signature; and for EIP712 messages it is the primaryType of the message.",
+    )
