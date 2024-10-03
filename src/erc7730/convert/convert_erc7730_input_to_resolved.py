@@ -288,13 +288,15 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             return AnyUrl(
                 str(url).replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/")
             )
-        return url
+        else:
+            return url
 
     @classmethod
     def _adapt_etherscan_uri(cls, url: AnyUrl) -> AnyUrl:
         if (api_key := os.environ.get("ETHERSCAN_API_KEY")) is not None:
             return AnyUrl(f"{url}&apikey={api_key}")
-        return url
+        else:
+            return url
 
     @classmethod
     def _get_schema_from_url(cls, url: AnyUrl) -> EIP712JsonSchema:
