@@ -24,7 +24,6 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
         if (tx_class := self._determine_tx_class(descriptor)) is None:
             # could not determine transaction type
             return None
-        out.info(title="Transaction type: ", message=str(tx_class))
         if (display := descriptor.display) is None:
             return None
         DisplayFormatChecker(tx_class, display).check(out)
@@ -61,23 +60,24 @@ class DisplayFormatChecker:
                 formats = self.display.formats
                 fields = self._get_all_displayed_fields(formats)
                 if not self._fields_contain("spender", fields):
-                    out.error(
-                        title="Missing spender in displayed fields",
-                        message="",
+                    out.warning(
+                        title="Expected Display field missing",
+                        message="Contract detected as permit but no spender field displayed",
                     )
                 if not self._fields_contain("amount", fields):
-                    out.error(
-                        title="Missing amount in displayed fields",
-                        message="",
+                    out.warning(
+                        title="Expected Display field missing",
+                        message="Contract detected as permit but no amount field displayed",
                     )
                 if (
                     not self._fields_contain("valid until", fields)
                     and not self._fields_contain("expiry", fields)
                     and not self._fields_contain("expiration", fields)
+                    and not self._fields_contain("deadline", fields)
                 ):
-                    out.error(
-                        title="Field not displayed",
-                        message="Missing expiration date in displayed fields for permit",
+                    out.warning(
+                        title="Expected Display field missing",
+                        message="Contract detected as permit but no expiration field displayed",
                     )
             case _:
                 pass

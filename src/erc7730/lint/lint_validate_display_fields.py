@@ -1,6 +1,6 @@
 from typing import final, override
 
-from erc7730.common.abi import compute_paths, compute_selector
+from erc7730.common.abi import compute_keccak, compute_paths, compute_selector, reduce_signature
 from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.common.paths import compute_eip712_paths, compute_format_paths
@@ -67,6 +67,10 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     )
 
     @classmethod
+    def _display(cls, selector: str, keccak: str) -> str:
+        return selector if selector == keccak else f"`{keccak}/{selector}`"
+
+    @classmethod
     def _validate_abi_paths(cls, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor.context, ResolvedContractContext):
             abi_paths_by_selector: dict[str, set[str]] = {}
@@ -75,22 +79,33 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     abi_paths_by_selector[compute_selector(abi)] = compute_paths(abi)
 
             for selector, fmt in descriptor.display.formats.items():
-                if selector not in abi_paths_by_selector:
+                keccak = selector
+                if not selector.startswith("0x"):
+                    if (reduced_signature := reduce_signature(selector)) is not None:
+                        keccak = compute_keccak(reduced_signature)
+                    else:
+                        out.error(
+                            title="Invalid selector",
+                            message=f"Selector {cls._display(selector, keccak)} is not a valid function signature.",
+                        )
+                        continue
+                if keccak not in abi_paths_by_selector:
                     out.error(
                         title="Invalid selector",
-                        message=f"Selector {selector} not found in ABI.",
+                        message=f"Selector {cls._display(selector, keccak)} not found in ABI.",
                     )
                     continue
                 format_paths = compute_format_paths(fmt).data_paths
-                abi_paths = abi_paths_by_selector[selector]
+                abi_paths = abi_paths_by_selector[keccak]
 
                 for path in abi_paths - format_paths:
                     out.warning(
                         title="Missing Display field",
-                        message=f"Display field for path `{path}` is missing for selector {selector}.",
+                        message=f"Display field for path `{path}` is missing for selector {cls._display(selector, 
+                                                                                                        keccak)}.",
                     )
                 for path in format_paths - abi_paths:
                     out.error(
                         title="Invalid Display field",
-                        message=f"Display field for path `{path}` is not in selector {selector}.",
+                        message=f"Display field for path `{path}` is not in selector {cls._display(selector, keccak)}.",
                     )

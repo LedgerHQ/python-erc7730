@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import cast
 
 from erc7730.model.context import EIP712Field, EIP712JsonSchema
 from erc7730.model.resolved.display import (
@@ -31,7 +32,7 @@ def compute_eip712_paths(schema: EIP712JsonSchema) -> set[str]:
             domain_type = domain.type
             if domain_type.endswith(ARRAY_SUFFIX):
                 domain_type = _remove_slicing(domain_type)
-                new_path += ARRAY_SUFFIX
+                new_path += f".{ARRAY_SUFFIX}"
             if domain_type in types:
                 append_paths(new_path, types[domain_type], types, paths)
             else:
@@ -70,10 +71,11 @@ def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
             match field:
                 case ResolvedFieldDescription():
                     add_path(path, field.path)
-                    if field.params and isinstance(field.params, TokenAmountParameters):  # FIXME model is not correct
-                        add_path(path, _remove_slicing(field.params.tokenPath))
+                    if field.params and isinstance(field.params, TokenAmountParameters):
+                        add_path(path, _remove_slicing(field.params.tokenPath).strip("."))
                 case ResolvedNestedFields():
-                    append_paths(_append_path(path, field.path), field.fields)  # type: ignore
+                    for nested_field in field.fields:
+                        append_paths(_append_path(path, field.path), cast(ResolvedField, nested_field))
 
     if format.fields is not None:
         for f in format.fields:

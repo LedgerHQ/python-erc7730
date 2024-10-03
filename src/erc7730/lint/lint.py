@@ -14,7 +14,6 @@ from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
 def lint_all_and_print_errors(paths: list[Path], gha: bool) -> bool:
-
     out = GithubAnnotationsAdder() if gha else ConsoleOutputAdder()
 
     lint_all(paths, out)

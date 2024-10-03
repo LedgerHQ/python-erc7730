@@ -1,3 +1,4 @@
+import os
 from typing import final, override
 
 import requests
@@ -111,9 +112,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     @classmethod
     def _convert_abis(cls, abis: list[ABI] | AnyUrl, out: OutputAdder) -> list[ABI] | None:
         if isinstance(abis, AnyUrl):
-            resp = requests.get(cls._adapt_uri(abis), timeout=10)  # type:ignore
-            resp.raise_for_status()
-            return RootModel[list[ABI]].model_validate(resp.json()).root
+            return cls._get_abi_from_url(abis)
 
         if isinstance(abis, list):
             return abis
@@ -156,9 +155,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     @classmethod
     def _convert_schema(cls, schema: EIP712JsonSchema | AnyUrl, out: OutputAdder) -> EIP712JsonSchema | None:
         if isinstance(schema, AnyUrl):
-            resp = requests.get(cls._adapt_uri(schema), timeout=10)  # type:ignore
-            resp.raise_for_status()
-            return EIP712JsonSchema.model_validate(resp.json())
+            return cls._get_schema_from_url(schema)
 
         if isinstance(schema, EIP712JsonSchema):
             return schema
@@ -283,10 +280,37 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_reference(cls, reference: InputReference, out: OutputAdder) -> ResolvedField | None:
-        raise NotImplementedError()  # TODO
+        raise NotImplementedError("_convert_reference is not implemented")  # TODO
 
     @classmethod
-    def _adapt_uri(cls, url: AnyUrl) -> AnyUrl:
-        return AnyUrl(
-            str(url).replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/")
-        )
+    def _adapt_github_uri(cls, url: AnyUrl) -> AnyUrl:
+        if url.host == "github.com":
+            return AnyUrl(
+                str(url).replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/")
+            )
+        return url
+
+    @classmethod
+    def _adapt_etherscan_uri(cls, url: AnyUrl) -> AnyUrl:
+        if (api_key := os.environ.get("ETHERSCAN_API_KEY")) is not None:
+            return AnyUrl(f"{url}&apikey={api_key}")
+        return url
+
+    @classmethod
+    def _get_schema_from_url(cls, url: AnyUrl) -> EIP712JsonSchema:
+        resp = requests.get(cls._adapt_github_uri(url), timeout=10)  # type:ignore
+        resp.raise_for_status()
+        return EIP712JsonSchema.model_validate(resp.json())
+
+    @classmethod
+    def _get_abi_from_url(cls, url: AnyUrl) -> list[ABI]:
+        match url.host:
+            case "api.etherscan.io":
+                # TODO use client? Do we want to parse URL? Or use deployments?
+                resp = requests.get(cls._adapt_etherscan_uri(url), timeout=10)  # type:ignore
+                resp.raise_for_status()
+                return RootModel[list[ABI]].model_validate_json(resp.json()["result"]).root
+            case _:
+                resp = requests.get(cls._adapt_github_uri(url), timeout=10)  # type:ignore
+                resp.raise_for_status()
+                return RootModel[list[ABI]].model_validate(resp.json()).root

@@ -1,8 +1,14 @@
+import re
 from dataclasses import dataclass
 
 from eth_hash.auto import keccak
 
 from erc7730.model.abi import ABI, Component, Function, InputOutput
+
+_SOLIDITY_IDENTIFIER = r"[a-zA-Z$_][a-zA-Z$_0-9]*"
+_SOLIDITY_PARAMETER_LIST = r"(" + _SOLIDITY_IDENTIFIER + r" *(" + _SOLIDITY_IDENTIFIER + r") *,? *)*"
+_SOLIDITY_FUNCTION = r" *(" + _SOLIDITY_IDENTIFIER + r") *\((" + _SOLIDITY_PARAMETER_LIST + r")\)"
+_SOLIDITY_FUNCTION_RE = re.compile(_SOLIDITY_FUNCTION)
 
 
 def _append_path(root: str, path: str) -> str:
@@ -45,9 +51,25 @@ def compute_signature(abi: Function) -> str:
         return f"{abi.name}({compute_types(abi.inputs)})"
 
 
+def reduce_signature(signature: str) -> str | None:
+    """Remove parameter names from a function signature. return None if the signature is invalid."""
+    match = _SOLIDITY_FUNCTION_RE.fullmatch(signature)
+    if match:
+        function_name = match.group(1)
+        parameters = match.group(2).split(",")
+        parameters_types = [param.strip().partition(" ")[0] for param in parameters]
+        return f"{function_name}({','.join(parameters_types)})"
+    return None
+
+
+def compute_keccak(signature: str) -> str:
+    """Compute the keccak of a signature."""
+    return "0x" + keccak(signature.encode()).hex()[:8]
+
+
 def compute_selector(abi: Function) -> str:
     """Compute the selector of a Function."""
-    return "0x" + keccak(compute_signature(abi).encode()).hex()[:8]
+    return compute_keccak(compute_signature(abi))
 
 
 @dataclass(kw_only=True)

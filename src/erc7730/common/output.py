@@ -118,7 +118,7 @@ class ConsoleOutputAdder(OutputAdder):
             case Output.Level.WARNING:
                 color = "yellow"
             case Output.Level.ERROR:
-                color = "error"
+                color = "red"
             case _:
                 assert_never(level)
 
