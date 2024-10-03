@@ -22,8 +22,11 @@ class ERC7730Converter(ABC, Generic[InputType, OutputType]):
         """
         Convert a descriptor from/to ERC-7730.
 
-        Conversion may fail partially, in which case it should emit errors with ERROR level, or totally, in which case
-        it should emit errors with FATAL level.
+        Conversion may fail partially, in which case it should emit errors with WARNING level, or totally, in which case
+        it should emit errors with ERROR level.
+
+        Conversion can return a single descriptor, or multiple ones, in the form of a dictionary with unique
+        identifiers.
 
         :param descriptor: input descriptor to convert
         :param out: output sink

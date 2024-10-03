@@ -1,7 +1,6 @@
 from typing import Annotated, Any, ForwardRef
 
-from pydantic import Discriminator, Tag
-from pydantic import Field as PydanticField
+from pydantic import Discriminator, Field, Tag
 
 from erc7730.common.properties import has_property
 from erc7730.model.base import Model
@@ -22,10 +21,19 @@ from erc7730.model.types import Id
 
 
 class ResolvedEnumParameters(Model):
-    ref: str = PydanticField(alias="$ref")  # TODO must be inlined here
+    """
+    TODO
+    """
+
+    ref: str = Field(alias="$ref")  # TODO must be inlined here
 
 
 def get_param_discriminator(v: Any) -> str | None:
+    """
+    TODO
+    :param v:
+    :return:
+    """
     if has_property(v, "tokenPath"):
         return "token_amount"
     if has_property(v, "encoding"):
@@ -56,21 +64,50 @@ ResolvedFieldParameters = Annotated[
 
 
 class ResolvedFieldDefinition(Model):
-    id: Id | None = PydanticField(None, alias="$id")
-    label: str
-    format: FieldFormat | None
-    params: ResolvedFieldParameters | None = None
+    """
+    TODO
+    """
+
+    id: Id | None = Field(
+        alias="$id",
+        default=None,
+        title="Id",
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a"
+        "reference in device specific sections.",
+    )
+
+    label: str = Field(
+        title="Field Label",
+        description="The label of the field, that will be displayed to the user in front of the formatted field value.",
+    )
+
+    format: FieldFormat | None = Field(title="TODO", description="TODO")
+
+    params: ResolvedFieldParameters | None = Field(default=None, title="TODO", description="TODO")
 
 
 class ResolvedFieldDescription(ResolvedFieldDefinition, FieldsBase):
-    pass
+    """
+    TODO
+    """
 
 
 class ResolvedNestedFields(FieldsBase):
-    fields: list[ForwardRef("ResolvedField")]  # type: ignore
+    """
+    TODO
+    """
+
+    fields: list[ForwardRef("ResolvedField")] = Field(  # type: ignore
+        title="TODO", description="TODO"
+    )
 
 
 def get_field_discriminator(v: Any) -> str | None:
+    """
+    TODO
+    :param v:
+    :return:
+    """
     if has_property(v, "fields"):
         return "nested_fields"
     if has_property(v, "label"):
@@ -88,9 +125,18 @@ ResolvedNestedFields.model_rebuild()
 
 
 class ResolvedFormat(FormatBase):
-    fields: list[ResolvedField]
+    """
+    TODO
+    """
+
+    fields: list[ResolvedField] = Field(title="TODO", description="TODO")
 
 
 class ResolvedDisplay(Model):
-    definitions: dict[str, ResolvedFieldDefinition] | None = None
-    formats: dict[str, ResolvedFormat]
+    """
+    TODO
+    """
+
+    definitions: dict[str, ResolvedFieldDefinition] | None = Field(default=None, title="TODO", description="TODO")
+
+    formats: dict[str, ResolvedFormat] = Field(title="TODO", description="TODO")

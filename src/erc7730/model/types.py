@@ -9,6 +9,10 @@ from typing import Annotated
 
 from pydantic import Field
 
-Id = Annotated[str, Field(min_length=1)]
-ContractAddress = Annotated[str, Field(min_length=0, max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")]
-Path = Annotated[str, Field(pattern=r"^[a-zA-Z0-9.\[\]_@\$\#]+")]
+Id = Annotated[str, Field(title="TODO", description="TODO", min_length=1)]
+
+ContractAddress = Annotated[
+    str, Field(title="TODO", description="TODO", min_length=0, max_length=64, pattern=r"^[a-zA-Z0-9_\-]+$")
+]
+
+Path = Annotated[str, Field(title="TODO", description="TODO", pattern=r"^[a-zA-Z0-9.\[\]_@\$\#]+")]

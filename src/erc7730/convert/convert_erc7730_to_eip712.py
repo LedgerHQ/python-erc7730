@@ -1,18 +1,28 @@
 from typing import assert_never, final, override
 
 from eip712 import (
-    EIP712ContractDescriptor,
-    EIP712DAppDescriptor,
-    EIP712Field,
-    EIP712Format,
-    EIP712Mapper,
-    EIP712MessageDescriptor,
+    EIP712ContractDescriptor as LegacyEIP712ContractDescriptor,
+)
+from eip712 import (
+    EIP712DAppDescriptor as LegacyEIP712DAppDescriptor,
+)
+from eip712 import (
+    EIP712Field as LegacyEIP712Field,
+)
+from eip712 import (
+    EIP712Format as LegacyEIP712Format,
+)
+from eip712 import (
+    EIP712Mapper as LegacyEIP712Mapper,
+)
+from eip712 import (
+    EIP712MessageDescriptor as LegacyEIP712MessageDescriptor,
 )
 
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, EIP712JsonSchema, NameType
+from erc7730.model.context import Deployment, EIP712Field, EIP712JsonSchema
 from erc7730.model.display import (
     FieldFormat,
     TokenAmountParameters,
@@ -27,7 +37,7 @@ from erc7730.model.resolved.display import (
 
 
 @final
-class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP712DAppDescriptor]):
+class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, LegacyEIP712DAppDescriptor]):
     """
     Converts ERC-7730 descriptor to Ledger legacy EIP-712 descriptor.
 
@@ -37,7 +47,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
     @override
     def convert(
         self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
-    ) -> dict[str, EIP712DAppDescriptor] | None:
+    ) -> dict[str, LegacyEIP712DAppDescriptor] | None:
         # note: model_construct() needs to be used here due to bad conception of EIP-712 library,
         # which adds computed fields on validation
 
@@ -51,7 +61,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
         if (contract_name := descriptor.metadata.owner) is None:
             return out.error("metadata.owner is not defined")
 
-        messages: list[EIP712MessageDescriptor] = []
+        messages: list[LegacyEIP712MessageDescriptor] = []
         for primary_type, format in descriptor.display.formats.items():
             schema = self._get_schema(primary_type, context.eip712.schemas, out)
 
@@ -59,16 +69,16 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
                 continue
 
             messages.append(
-                EIP712MessageDescriptor.model_construct(
+                LegacyEIP712MessageDescriptor.model_construct(
                     schema=schema,
-                    mapper=EIP712Mapper.model_construct(
+                    mapper=LegacyEIP712Mapper.model_construct(
                         label=primary_type,
                         fields=[out_field for in_field in format.fields for out_field in self.convert_field(in_field)],
                     ),
                 )
             )
 
-        descriptors: dict[str, EIP712DAppDescriptor] = {}
+        descriptors: dict[str, LegacyEIP712DAppDescriptor] = {}
         for deployment in context.eip712.deployments:
             output_descriptor = self._build_network_descriptor(deployment, dapp_name, contract_name, messages, out)
             if output_descriptor is not None:
@@ -81,18 +91,18 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
         deployment: Deployment,
         dapp_name: str,
         contract_name: str,
-        messages: list[EIP712MessageDescriptor],
+        messages: list[LegacyEIP712MessageDescriptor],
         out: OutputAdder,
-    ) -> EIP712DAppDescriptor | None:
+    ) -> LegacyEIP712DAppDescriptor | None:
         if (network := ledger_network_id(deployment.chainId)) is None:
             return out.error(f"network id {deployment.chainId} not supported")
 
-        return EIP712DAppDescriptor.model_construct(
+        return LegacyEIP712DAppDescriptor.model_construct(
             blockchainName=network,
             chainId=deployment.chainId,
             name=dapp_name,
             contracts=[
-                EIP712ContractDescriptor.model_construct(
+                LegacyEIP712ContractDescriptor.model_construct(
                     address=deployment.address.lower(), contractName=contract_name, messages=messages
                 )
             ],
@@ -101,50 +111,50 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, EIP71
     @classmethod
     def _get_schema(
         cls, primary_type: str, schemas: list[EIP712JsonSchema], out: OutputAdder
-    ) -> dict[str, list[NameType]] | None:
+    ) -> dict[str, list[EIP712Field]] | None:
         for schema in schemas:
             if schema.primaryType == primary_type:
                 return schema.types
         return out.error(f"schema for type {primary_type} not found")
 
     @classmethod
-    def convert_field(cls, field: ResolvedField) -> list[EIP712Field]:
+    def convert_field(cls, field: ResolvedField) -> list[LegacyEIP712Field]:
         if isinstance(field, ResolvedNestedFields):
             return [out_field for in_field in field.fields for out_field in cls.convert_field(in_field)]
         return [cls.convert_field_description(field)]
 
     @classmethod
-    def convert_field_description(cls, field: ResolvedFieldDescription) -> EIP712Field:
+    def convert_field_description(cls, field: ResolvedFieldDescription) -> LegacyEIP712Field:
         asset_path: str | None = None
-        field_format: EIP712Format | None = None
+        field_format: LegacyEIP712Format | None = None
         match field.format:
             case FieldFormat.TOKEN_AMOUNT:
                 if field.params is not None and isinstance(field.params, TokenAmountParameters):
                     asset_path = field.params.tokenPath
-                field_format = EIP712Format.AMOUNT
+                field_format = LegacyEIP712Format.AMOUNT
             case FieldFormat.AMOUNT:
-                field_format = EIP712Format.AMOUNT
+                field_format = LegacyEIP712Format.AMOUNT
             case FieldFormat.DATE:
-                field_format = EIP712Format.DATETIME
+                field_format = LegacyEIP712Format.DATETIME
             case FieldFormat.ADDRESS_NAME:
-                field_format = EIP712Format.RAW
+                field_format = LegacyEIP712Format.RAW
             case FieldFormat.ENUM:
-                field_format = EIP712Format.RAW
+                field_format = LegacyEIP712Format.RAW
             case FieldFormat.UNIT:
-                field_format = EIP712Format.RAW
+                field_format = LegacyEIP712Format.RAW
             case FieldFormat.DURATION:
-                field_format = EIP712Format.RAW
+                field_format = LegacyEIP712Format.RAW
             case FieldFormat.NFT_NAME:
-                field_format = EIP712Format.RAW
+                field_format = LegacyEIP712Format.RAW
             case FieldFormat.CALL_DATA:
-                field_format = EIP712Format.RAW
+                field_format = LegacyEIP712Format.RAW
             case FieldFormat.RAW:
-                field_format = EIP712Format.RAW
+                field_format = LegacyEIP712Format.RAW
             case None:
                 field_format = None
             case _:
                 assert_never(field.format)
-        return EIP712Field(
+        return LegacyEIP712Field(
             path=field.path,
             label=field.label,
             assetPath=asset_path,

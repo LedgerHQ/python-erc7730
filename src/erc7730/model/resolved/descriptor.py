@@ -2,11 +2,12 @@
 Module implementing an object model for ERC-7730 resolved descriptors.
 
 This model represents descriptors after resolution phase:
- - URLs have been fetched
- - References have been inlined
- - Constants have been inlined
- - Enums have been inlined
- - Selectors have been converted to 4 bytes form
+    - URLs have been fetched
+    - Contract addresses have been normalized to lowercase
+    - References have been inlined
+    - Constants have been inlined
+    - Field definitions have been inlined
+    - Selectors have been converted to 4 bytes form
 """
 
 from pydantic import Field
@@ -24,11 +25,12 @@ class ResolvedERC7730Descriptor(Model):
     An ERC7730 Clear Signing descriptor.
 
     This model represents descriptors after resolution phase:
-     - URLs have been fetched
-     - References have been inlined
-     - Constants have been inlined
-     - Enums have been inlined
-     - Selectors have been converted to 4 bytes form
+        - URLs have been fetched
+        - Contract addresses have been normalized to lowercase
+        - References have been inlined
+        - Constants have been inlined
+        - Field definitions have been inlined
+        - Selectors have been converted to 4 bytes form
 
     Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs
 
@@ -36,8 +38,9 @@ class ResolvedERC7730Descriptor(Model):
     """
 
     schema_: str | None = Field(
-        None,
         alias="$schema",
+        default=None,
+        title="Schema URL",
         description="The schema that the document should conform to. This should be the URL of a version of the clear "
         "signing JSON schemas available under "
         "https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs",

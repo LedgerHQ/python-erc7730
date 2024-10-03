@@ -21,6 +21,8 @@ class InputERC7730Descriptor(Model):
     """
     An ERC7730 Clear Signing descriptor.
 
+    This model is directly serializable back the original JSON document.
+
     Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs
 
     JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/master/specs/erc7730-v1.schema.json

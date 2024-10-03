@@ -50,7 +50,17 @@ from erc7730.model.resolved.display import (
 
 @final
 class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedERC7730Descriptor]):
-    """Converts ERC-7730 descriptor input to resolved form."""
+    """
+    Converts ERC-7730 descriptor input to resolved form.
+
+    After conversion, the descriptor is in resolved form:
+     - URLs have been fetched
+     - Contract addresses have been normalized to lowercase (TODO not implemented)
+     - References have been inlined (TODO not implemented)
+     - Constants have been inlined (TODO not implemented)
+     - Field definitions have been inlined (TODO not implemented)
+     - Selectors have been converted to 4 bytes form (TODO not implemented)
+    """
 
     @override
     def convert(self, descriptor: InputERC7730Descriptor, out: OutputAdder) -> ResolvedERC7730Descriptor | None:

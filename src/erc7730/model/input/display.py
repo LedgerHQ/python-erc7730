@@ -1,7 +1,6 @@
 from typing import Annotated, Any, ForwardRef
 
-from pydantic import Discriminator, Tag
-from pydantic import Field as PydanticField
+from pydantic import Discriminator, Field, Tag
 
 from erc7730.common.properties import has_property
 from erc7730.model.base import Model
@@ -22,15 +21,31 @@ from erc7730.model.types import Id
 
 
 class InputReference(FieldsBase):
-    ref: str = PydanticField(alias="$ref")
-    params: dict[str, str] | None = None  # FIXME wrong
+    """
+    TODO
+    """
+
+    ref: str = Field(alias="$ref", title="TODO", description="TODO")
+
+    params: dict[str, str] | None = Field(  # FIXME wrong
+        default=None, title="TODO", description="TODO"
+    )
 
 
 class InputEnumParameters(Model):
-    ref: str = PydanticField(alias="$ref")
+    """
+    TODO
+    """
+
+    ref: str = Field(alias="$ref", title="TODO", description="TODO")
 
 
 def get_param_discriminator(v: Any) -> str | None:
+    """
+    TODO
+    :param v:
+    :return:
+    """
     if has_property(v, "tokenPath"):
         return "token_amount"
     if has_property(v, "encoding"):
@@ -61,21 +76,50 @@ InputFieldParameters = Annotated[
 
 
 class InputFieldDefinition(Model):
-    id: Id | None = PydanticField(None, alias="$id")
-    label: str
-    format: FieldFormat | None
-    params: InputFieldParameters | None = None
+    """
+    TODO
+    """
+
+    id: Id | None = Field(
+        alias="$id",
+        default=None,
+        title="Id",
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a"
+        "reference in device specific sections.",
+    )
+
+    label: str = Field(
+        title="Field Label",
+        description="The label of the field, that will be displayed to the user in front of the formatted field value.",
+    )
+
+    format: FieldFormat | None = Field(title="TODO", description="TODO")
+
+    params: InputFieldParameters | None = Field(default=None, title="TODO", description="TODO")
 
 
 class InputFieldDescription(InputFieldDefinition, FieldsBase):
-    pass
+    """
+    TODO
+    """
 
 
 class InputNestedFields(FieldsBase):
-    fields: list[ForwardRef("InputField")]  # type: ignore
+    """
+    TODO
+    """
+
+    fields: list[ForwardRef("InputField")] = Field(  # type: ignore
+        title="TODO", description="TODO"
+    )
 
 
 def get_field_discriminator(v: Any) -> str | None:
+    """
+    TODO
+    :param v:
+    :return:
+    """
     if has_property(v, "$ref"):
         return "reference"
     if has_property(v, "fields"):
@@ -97,9 +141,18 @@ InputNestedFields.model_rebuild()
 
 
 class InputFormat(FormatBase):
-    fields: list[InputField]
+    """
+    TODO
+    """
+
+    fields: list[InputField] = Field(title="TODO", description="TODO")
 
 
 class InputDisplay(Model):
-    definitions: dict[str, InputFieldDefinition] | None = None
-    formats: dict[str, InputFormat]
+    """
+    TODO
+    """
+
+    definitions: dict[str, InputFieldDefinition] | None = Field(default=None, title="TODO", description="TODO")
+
+    formats: dict[str, InputFormat] = Field(title="TODO", description="TODO")

@@ -7,26 +7,46 @@ JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/mas
 
 from datetime import datetime
 
+from pydantic import Field
+
 from erc7730.model.base import Model
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
 class OwnerInfo(Model):
-    legalName: str
-    lastUpdate: datetime | None
-    url: str
+    """
+    TODO
+    """
+
+    legalName: str = Field(title="TODO", description="TODO")
+    lastUpdate: datetime | None = Field(title="TODO", description="TODO")
+    url: str = Field(title="TODO", description="TODO")
 
 
 class TokenInfo(Model):
-    name: str
-    ticker: str
-    decimals: int
+    """
+    TODO
+    """
+
+    name: str = Field(title="TODO", description="TODO")
+
+    ticker: str = Field(title="TODO", description="TODO")
+
+    decimals: int = Field(title="TODO", description="TODO")
 
 
 class Metadata(Model):
-    owner: str | None = None
-    info: OwnerInfo | None = None
-    token: TokenInfo | None = None
-    constants: dict[str, str] | None = None
-    enums: dict[str, str | dict[str, str]] | None = None
+    """
+    TODO
+    """
+
+    owner: str | None = Field(default=None, title="TODO", description="TODO")
+
+    info: OwnerInfo | None = Field(default=None, title="TODO", description="TODO")
+
+    token: TokenInfo | None = Field(default=None, title="TODO", description="TODO")
+
+    constants: dict[str, str] | None = Field(default=None, title="TODO", description="TODO")
+
+    enums: dict[str, str | dict[str, str]] | None = Field(default=None, title="TODO", description="TODO")

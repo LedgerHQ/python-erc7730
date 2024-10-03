@@ -1,8 +1,7 @@
 from enum import Enum
 from typing import Any
 
-from pydantic import Field as PydanticField
-from pydantic import RootModel
+from pydantic import Field, RootModel
 
 from erc7730.model.base import Model
 from erc7730.model.types import Id
@@ -11,6 +10,10 @@ from erc7730.model.types import Id
 
 
 class Source(str, Enum):
+    """
+    TODO
+    """
+
     WALLET = "wallet"
     ENS = "ens"
     CONTRACT = "contract"
@@ -19,6 +22,10 @@ class Source(str, Enum):
 
 
 class FieldFormat(str, Enum):
+    """
+    TODO
+    """
+
     RAW = "raw"
     ADDRESS_NAME = "addressName"
     CALL_DATA = "calldata"
@@ -32,22 +39,41 @@ class FieldFormat(str, Enum):
 
 
 class TokenAmountParameters(Model):
-    tokenPath: str
-    nativeCurrencyAddress: str | None = None
-    threshold: str | None = None
-    message: str | None = None
+    """
+    Token Amount Formatting Parameters.
+    """
+
+    tokenPath: str = Field(title="Token Path", description="The path to the token address in the structured data, or in the ERC 7730 file.")
+
+    nativeCurrencyAddress: str | None = Field(default=None, title="Native Currency Address", description="An address equal to this value is interpreted as an amount in native currency rather than a token.")
+
+    threshold: str | None = Field(default=None, title="Unlimited Threshold", description="The threshold above which the amount should be displayed using the message parameter rather than the real amount.")
+
+    message: str | None = Field(default=None, title="Unlimited Message", description="The message to display when the amount is above the threshold.")
 
 
 class DateEncoding(str, Enum):
+    """
+    The encoding for a date.
+    """
+
     BLOCKHEIGHT = "blockheight"
     TIMESTAMP = "timestamp"
 
 
 class DateParameters(Model):
-    encoding: DateEncoding
+    """
+    Date Formatting Parameters
+    """
+
+    encoding: DateEncoding = Field(title="Date Encoding", description="The encoding of the date.")
 
 
 class AddressNameType(str, Enum):
+    """
+    TODO
+    """
+
     WALLET = "wallet"
     EOA = "eoa"
     CONTRACT = "contract"
@@ -56,40 +82,83 @@ class AddressNameType(str, Enum):
 
 
 class AddressNameSources(str, Enum):
+    """
+    TODO
+    """
+
     LOCAL = "local"
     ENS = "ens"
 
 
 class AddressNameParameters(Model):
-    type: AddressNameType | None = None
-    sources: list[AddressNameSources] | None = None
+    """
+    TODO
+    """
+
+    type: AddressNameType | None = Field(default=None, title="TODO", description="TODO")
+
+    sources: list[AddressNameSources] | None = Field(default=None, title="TODO", description="TODO")
 
 
 class CallDataParameters(Model):
-    selector: str | None = None
-    calleePath: str | None = None
+    """
+    TODO
+    """
+
+    selector: str | None = Field(default=None, title="TODO", description="TODO")
+
+    calleePath: str | None = Field(default=None, title="TODO", description="TODO")
 
 
 class NftNameParameters(Model):
-    collectionPath: str
+    """
+    NFT Names Formatting Parameters.
+    """
+
+    collectionPath: str = Field(title="Collection Path", description="The path to the collection in the structured data.")
 
 
 class UnitParameters(Model):
-    base: str
-    decimals: int | None = None
-    prefix: bool | None = None
+    """
+    TODO
+    """
+
+    base: str = Field(title="TODO", description="TODO")
+
+    decimals: int | None = Field(default=None, title="TODO", description="TODO")
+
+    prefix: bool | None = Field(default=None, title="TODO", description="TODO")
 
 
 class Screen(RootModel[dict[str, Any]]):
-    """Screen"""
+    """
+    TODO
+    """
 
 
 class FieldsBase(Model):
-    path: str
+    """
+    TODO
+    """
+
+    path: str = Field(title="TODO", description="TODO")
 
 
 class FormatBase(Model):
-    id: Id | None = PydanticField(None, alias="$id")
-    intent: str | dict[str, str] | None = None
-    required: list[str] | None = None
-    screens: dict[str, list[Screen]] | None = None
+    """
+    TODO
+    """
+
+    id: Id | None = Field(
+        alias="$id",
+        default=None,
+        title="Id",
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a"
+        "reference in device specific sections.",
+    )
+
+    intent: str | dict[str, str] | None = Field(default=None, title="TODO", description="TODO")
+
+    required: list[str] | None = Field(default=None, title="TODO", description="TODO")
+
+    screens: dict[str, list[Screen]] | None = Field(default=None, title="TODO", description="TODO")
