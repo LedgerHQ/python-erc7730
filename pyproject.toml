@@ -23,7 +23,7 @@ dependencies = [
     "eip712-clearsign>=2.1.0",
     "requests>=2.32.3",
     "typer>=0.12.5",
-    "eth-hash[pycryptodome]>=0.7.0",
+    "eth-utils>=5.0.0",
     "jsonschema",
     "eth_hash",
     "rich",
@@ -107,7 +107,17 @@ omit = ["tests/*"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "N", "UP", "B", "SIM", "I", "TID", "RUF"] # see https://docs.astral.sh/ruff/rules
+select = [
+    "E",
+    "F",
+    "N",
+    "UP",
+    "B",
+    "SIM",
+    "I",
+    "TID",
+    "RUF",
+] # see https://docs.astral.sh/ruff/rules
 
 [tool.mypy]
 plugins = ["pydantic.mypy"]

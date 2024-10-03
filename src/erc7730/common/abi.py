@@ -1,7 +1,9 @@
 import re
 from dataclasses import dataclass
+from typing import cast
 
-from eth_hash.auto import keccak
+from eth_typing import ABIFunction
+from eth_utils.abi import abi_to_signature, function_signature_to_4byte_selector
 
 from erc7730.model.abi import ABI, Component, Function, InputOutput
 
@@ -33,28 +35,13 @@ def compute_paths(abi: Function) -> set[str]:
 
 def compute_signature(abi: Function) -> str:
     """Compute the signature of a Function."""
-
-    def compute_types(params: list[InputOutput] | list[Component] | None) -> str:
-        def compute_type(param: InputOutput | Component) -> str:
-            if param.components:
-                return f"({compute_types(param.components)})"  # type: ignore
-            else:
-                return param.type
-
-        if params is None:
-            return ""
-        return ",".join([compute_type(param) for param in params])
-
-    if abi.signature:
-        return abi.signature
-    else:
-        return f"{abi.name}({compute_types(abi.inputs)})"
+    abi_function = cast(ABIFunction, abi.model_dump())
+    return abi_to_signature(abi_function)
 
 
 def reduce_signature(signature: str) -> str | None:
     """Remove parameter names from a function signature. return None if the signature is invalid."""
-    match = _SOLIDITY_FUNCTION_RE.fullmatch(signature)
-    if match:
+    if match := _SOLIDITY_FUNCTION_RE.fullmatch(signature):
         function_name = match.group(1)
         parameters = match.group(2).split(",")
         parameters_types = [param.strip().partition(" ")[0] for param in parameters]
@@ -62,14 +49,14 @@ def reduce_signature(signature: str) -> str | None:
     return None
 
 
-def compute_keccak(signature: str) -> str:
+def signature_to_selector(signature: str) -> str:
     """Compute the keccak of a signature."""
-    return "0x" + keccak(signature.encode()).hex()[:8]
+    return "0x" + function_signature_to_4byte_selector(signature).hex()
 
 
-def compute_selector(abi: Function) -> str:
+def function_to_selector(abi: Function) -> str:
     """Compute the selector of a Function."""
-    return compute_keccak(compute_signature(abi))
+    return signature_to_selector(compute_signature(abi))
 
 
 @dataclass(kw_only=True)
@@ -83,7 +70,7 @@ def get_functions(abis: list[ABI]) -> Functions:
     functions = Functions(functions={}, proxy=False)
     for abi in abis:
         if abi.type == "function":
-            functions.functions[compute_selector(abi)] = abi
+            functions.functions[function_to_selector(abi)] = abi
             if abi.name in ("proxyType", "getImplementation", "implementation"):
                 functions.proxy = True
     return functions
