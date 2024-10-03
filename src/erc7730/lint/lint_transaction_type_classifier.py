@@ -62,12 +62,12 @@ class DisplayFormatChecker:
                 if not self._fields_contain("spender", fields):
                     out.warning(
                         title="Expected Display field missing",
-                        message="Contract detected as permit but no spender field displayed",
+                        message="Contract detected as Permit but no spender field displayed",
                     )
                 if not self._fields_contain("amount", fields):
                     out.warning(
                         title="Expected Display field missing",
-                        message="Contract detected as permit but no amount field displayed",
+                        message="Contract detected as Permit but no amount field displayed",
                     )
                 if (
                     not self._fields_contain("valid until", fields)
@@ -77,7 +77,7 @@ class DisplayFormatChecker:
                 ):
                     out.warning(
                         title="Expected Display field missing",
-                        message="Contract detected as permit but no expiration field displayed",
+                        message="Contract detected as Permit but no expiration field displayed",
                     )
             case _:
                 pass
@@ -93,5 +93,5 @@ class DisplayFormatChecker:
 
     @classmethod
     def _fields_contain(cls, word: str, fields: set[str]) -> bool:
-        """To check if the provided keyword is contained in one of the fields (case insensitive)"""
+        """Check if the provided keyword is contained in one of the fields (case insensitive)"""
         return any(word.lower() in field.lower() for field in fields)
