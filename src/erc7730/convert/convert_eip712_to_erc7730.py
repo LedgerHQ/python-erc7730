@@ -2,15 +2,19 @@ import typing
 from typing import assert_never, final, override
 
 from eip712 import (
-    EIP712DAppDescriptor,
-    EIP712Field,
-    EIP712Format,
+    EIP712DAppDescriptor as LegacyEIP712DAppDescriptor,
+)
+from eip712 import (
+    EIP712Field as LegacyEIP712Field,
+)
+from eip712 import (
+    EIP712Format as LegacyEIP712Format,
 )
 from pydantic import AnyUrl
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, Domain, EIP712JsonSchema, NameType
+from erc7730.model.context import Deployment, Domain, EIP712Field, EIP712JsonSchema
 from erc7730.model.display import (
     FieldFormat,
     TokenAmountParameters,
@@ -28,7 +32,7 @@ from erc7730.model.metadata import Metadata
 
 
 @final
-class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC7730Descriptor]):
+class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, InputERC7730Descriptor]):
     """
     Converts Ledger legacy EIP-712 descriptor to ERC-7730 descriptor.
 
@@ -36,7 +40,9 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
     """
 
     @override
-    def convert(self, descriptor: EIP712DAppDescriptor, out: OutputAdder) -> dict[str, InputERC7730Descriptor] | None:
+    def convert(
+        self, descriptor: LegacyEIP712DAppDescriptor, out: OutputAdder
+    ) -> dict[str, InputERC7730Descriptor] | None:
         descriptors: dict[str, InputERC7730Descriptor] = {}
 
         for contract in descriptor.contracts:
@@ -45,8 +51,10 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
 
             for message in contract.messages:
                 # TODO improve typing on EIP-712 library
-                schema = typing.cast(dict[str, list[NameType]], message.schema_)
+                schema = typing.cast(dict[str, list[EIP712Field]], message.schema_)
                 mapper = message.mapper
+                # FIXME this is wrong,
+                #  see https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/21/files#r1785706984
                 primary_type = mapper.label
                 schemas.append(EIP712JsonSchema(primaryType=primary_type, types=schema))
                 fields = [self._convert_field(field) for field in mapper.fields]
@@ -81,20 +89,20 @@ class EIP712toERC7730Converter(ERC7730Converter[EIP712DAppDescriptor, InputERC77
         return descriptors
 
     @classmethod
-    def _convert_field(cls, field: EIP712Field) -> InputFieldDescription | InputReference | InputNestedFields:
+    def _convert_field(cls, field: LegacyEIP712Field) -> InputFieldDescription | InputReference | InputNestedFields:
         match field.format:
-            case EIP712Format.AMOUNT if field.assetPath is not None:
+            case LegacyEIP712Format.AMOUNT if field.assetPath is not None:
                 return InputFieldDescription(
                     label=field.label,
                     format=FieldFormat.TOKEN_AMOUNT,
                     params=TokenAmountParameters(tokenPath=field.assetPath),
                     path=field.path,
                 )
-            case EIP712Format.AMOUNT:
+            case LegacyEIP712Format.AMOUNT:
                 return InputFieldDescription(label=field.label, format=FieldFormat.AMOUNT, params=None, path=field.path)
-            case EIP712Format.DATETIME:
+            case LegacyEIP712Format.DATETIME:
                 return InputFieldDescription(label=field.label, format=FieldFormat.DATE, params=None, path=field.path)
-            case EIP712Format.RAW | None:
+            case LegacyEIP712Format.RAW | None:
                 return InputFieldDescription(label=field.label, format=FieldFormat.RAW, params=None, path=field.path)
             case _:
                 assert_never(field.format)
