@@ -30,7 +30,9 @@ class EIP712JsonSchema(Model):
 
     primaryType: EIP712Type = Field(title="Primary Type", description="The identifier of the schema primary type.")
 
-    types: dict[EIP712Type, list[EIP712Field]] = Field(title="Types", description="The schema types reachable from primary type.")
+    types: dict[EIP712Type, list[EIP712Field]] = Field(
+        title="Types", description="The schema types reachable from primary type."
+    )
 
 
 class EIP712Schema(Model):
