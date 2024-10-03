@@ -41,7 +41,9 @@ class InputContract(Model):
 
 class InputEIP712(Model):
     """
-    TODO
+    EIP 712 Binding.
+
+    The EIP-712 binding context is a set of constraints that must be verified by the message being signed.
     """
 
     deployments: list[Deployment] = Field(
@@ -62,12 +64,17 @@ class InputEIP712(Model):
         description="The domain separator value that must be matched by the message. In hex string representation.",
     )
 
-    schemas: list[EIP712JsonSchema | AnyUrl] = Field(title="TODO", description="TODO")
+    schemas: list[EIP712JsonSchema | AnyUrl] = Field(
+        title="EIP-712 messages schemas", description="Schemas of all messages."
+    )
 
 
 class InputContractContext(Model):
     """
-    TODO
+    Contract Binding Context.
+
+    The contract binding context is a set constraints that are used to bind the ERC7730 file to a specific smart
+    contract.
     """
 
     id: Id | None = Field(
@@ -78,12 +85,18 @@ class InputContractContext(Model):
         "reference in device specific sections.",
     )
 
-    contract: InputContract = Field(title="TODO", description="TODO")
+    contract: InputContract = Field(
+        title="Contract Binding Context",
+        description="The contract binding context is a set constraints that are used to bind the ERC7730 file to a"
+        "specific smart contract.",
+    )
 
 
 class InputEIP712Context(Model):
     """
-    TODO
+    EIP 712 Binding.
+
+    The EIP-712 binding context is a set of constraints that must be verified by the message being signed.
     """
 
     id: Id | None = Field(
@@ -94,4 +107,8 @@ class InputEIP712Context(Model):
         "reference in device specific sections.",
     )
 
-    eip712: InputEIP712 = Field(title="TODO", description="TODO")
+    eip712: InputEIP712 = Field(
+        title="EIP 712 Binding",
+        description="The EIP-712 binding context is a set of constraints that must be verified by the message being"
+        "signed.",
+    )

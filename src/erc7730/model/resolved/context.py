@@ -10,6 +10,8 @@ from erc7730.model.types import Id
 
 class ResolvedContract(Model):
     """
+    Contract Binding Context.
+
     The contract binding context is a set constraints that are used to bind the ERC7730 file to a specific smart
     contract.
     """
@@ -40,6 +42,12 @@ class ResolvedContract(Model):
 
 
 class ResolvedEIP712(Model):
+    """
+    EIP 712 Binding.
+
+    The EIP-712 binding context is a set of constraints that must be verified by the message being signed.
+    """
+
     deployments: list[Deployment] = Field(
         title="Deployments",
         description="An array of deployments describing where the contract is deployed. The target contract (Tx to or"
@@ -58,12 +66,15 @@ class ResolvedEIP712(Model):
         description="The domain separator value that must be matched by the message. In hex string representation.",
     )
 
-    schemas: list[EIP712JsonSchema]
+    schemas: list[EIP712JsonSchema] = Field(title="EIP-712 messages schemas", description="Schemas of all messages.")
 
 
 class ResolvedContractContext(Model):
     """
-    TODO
+    Contract Binding Context.
+
+    The contract binding context is a set constraints that are used to bind the ERC7730 file to a specific smart
+    contract.
     """
 
     id: Id | None = Field(
@@ -74,12 +85,18 @@ class ResolvedContractContext(Model):
         "reference in device specific sections.",
     )
 
-    contract: ResolvedContract = Field(title="TODO", description="TODO")
+    contract: ResolvedContract = Field(
+        title="Contract Binding Context",
+        description="The contract binding context is a set constraints that are used to bind the ERC7730 file to a"
+        "specific smart contract.",
+    )
 
 
 class ResolvedEIP712Context(Model):
     """
-    TODO
+    EIP 712 Binding.
+
+    The EIP-712 binding context is a set of constraints that must be verified by the message being signed.
     """
 
     id: Id | None = Field(
@@ -90,4 +107,8 @@ class ResolvedEIP712Context(Model):
         "reference in device specific sections.",
     )
 
-    eip712: ResolvedEIP712 = Field(title="TODO", description="TODO")
+    eip712: ResolvedEIP712 = Field(
+        title="EIP 712 Binding",
+        description="The EIP-712 binding context is a set of constraints that must be verified by the message being"
+        "signed.",
+    )
