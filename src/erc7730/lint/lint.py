@@ -14,8 +14,19 @@ from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
 def lint_all_and_print_errors(paths: list[Path], gha: bool) -> bool:
-    # FIXME adder must retain error state
-    lint_all(paths, GithubAnnotationsAdder() if gha else ConsoleOutputAdder())
+
+    out = GithubAnnotationsAdder() if gha else ConsoleOutputAdder()
+
+    lint_all(paths, out)
+
+    if out.has_errors:
+        print("[red]some errors found ❌[/red]")
+        return False
+
+    if out.has_warnings:
+        print("[yellow]some warnings found ⚠️[/yellow]")
+        return False
+
     print("[green]no issues found ✅[/green]")
     return True
 

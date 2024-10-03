@@ -27,6 +27,10 @@ class Output(BaseModel):
 class OutputAdder(ABC):
     """An output notice/warning/error sink."""
 
+    has_infos = False
+    has_warnings = False
+    has_errors = False
+
     @abstractmethod
     def info(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
@@ -56,18 +60,21 @@ class ListOutputAdder(OutputAdder, BaseModel):
     def info(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_infos = True
         self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.INFO))
 
     @override
     def warning(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_warnings = True
         self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.WARNING))
 
     @override
     def error(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_errors = True
         self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.ERROR))
 
 
@@ -79,18 +86,21 @@ class ConsoleOutputAdder(OutputAdder):
     def info(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_infos = True
         self._log(Output.Level.INFO, message, file, line, title)
 
     @override
     def warning(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_warnings = True
         self._log(Output.Level.WARNING, message, file, line, title)
 
     @override
     def error(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_errors = True
         self._log(Output.Level.ERROR, message, file, line, title)
 
     @classmethod
@@ -132,18 +142,21 @@ class GithubAnnotationsAdder(OutputAdder):
     def info(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_infos = True
         self._log(Output.Level.INFO, message, file, line, title)
 
     @override
     def warning(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_warnings = True
         self._log(Output.Level.WARNING, message, file, line, title)
 
     @override
     def error(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
+        self.has_errors = True
         self._log(Output.Level.ERROR, message, file, line, title)
 
     @classmethod
