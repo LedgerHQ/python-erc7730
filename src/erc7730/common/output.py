@@ -218,3 +218,31 @@ class GithubAnnotationsAdder(OutputAdder):
         log += f"::{message_formatted}"
 
         builtin_print(log)
+
+
+class FileOutputAdder(OutputAdder):
+    """An output adder wrapper that adds a specific file to all outputs."""
+
+    def __init__(self, delegate: OutputAdder, file: FilePath) -> None:
+        self.delegate: OutputAdder = delegate
+        self.file: FilePath = file
+
+    def debug(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self.delegate.debug(message=message, file=self.file, line=line, title=title)
+
+    def info(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self.delegate.info(message=message, file=self.file, line=line, title=title)
+
+    def warning(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self.delegate.warning(message=message, file=self.file, line=line, title=title)
+
+    def error(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self.delegate.error(message=message, file=self.file, line=line, title=title)

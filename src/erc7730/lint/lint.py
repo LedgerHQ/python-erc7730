@@ -3,7 +3,7 @@ from pathlib import Path
 from rich import print
 
 from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
-from erc7730.common.output import ConsoleOutputAdder, GithubAnnotationsAdder, OutputAdder
+from erc7730.common.output import ConsoleOutputAdder, FileOutputAdder, GithubAnnotationsAdder, OutputAdder
 from erc7730.convert.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.lint_base import MultiLinter
@@ -37,6 +37,7 @@ def lint_all(paths: list[Path], out: OutputAdder) -> None:
     Paths can be files or directories, in which case all JSON files in the directory are recursively linted.
 
     :param paths: paths to apply linter on
+    :param out: output adder
     :return: output errors
     """
     linter = MultiLinter(
@@ -70,13 +71,13 @@ def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder) -> None:
     """
     print(f"[italic]checking {path}...[/italic]")
 
-    # TODO wrap adder to add file path to all errors
+    adder = FileOutputAdder(delegate=out, file=path)
 
     try:
         input_descriptor = InputERC7730Descriptor.load(path)
-        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, out)
+        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, adder)
         if resolved_descriptor is not None:
-            linter.lint(resolved_descriptor, out)
+            linter.lint(resolved_descriptor, adder)
     except Exception as e:
         # TODO unwrap pydantic validation errors here to provide more user-friendly error messages
-        out.error(file=path, title="Failed to parse descriptor", message=str(e))
+        adder.error(file=path, title="Failed to parse descriptor", message=str(e))
