@@ -92,6 +92,7 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
 
     @classmethod
     def _convert_field(cls, field: LegacyEIP712Field) -> InputFieldDescription | InputReference | InputNestedFields:
+        # FIXME must generate nested fields for arrays
         match field.format:
             case LegacyEIP712Format.AMOUNT if field.assetPath is not None:
                 return InputFieldDescription(

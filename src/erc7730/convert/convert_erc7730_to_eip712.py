@@ -73,7 +73,11 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
                     schema=schema,
                     mapper=LegacyEIP712Mapper.model_construct(
                         label=primary_type,
-                        fields=[out_field for in_field in format.fields for out_field in self.convert_field(in_field)],
+                        fields=[
+                            out_field
+                            for in_field in format.fields
+                            for out_field in self.convert_field(in_field, prefix=None)
+                        ],
                     ),
                 )
             )
@@ -118,19 +122,20 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
         return out.error(f"schema for type {primary_type} not found")
 
     @classmethod
-    def convert_field(cls, field: ResolvedField) -> list[LegacyEIP712Field]:
+    def convert_field(cls, field: ResolvedField, prefix: str | None) -> list[LegacyEIP712Field]:
         if isinstance(field, ResolvedNestedFields):
-            return [out_field for in_field in field.fields for out_field in cls.convert_field(in_field)]
-        return [cls.convert_field_description(field)]
+            field_prefix = field.path if prefix is None else f"{prefix}.{field.path}"
+            return [out_field for in_field in field.fields for out_field in cls.convert_field(in_field, field_prefix)]
+        return [cls.convert_field_description(field, prefix)]
 
     @classmethod
-    def convert_field_description(cls, field: ResolvedFieldDescription) -> LegacyEIP712Field:
+    def convert_field_description(cls, field: ResolvedFieldDescription, prefix: str | None) -> LegacyEIP712Field:
         asset_path: str | None = None
         field_format: LegacyEIP712Format | None = None
         match field.format:
             case FieldFormat.TOKEN_AMOUNT:
                 if field.params is not None and isinstance(field.params, TokenAmountParameters):
-                    asset_path = field.params.tokenPath
+                    asset_path = field.params.tokenPath if prefix is None else f"{prefix}.{field.params.tokenPath}"
                 field_format = LegacyEIP712Format.AMOUNT
             case FieldFormat.AMOUNT:
                 field_format = LegacyEIP712Format.AMOUNT
