@@ -5,13 +5,13 @@ from eip712 import (
     EIP712DAppDescriptor as LegacyEIP712DAppDescriptor,
 )
 from eip712 import (
-    EIP712MessageDescriptor as LegacyEIP712MessageDescriptor,
-)
-from eip712 import (
     EIP712Field as LegacyEIP712Field,
 )
 from eip712 import (
     EIP712Format as LegacyEIP712Format,
+)
+from eip712 import (
+    EIP712MessageDescriptor as LegacyEIP712MessageDescriptor,
 )
 from pydantic import AnyUrl
 
