@@ -5,6 +5,9 @@ from eip712 import (
     EIP712DAppDescriptor as LegacyEIP712DAppDescriptor,
 )
 from eip712 import (
+    EIP712MessageDescriptor as LegacyEIP712MessageDescriptor,
+)
+from eip712 import (
     EIP712Field as LegacyEIP712Field,
 )
 from eip712 import (
@@ -53,9 +56,8 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
                 # TODO improve typing on EIP-712 library
                 schema = typing.cast(dict[str, list[EIP712Field]], message.schema_)
                 mapper = message.mapper
-                # FIXME this is wrong,
-                #  see https://github.com/LedgerHQ/clear-signing-erc7730-registry/pull/21/files#r1785706984
-                primary_type = mapper.label
+                # TODO make this public on EIP-712 library
+                primary_type = LegacyEIP712MessageDescriptor._schema_top_level_type(schema)
                 schemas.append(EIP712JsonSchema(primaryType=primary_type, types=schema))
                 fields = [self._convert_field(field) for field in mapper.fields]
                 formats[primary_type] = InputFormat(intent=None, fields=fields, required=None, screens=None)
