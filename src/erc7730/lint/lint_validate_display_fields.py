@@ -8,7 +8,7 @@ from erc7730.lint.common.paths import compute_eip712_paths, compute_format_paths
 from erc7730.model.resolved.context import EIP712JsonSchema, ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
-AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX = {r"(.+\.)?nonce", r"witness\..+"}
+AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX = {r"(.+\.)?nonce"}
 
 
 @final
