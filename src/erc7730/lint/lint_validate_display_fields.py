@@ -1,3 +1,4 @@
+import re
 from typing import final, override
 
 from erc7730.common.abi import compute_paths, function_to_selector, reduce_signature, signature_to_selector
@@ -6,6 +7,8 @@ from erc7730.lint import ERC7730Linter
 from erc7730.lint.common.paths import compute_eip712_paths, compute_format_paths
 from erc7730.model.resolved.context import EIP712JsonSchema, ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
+
+AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX = {r"(.+\.)?nonce", r"witness\..+"}
 
 
 @final
@@ -43,10 +46,16 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     format_paths = compute_format_paths(descriptor.display.formats[schema.primaryType]).data_paths
 
                     for path in eip712_paths - format_paths:
-                        out.warning(
-                            title="Missing Display field",
-                            message=f"Display field for path `{path}` is missing for message {schema.primaryType}.",
-                        )
+                        if any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
+                            out.debug(
+                                title="Optional Display field missing",
+                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}.",
+                            )
+                        else:
+                            out.warning(
+                                title="Missing Display field",
+                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}.",
+                            )
                     for path in format_paths - eip712_paths:
                         out.error(
                             title="Extra Display field",
@@ -99,11 +108,18 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 abi_paths = abi_paths_by_selector[keccak]
 
                 for path in abi_paths - format_paths:
-                    out.warning(
-                        title="Missing Display field",
-                        message=f"Display field for path `{path}` is missing for selector {cls._display(selector, 
-                                                                                                        keccak)}.",
-                    )
+                    if not any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
+                        out.debug(
+                            title="Optional Display field missing",
+                            message=f"Display field for path `{path}` is missing for selector {cls._display(selector, 
+                                                                                                            keccak)}.",
+                        )
+                    else:
+                        out.warning(
+                            title="Missing Display field",
+                            message=f"Display field for path `{path}` is missing for selector {cls._display(selector, 
+                                                                                                            keccak)}.",
+                        )
                 for path in format_paths - abi_paths:
                     out.error(
                         title="Invalid Display field",

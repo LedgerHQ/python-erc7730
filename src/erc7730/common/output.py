@@ -8,11 +8,12 @@ from rich import print
 
 
 class Output(BaseModel):
-    """An output notice/warning/error."""
+    """An output info/debug/warning/error."""
 
     class Level(IntEnum):
         """ERC7730Linter output level."""
 
+        DEBUG = auto()
         INFO = auto()
         WARNING = auto()
         ERROR = auto()
@@ -25,11 +26,17 @@ class Output(BaseModel):
 
 
 class OutputAdder(ABC):
-    """An output notice/warning/error sink."""
+    """An output debug/info/warning/error sink."""
 
     has_infos = False
     has_warnings = False
     has_errors = False
+
+    @abstractmethod
+    def debug(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        raise NotImplementedError()
 
     @abstractmethod
     def info(
@@ -55,6 +62,12 @@ class ListOutputAdder(OutputAdder, BaseModel):
     """An output adder that stores outputs in a list."""
 
     outputs: list[Output] = []
+
+    @override
+    def debug(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.DEBUG))
 
     @override
     def info(
@@ -83,6 +96,12 @@ class ConsoleOutputAdder(OutputAdder):
     """An output adder that prints to the console."""
 
     @override
+    def debug(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self._log(Output.Level.DEBUG, message, file, line, title)
+
+    @override
     def info(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
@@ -113,23 +132,25 @@ class ConsoleOutputAdder(OutputAdder):
         title: str | None = None,
     ) -> None:
         match level:
+            case Output.Level.DEBUG:
+                style = "bold"
             case Output.Level.INFO:
-                color = "blue"
+                style = "blue"
             case Output.Level.WARNING:
-                color = "yellow"
+                style = "yellow"
             case Output.Level.ERROR:
-                color = "red"
+                style = "red"
             case _:
                 assert_never(level)
 
-        log = f"[{color}]{level.name}"
+        log = f"[{style}]{level.name}"
         if file is not None:
             log += f": {file.name}"
         if line is not None:
             log += f" line {line}"
         if title is not None:
             log += f": {title}"
-        log += f"[/{color}]: {message}"
+        log += f"[/{style}]: {message}"
 
         print(log)
 
@@ -139,6 +160,12 @@ class GithubAnnotationsAdder(OutputAdder):
     """An output adder that formats errors to be parsed as Github annotations."""
 
     @override
+    def debug(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        pass
+
+    @override
     def info(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
@@ -169,6 +196,8 @@ class GithubAnnotationsAdder(OutputAdder):
         title: str | None = None,
     ) -> None:
         match level:
+            case Output.Level.DEBUG:
+                raise RuntimeError("GithubAnnotationsAdder does not support debug messages")
             case Output.Level.INFO:
                 lvl = "notice"
             case Output.Level.WARNING:
