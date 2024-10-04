@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import ValidationError
 from rich import print
 
 from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
@@ -78,6 +79,12 @@ def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder) -> None:
         resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, adder)
         if resolved_descriptor is not None:
             linter.lint(resolved_descriptor, adder)
+    except ValidationError as e:
+        for ex in e.errors(include_url=False, include_context=True, include_input=True):
+            loc = ex["loc"]
+            adder.error(title=f"{loc} is invalid", message=ex["msg"])
     except Exception as e:
         # TODO unwrap pydantic validation errors here to provide more user-friendly error messages
-        adder.error(file=path, title="Failed to parse descriptor", message=str(e))
+        adder.error(title="Failed to parse descriptor", message=str(e))
+    finally:
+        print()

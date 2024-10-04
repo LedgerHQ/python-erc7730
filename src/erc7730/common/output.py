@@ -143,14 +143,12 @@ class ConsoleOutputAdder(OutputAdder):
             case _:
                 assert_never(level)
 
-        log = f"[{style}]{level.name}"
-        if file is not None:
-            log += f": {file.name}"
+        log = f"[{style}]{level.name}: "
         if line is not None:
-            log += f" line {line}"
+            log += f"line {line}: "
         if title is not None:
-            log += f": {title}"
-        log += f"[/{style}]: {message}"
+            log += f"{title}: "
+        log += f"[/{style}]{message}"
 
         print(log)
 
