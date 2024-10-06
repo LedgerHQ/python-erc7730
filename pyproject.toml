@@ -25,7 +25,7 @@ dependencies = [
     "typer>=0.12.5",
     "eth-utils>=5.0.0",
     "jsonschema",
-    "eth_hash",
+    "eth_hash[pycryptodome]",
     "rich",
     "typer",
 ]
