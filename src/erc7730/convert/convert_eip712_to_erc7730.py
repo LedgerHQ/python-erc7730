@@ -1,4 +1,3 @@
-import typing
 from typing import assert_never, final, override
 
 from eip712 import (
@@ -10,15 +9,14 @@ from eip712 import (
 from eip712 import (
     EIP712Format as LegacyEIP712Format,
 )
-from eip712 import (
-    EIP712MessageDescriptor as LegacyEIP712MessageDescriptor,
-)
-from pydantic import AnyUrl
+from pydantic import AnyUrl, RootModel
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, Domain, EIP712Field, EIP712JsonSchema
+from erc7730.model.context import Deployment, Domain, EIP712Field, EIP712JsonSchema, EIP712Type
 from erc7730.model.display import (
+    DateEncoding,
+    DateParameters,
     FieldFormat,
     TokenAmountParameters,
 )
@@ -53,14 +51,23 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
             schemas: list[EIP712JsonSchema | AnyUrl] = []
 
             for message in contract.messages:
-                # TODO improve typing on EIP-712 library
-                schema = typing.cast(dict[str, list[EIP712Field]], message.schema_)
-                mapper = message.mapper
-                # TODO make this public on EIP-712 library
-                primary_type = LegacyEIP712MessageDescriptor._schema_top_level_type(schema)
+                # TODO Improve typing on EIP-712 library to use dict[EIP712Type, list[EIP712Field]]
+                #  we serialize/deserialize here to be sure to have the proper types, as in some context we have dicts
+                #  instead of classes.
+                schema_dict = RootModel(message.schema_).model_dump()
+                schema = RootModel[dict[EIP712Type, list[EIP712Field]]].model_validate(schema_dict).root
+
+                if (primary_type := self._get_primary_type(schema, out)) is None:
+                    return None
+
                 schemas.append(EIP712JsonSchema(primaryType=primary_type, types=schema))
-                fields = [self._convert_field(field) for field in mapper.fields]
-                formats[primary_type] = InputFormat(intent=None, fields=fields, required=None, screens=None)
+
+                formats[primary_type] = InputFormat(
+                    intent=message.mapper.label,
+                    fields=[self._convert_field(field) for field in message.mapper.fields],
+                    required=None,
+                    screens=None,
+                )
 
             descriptors[contract.address] = InputERC7730Descriptor(
                 context=InputEIP712Context(
@@ -94,18 +101,37 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
     def _convert_field(cls, field: LegacyEIP712Field) -> InputFieldDescription | InputReference | InputNestedFields:
         # FIXME must generate nested fields for arrays
         match field.format:
+            case LegacyEIP712Format.RAW | None:
+                return InputFieldDescription(path=field.path, label=field.label, format=FieldFormat.RAW, params=None)
             case LegacyEIP712Format.AMOUNT if field.assetPath is not None:
                 return InputFieldDescription(
+                    path=field.path,
                     label=field.label,
                     format=FieldFormat.TOKEN_AMOUNT,
                     params=TokenAmountParameters(tokenPath=field.assetPath),
-                    path=field.path,
                 )
             case LegacyEIP712Format.AMOUNT:
-                return InputFieldDescription(label=field.label, format=FieldFormat.AMOUNT, params=None, path=field.path)
+                return InputFieldDescription(path=field.path, label=field.label, format=FieldFormat.AMOUNT, params=None)
             case LegacyEIP712Format.DATETIME:
-                return InputFieldDescription(label=field.label, format=FieldFormat.DATE, params=None, path=field.path)
-            case LegacyEIP712Format.RAW | None:
-                return InputFieldDescription(label=field.label, format=FieldFormat.RAW, params=None, path=field.path)
+                return InputFieldDescription(
+                    path=field.path,
+                    label=field.label,
+                    format=FieldFormat.DATE,
+                    params=DateParameters(encoding=DateEncoding.TIMESTAMP),
+                )
             case _:
                 assert_never(field.format)
+
+    @classmethod
+    def _get_primary_type(cls, schema: dict[EIP712Type, list[EIP712Field]], out: OutputAdder) -> EIP712Type | None:
+        # TODO _schema_top_level_type() is wrong on EIP-712 library (fails with "SomeType[]" syntax)
+        referenced_types = {
+            field.type.rstrip("[]") for type_name, type_fields in schema.items() for field in type_fields
+        }
+        match len(roots := set(schema.keys()) - referenced_types - {"EIP712Domain"}):
+            case 0:
+                return out.error("Primary type not found on EIP-712 schema, it has circular references")
+            case 1:
+                return next(iter(roots))
+            case _:
+                return out.error(f"Cannot determine primary type on EIP-712 schema, it has orphan types: {roots}")

@@ -48,8 +48,8 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
     def convert(
         self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
     ) -> dict[str, LegacyEIP712DAppDescriptor] | None:
-        # note: model_construct() needs to be used here due to bad conception of EIP-712 library,
-        # which adds computed fields on validation
+        # FIXME model_construct() needs to be used here due to bad conception of EIP-712 library,
+        #  which adds computed fields on validation
 
         context = descriptor.context
         if not isinstance(context, ResolvedEIP712Context):
@@ -66,13 +66,15 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
             schema = self._get_schema(primary_type, context.eip712.schemas, out)
 
             if schema is None:
-                continue
+                return out.error(f"EIP-712 schema for {primary_type} is missing")
+
+            label = format.intent if isinstance(format.intent, str) else primary_type
 
             messages.append(
                 LegacyEIP712MessageDescriptor.model_construct(
                     schema=schema,
                     mapper=LegacyEIP712Mapper.model_construct(
-                        label=primary_type,
+                        label=label,
                         fields=[
                             out_field
                             for in_field in format.fields
