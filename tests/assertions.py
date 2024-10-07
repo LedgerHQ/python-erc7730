@@ -14,9 +14,14 @@ def assert_dict_equals(expected: dict[str, Any], actual: dict[str, Any]) -> None
         raise AssertionError("Dictionaries are not equal")
 
 
+def assert_json_str_equals(expected: str, actual: str) -> None:
+    """Assert deserialized JSON strings are equal."""
+    assert_dict_equals(json.loads(expected), json.loads(actual))
+
+
 def assert_model_json_equals(expected: ModelType, actual: ModelType) -> None:
     """Assert models serialize to same JSON, pretty printing differences to console."""
-    assert_dict_equals(json.loads(model_to_json_str(expected)), json.loads(model_to_json_str(actual)))
+    assert_json_str_equals(model_to_json_str(expected), model_to_json_str(actual))
 
 
 def assert_model_json_schema(model: ModelType, schema: Any) -> None:

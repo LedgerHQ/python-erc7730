@@ -28,6 +28,7 @@ dependencies = [
     "eth_hash[pycryptodome]",
     "rich",
     "typer",
+    "lark>=1.2.2",
 ]
 
 [project.urls]

@@ -90,3 +90,11 @@ class Factory(Model):
         title="Deploy Event signature",
         description="The event signature that the factory emits when deploying a new contract.",
     )
+
+
+class BindingContext(Model):
+    deployments: list[Deployment] = Field(
+        title="Deployments",
+        description="An array of deployments describing where the contract is deployed. The target contract (Tx to or"
+        "factory) MUST match one of those deployments.",
+    )

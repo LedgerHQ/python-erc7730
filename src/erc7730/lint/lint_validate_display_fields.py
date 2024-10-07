@@ -108,20 +108,19 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 abi_paths = abi_paths_by_selector[keccak]
 
                 for path in abi_paths - format_paths:
+                    function = cls._display(selector, keccak)
                     if not any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
                         out.debug(
                             title="Optional Display field missing",
-                            message=f"Display field for path `{path}` is missing for selector {cls._display(selector, 
-                                                                                                            keccak)}.",
+                            message=f"Display field for path `{path}` is missing for selector {function}.",
                         )
                     else:
                         out.warning(
                             title="Missing Display field",
-                            message=f"Display field for path `{path}` is missing for selector {cls._display(selector, 
-                                                                                                            keccak)}.",
+                            message=f"Display field for path `{path}` is missing for selector {function}.",
                         )
                 for path in format_paths - abi_paths:
                     out.error(
                         title="Invalid Display field",
-                        message=f"Display field for path `{path}` is not in selector {cls._display(selector, keccak)}.",
+                        message=f"Display field for path `{path}` is not in selector {function}.",
                     )
