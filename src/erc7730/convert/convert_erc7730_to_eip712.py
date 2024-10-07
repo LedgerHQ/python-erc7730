@@ -162,7 +162,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
             case _:
                 assert_never(field.format)
         return LegacyEIP712Field(
-            path=field.path,
+            path=field.path if prefix is None else f"{prefix}.{field.path}",
             label=field.label,
             assetPath=asset_path,
             format=field_format,
