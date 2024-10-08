@@ -141,5 +141,5 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
                 return out.error(
                     title="Invalid EIP-712 schema",
                     message="Primary type could not be determined on EIP-712 schema, as several types are not"
-                    "referenced by any other types. Please make sure your schema has a single root type.",
+                    "referenced by any other type. Please make sure your schema has a single root type.",
                 )
