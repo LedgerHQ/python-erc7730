@@ -33,13 +33,14 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     if schema.primaryType not in schema.types:
                         out.error(
                             title="Invalid EIP712 Schema",
-                            message=f"Primary type `{schema.primaryType}` not found in types.",
+                            message=f"Primary type `{schema.primaryType}` is not present in schema types. Please make"
+                            f"sure the EIP-712 includes a definition for the primary type.",
                         )
                         continue
                     if schema.primaryType not in descriptor.display.formats:
                         out.error(
                             title="Missing Display field",
-                            message=f"Display field for primary type `{schema.primaryType}` is missing.",
+                            message=f"Schema primary type `{schema.primaryType}` must have a display format defined.",
                         )
                         continue
                     eip712_paths = compute_eip712_paths(schema)
@@ -49,17 +50,22 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                         if any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
                             out.debug(
                                 title="Optional Display field missing",
-                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}.",
+                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}."
+                                f"If intentionally excluded, please add it to `exclude` list to avoid this"
+                                f"warning.",
                             )
                         else:
                             out.warning(
                                 title="Missing Display field",
-                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}.",
+                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}."
+                                f"If intentionally excluded, please add it to `exclude` list to avoid this"
+                                f"warning.",
                             )
                     for path in format_paths - eip712_paths:
                         out.error(
                             title="Extra Display field",
-                            message=f"Display field for path `{path}` is not in message {schema.primaryType}.",
+                            message=f"Display field for path `{path}` is not in message {schema.primaryType}. Please"
+                            f"check the field path is valid according to the EIP-712 schema.",
                         )
 
                 else:
@@ -72,7 +78,8 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 if fmt not in primary_types:
                     out.error(
                         title="Invalid Display field",
-                        message=f"Format message `{fmt}` is not in EIP712 schemas.",
+                        message=f"Format message `{fmt}` is not in EIP712 schemas. Please check the field path is valid"
+                        f"according to the EIP-712 schema.",
                     )
 
     @classmethod
