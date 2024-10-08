@@ -1,5 +1,5 @@
 import pytest
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 
 from erc7730.model.input.path import InputPath, InputPathAsJson
 from erc7730.model.path import (
@@ -22,13 +22,14 @@ def _test_valid_input_path(string: str, obj: InputPath, json: str) -> None:
     assert parse_path(string) == obj
     assert TypeAdapter(InputPath).validate_json(f'"{string}"') == obj
     assert TypeAdapter(InputPathAsJson).validate_json(json) == obj
-    # TODO test serialize back to string
+    assert str(obj) == string
 
 
 def _test_valid_resolved_path(string: str, obj: ResolvedPath, json: str) -> None:
     assert_json_str_equals(json, obj.to_json_string())
     assert parse_path(string) == obj
     assert TypeAdapter(ResolvedPath).validate_json(json) == obj
+    assert str(obj) == string
 
 
 def test_valid_input_container_path() -> None:
@@ -39,21 +40,52 @@ def test_valid_input_container_path() -> None:
     )
 
 
-def test_valid_input_data_path() -> None:
+def test_valid_input_data_path_absolute() -> None:
     _test_valid_input_path(
         string="#.params.[].[-2].[1:5].amountIn",
         obj=DataPath(
+            absolute=True,
             elements=[
                 Field(identifier="params"),
                 Array(),
                 ArrayElement(index=-2),
                 ArraySlice(start=1, end=5),
                 Field(identifier="amountIn"),
-            ]
+            ],
         ),
         json="""
             {
               "type": "data",
+              "absolute": true,
+              "elements": [
+                { "type": "field", "identifier": "params" },
+                { "type": "array" },
+                { "type": "array_element", "index": -2 },
+                { "type": "array_slice", "start": 1, "end": 5 },
+                { "type": "field", "identifier": "amountIn" }
+              ]
+            }
+        """,
+    )
+
+
+def test_valid_input_data_path_relative() -> None:
+    _test_valid_input_path(
+        string="params.[].[-2].[1:5].amountIn",
+        obj=DataPath(
+            absolute=False,
+            elements=[
+                Field(identifier="params"),
+                Array(),
+                ArrayElement(index=-2),
+                ArraySlice(start=1, end=5),
+                Field(identifier="amountIn"),
+            ],
+        ),
+        json="""
+            {
+              "type": "data",
+              "absolute": false,
               "elements": [
                 { "type": "field", "identifier": "params" },
                 { "type": "array" },
@@ -103,17 +135,19 @@ def test_valid_resolved_data_path() -> None:
     _test_valid_resolved_path(
         string="#.params.[].[-2].[1:5].amountIn",
         obj=DataPath(
+            absolute=True,
             elements=[
                 Field(identifier="params"),
                 Array(),
                 ArrayElement(index=-2),
                 ArraySlice(start=1, end=5),
                 Field(identifier="amountIn"),
-            ]
+            ],
         ),
         json="""
             {
               "type": "data",
+              "absolute": true,
               "elements": [
                 { "type": "field", "identifier": "params" },
                 { "type": "array" },
@@ -205,3 +239,10 @@ def test_invalid_array_used_in_descriptor_path() -> None:
     assert "Invalid path" in message
     assert "$.[]" in message
     assert "Expected one of" in message
+
+
+def test_invalid_relative_resolved_data_path() -> None:
+    with pytest.raises(ValidationError) as e:
+        TypeAdapter(ResolvedPath).validate_python(parse_path("params.[].[-2].[1:5].amountIn"))
+    message = str(e.value)
+    assert "A resolved data path must be absolute" in message

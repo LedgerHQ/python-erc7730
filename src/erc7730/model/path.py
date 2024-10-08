@@ -39,6 +39,9 @@ class Field(Model):
         pattern=r"^[a-zA-Z0-9_]+$",
     )
 
+    def __str__(self) -> str:
+        return self.identifier
+
 
 class ArrayElement(Model):
     """A path component designating a single element of an array."""
@@ -53,6 +56,9 @@ class ArrayElement(Model):
         title="Array Element",
         description="The index of the element in the array. It can be negative to count from the end of the array.",
     )
+
+    def __str__(self) -> str:
+        return f"[{self.index}]"
 
 
 class ArraySlice(Model):
@@ -82,6 +88,9 @@ class ArraySlice(Model):
             raise ValueError("Array slice start index must be lower than end index.")
         return self
 
+    def __str__(self) -> str:
+        return f"[{self.start}:{self.end}]"
+
 
 class Array(Model):
     """A path component designating all elements of an array (in which case, the path targets multiple values)."""
@@ -91,6 +100,9 @@ class Array(Model):
         title="Path Component Type",
         description="The path component type identifier (discriminator for path components discriminated union).",
     )
+
+    def __str__(self) -> str:
+        return "[]"
 
 
 class ContainerField(StrEnum):
@@ -133,7 +145,7 @@ class ContainerPath(Model):
     """
     Path applying to the container of the structured data to be signed.
 
-    Such paths are prefixed with "#".
+    Such paths are prefixed with "@".
     """
 
     type: Literal["container"] = PydanticField(
@@ -146,6 +158,9 @@ class ContainerPath(Model):
         title="Container field",
         description="The referenced field in the container, only some well-known values are allowed.",
     )
+
+    def __str__(self) -> str:
+        return f"@.{self.field}"
 
 
 class DataPath(Model):
@@ -162,6 +177,12 @@ class DataPath(Model):
         "data", title="Path Type", description="The path type identifier (discriminator for paths discriminated union)."
     )
 
+    absolute: bool = PydanticField(
+        title="Absolute",
+        description="Whether the path is absolute (starting from the structured data root) or relative (starting from"
+        "the current field).",
+    )
+
     elements: list[DataPathElement] = PydanticField(
         title="Elements",
         description="The path elements, as a list of references to be interpreted left to right from the structured"
@@ -169,7 +190,8 @@ class DataPath(Model):
         min_length=1,
     )
 
-    # TODO absolute vs relative data path
+    def __str__(self) -> str:
+        return f'{"#." if self.absolute else ""}{".".join(str(e) for e in self.elements)}'
 
 
 class DescriptorPath(Model):
@@ -194,20 +216,25 @@ class DescriptorPath(Model):
         min_length=1,
     )
 
+    def __str__(self) -> str:
+        return f'$.{".".join(str(e) for e in self.elements)}'
+
 
 PATH_PARSER = Lark(
     grammar=r"""
-        ?path: container_path | data_path | descriptor_path
+        ?path: descriptor_path | container_path | data_path
+    
+        descriptor_path: "$." descriptor_path_component ("." descriptor_path_component)*
+        ?descriptor_path_component: field | array_element
     
         container_path: "@." container_field
         !container_field: "to" | "value"
     
-        data_path: ["#."] data_path_component ("." data_path_component)*
+        ?data_path: absolute_data_path | relative_data_path
+        absolute_data_path: "#." data_path_component ("." data_path_component)*
+        relative_data_path: data_path_component ("." data_path_component)*
         ?data_path_component: field | array | array_element | array_slice
-    
-        descriptor_path: ["$."] descriptor_path_component ("." descriptor_path_component)*
-        ?descriptor_path_component: field | array_element
-    
+
         field: /[a-zA-Z0-9_]+/
         array: "[]"
         array_index: /-?[0-9]+/
@@ -244,15 +271,18 @@ class PathTransformer(Transformer_InPlaceRecursive):
         (value,) = ast
         return ContainerField(value)
 
+    def descriptor_path(self, ast: Any) -> DescriptorPath:
+        return DescriptorPath(elements=ast)
+
     def container_path(self, ast: Any) -> ContainerPath:
         (value,) = ast
         return ContainerPath(field=value)
 
-    def data_path(self, ast: Any) -> DataPath:
-        return DataPath(elements=ast)
+    def absolute_data_path(self, ast: Any) -> DataPath:
+        return DataPath(elements=ast, absolute=True)
 
-    def descriptor_path(self, ast: Any) -> DescriptorPath:
-        return DescriptorPath(elements=ast)
+    def relative_data_path(self, ast: Any) -> DataPath:
+        return DataPath(elements=ast, absolute=False)
 
 
 PATH_TRANSFORMER = PathTransformer()
