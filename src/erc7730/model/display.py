@@ -58,15 +58,18 @@ class TokenAmountParameters(Model):
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: str = Field(
-        title="Token Path", description="The path to the token address in the structured data, or in the ERC 7730 file."
+    tokenPath: str | None = Field(
+        title="Token Path",
+        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker"
+        "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
+        '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: str | None = Field(
+    nativeCurrencyAddress: str | list[str] | None = Field(
         default=None,
         title="Native Currency Address",
-        description="An address equal to this value is interpreted as an amount in native currency rather than a"
-        "token.",
+        description="An address or array of addresses, any of which are interpreted as an amount in native currency"
+        "rather than a token.",
     )
 
     threshold: str | None = Field(

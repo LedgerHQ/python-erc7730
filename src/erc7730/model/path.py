@@ -115,6 +115,9 @@ class ContainerField(StrEnum):
     VALUE = auto()
     """The native currency value of the transaction containing the structured data."""
 
+    FROM = auto()
+    """The address of the sender of the transaction / signer of the message."""
+
     TO = auto()
     """The destination address of the containing transaction, ie the target smart contract address."""
 
@@ -228,7 +231,7 @@ PATH_PARSER = Lark(
         ?descriptor_path_component: field | array_element
     
         container_path: "@." container_field
-        !container_field: "to" | "value"
+        !container_field: "from" | "to" | "value"
     
         ?data_path: absolute_data_path | relative_data_path
         absolute_data_path: "#." data_path_component ("." data_path_component)*
