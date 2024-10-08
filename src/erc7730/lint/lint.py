@@ -25,7 +25,7 @@ def lint_all_and_print_errors(paths: list[Path], gha: bool) -> bool:
 
     if out.has_warnings:
         print("[yellow]some warnings found ⚠️[/yellow]")
-        return False
+        return True
 
     print("[green]no issues found ✅[/green]")
     return True
