@@ -71,8 +71,12 @@ def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
             match field:
                 case ResolvedFieldDescription():
                     add_path(path, field.path)
-                    if field.params and isinstance(field.params, TokenAmountParameters):
-                        add_path(path, _remove_slicing(field.params.tokenPath).strip("."))
+                    if (
+                        (params := field.params)
+                        and isinstance(params, TokenAmountParameters)
+                        and (token_path := params.tokenPath) is not None
+                    ):
+                        add_path(path, _remove_slicing(token_path).strip("."))
                 case ResolvedNestedFields():
                     for nested_field in field.fields:
                         append_paths(_append_path(path, field.path), cast(ResolvedField, nested_field))

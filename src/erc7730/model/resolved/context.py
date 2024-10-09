@@ -2,25 +2,19 @@ from pydantic import AnyUrl, Field
 
 from erc7730.model.abi import ABI
 from erc7730.model.base import Model
-from erc7730.model.context import Deployment, Domain, EIP712JsonSchema, Factory
+from erc7730.model.context import BindingContext, Domain, EIP712JsonSchema, Factory
 from erc7730.model.types import Id
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class ResolvedContract(Model):
+class ResolvedContract(BindingContext):
     """
     Contract Binding Context.
 
     The contract binding context is a set constraints that are used to bind the ERC7730 file to a specific smart
     contract.
     """
-
-    deployments: list[Deployment] = Field(
-        title="Deployments",
-        description="An array of deployments describing where the contract is deployed. The target contract (Tx to or"
-        "factory) MUST match one of those deployments.",
-    )
 
     abi: list[ABI] = Field(
         title="ABI",
@@ -41,18 +35,12 @@ class ResolvedContract(Model):
     )
 
 
-class ResolvedEIP712(Model):
+class ResolvedEIP712(BindingContext):
     """
     EIP 712 Binding.
 
     The EIP-712 binding context is a set of constraints that must be verified by the message being signed.
     """
-
-    deployments: list[Deployment] = Field(
-        title="Deployments",
-        description="An array of deployments describing where the contract is deployed. The target contract (Tx to or"
-        "factory) MUST match one of those deployments.",
-    )
 
     domain: Domain | None = Field(
         default=None,
