@@ -277,7 +277,7 @@ class FormatBase(Model):
     excluded: list[str] | None = Field(
         default=None,
         title="Excluded fields",
-        description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that"
+        description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
         "has no formatter and is not declared in this list MAY be considered as an error by the wallet when"
         "interpreting the descriptor.",
     )
