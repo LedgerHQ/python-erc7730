@@ -49,7 +49,6 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     excluded = primary_type_format.excluded or []
 
                     for path in eip712_paths - format_paths:
-
                         allowed = False
                         for excluded_path in excluded:
                             if path.startswith(excluded_path):
@@ -128,7 +127,6 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 function = cls._display(selector, keccak)
 
                 for path in abi_paths - format_paths:
-
                     allowed = False
                     for excluded_path in excluded:
                         if path.startswith(excluded_path):
