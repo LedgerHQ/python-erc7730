@@ -24,6 +24,10 @@ jobs:
         timeout-minutes: 10
         uses: actions/checkout@v4
 
+      - name: Setup Graphviz
+        timeout-minutes: 10
+        uses: ts-graphviz/setup-graphviz@v2
+
       - name: Setup python / PDM
         timeout-minutes: 10
         uses: ./.github/actions/pdm
@@ -40,33 +44,17 @@ jobs:
         timeout-minutes: 10
         run: pdm build
 
-      - name: Build standalone application
-        timeout-minutes: 10
-        run: pdm exe
-
       - name: Generate library build attestations
         timeout-minutes: 10
         uses: LedgerHQ/actions-security/actions/attest@actions/attest-1
         with:
           subject-path: dist/*
 
-      - name: Generate application build attestations
-        timeout-minutes: 10
-        uses: LedgerHQ/actions-security/actions/attest@actions/attest-1
-        with:
-          subject-path: erc7730
-
       - name: Sign library artifacts
         timeout-minutes: 10
         uses: LedgerHQ/actions-security/actions/sign-blob@actions/sign-blob-1
         with:
           path: dist
-
-      - name: Sign application artifacts
-        timeout-minutes: 10
-        uses: LedgerHQ/actions-security/actions/sign-blob@actions/sign-blob-1
-        with:
-          path: erc7730
 
       - name: Upload library artifacts to Ledger Artifactory repository
         timeout-minutes: 10
@@ -76,12 +64,8 @@ jobs:
           PDM_PUBLISH_PASSWORD: ${{ steps.jfrog-login.outputs.oidc-token }}
         run: pdm publish --no-build
 
-      - name: Attach standalone application to Github release
-        uses: svenstaro/upload-release-action@v2
+      - name: Upload library artifacts to PyPI
         timeout-minutes: 10
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.ref }}
-          file: erc7730
-          asset_name: erc7730
-          overwrite: true
+        env:
+          PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_PUBLIC_API_TOKEN }}
+        run: pdm publish --no-build

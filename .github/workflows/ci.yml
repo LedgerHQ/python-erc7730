@@ -78,6 +78,14 @@ jobs:
             dependencies
           add_comment: true
 
+      - name: Get API keys
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          cat << EOF | jq -r 'to_entries[] | select(.key|endswith("_API_KEY")) | "\(.key)=\(.value)"' >> "$GITHUB_ENV"
+          ${{ toJSON(secrets) }}
+          EOF
+
       - name: Setup pre-commit cache
         timeout-minutes: 10
         uses: actions/cache@v4
@@ -88,6 +96,10 @@ jobs:
       - name: Setup python / PDM
         timeout-minutes: 10
         uses: ./.github/actions/pdm
+
+      - name: Setup Graphviz
+        timeout-minutes: 10
+        uses: ts-graphviz/setup-graphviz@v2
 
       - name: Install dependencies
         timeout-minutes: 10
@@ -117,7 +129,7 @@ jobs:
 
       - name: Publish test reports
         timeout-minutes: 10
-        if: always()
+        if: ${{ !cancelled() }}
         uses: pmeier/pytest-results-action@v0.7.1
         with:
           path: tests/.tests.xml
@@ -125,3 +137,33 @@ jobs:
           summary: true
           display-options: fEX
           fail-on-empty: false
+
+      - name: Setup docs cache
+        timeout-minutes: 10
+        if: ${{ !cancelled() }}
+        uses: actions/cache@v4
+        with:
+          path: docs/build
+          key: docs-cache-${{ hashFiles('docs') }}
+
+      - name: Build docs
+        timeout-minutes: 10
+        if: ${{ !cancelled() }}
+        run: pdm run docs
+
+      - name: Setup Github Pages
+        timeout-minutes: 10
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload docs to Github Pages
+        timeout-minutes: 10
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './docs/build'
+
+      - name: Deploy GitHub Pages
+        timeout-minutes: 10
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/deploy-pages@v4

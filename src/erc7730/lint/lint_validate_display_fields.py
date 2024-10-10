@@ -49,21 +49,26 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     excluded = primary_type_format.excluded or []
 
                     for path in eip712_paths - format_paths:
-                        if path in excluded:
+                        allowed = False
+                        for excluded_path in excluded:
+                            if path.startswith(excluded_path):
+                                allowed = True
+                                break
+                        if allowed:
                             continue
 
                         if any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
                             out.debug(
                                 title="Optional Display field missing",
                                 message=f"Display field for path `{path}` is missing for message {schema.primaryType}. "
-                                f"If intentionally excluded, please add it to `exclude` list to avoid this "
+                                f"If intentionally excluded, please add it to `excluded` list to avoid this "
                                 f"warning.",
                             )
                         else:
                             out.warning(
                                 title="Missing Display field",
                                 message=f"Display field for path `{path}` is missing for message {schema.primaryType}. "
-                                f"If intentionally excluded, please add it to `exclude` list to avoid this "
+                                f"If intentionally excluded, please add it to `excluded` list to avoid this "
                                 f"warning.",
                             )
                     for path in format_paths - eip712_paths:
@@ -122,20 +127,25 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 function = cls._display(selector, keccak)
 
                 for path in abi_paths - format_paths:
-                    if path in excluded:
+                    allowed = False
+                    for excluded_path in excluded:
+                        if path.startswith(excluded_path):
+                            allowed = True
+                            break
+                    if allowed:
                         continue
 
                     if not any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
                         out.debug(
                             title="Optional Display field missing",
                             message=f"Display field for path `{path}` is missing for selector {function}. If "
-                            f"intentionally excluded, please add it to `exclude` list to avoid this warning.",
+                            f"intentionally excluded, please add it to `excluded` list to avoid this warning.",
                         )
                     else:
                         out.warning(
                             title="Missing Display field",
                             message=f"Display field for path `{path}` is missing for selector {function}. If "
-                            f"intentionally excluded, please add it to `exclude` list to avoid this warning.",
+                            f"intentionally excluded, please add it to `excluded` list to avoid this warning.",
                         )
                 for path in format_paths - abi_paths:
                     out.error(
