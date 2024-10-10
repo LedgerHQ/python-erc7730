@@ -121,7 +121,7 @@ jobs:
 
       - name: Publish test reports
         timeout-minutes: 10
-        if: always()
+        if: ${{ !cancelled() }}
         uses: pmeier/pytest-results-action@v0.7.1
         with:
           path: tests/.tests.xml
@@ -132,6 +132,7 @@ jobs:
 
       - name: Setup docs cache
         timeout-minutes: 10
+        if: ${{ !cancelled() }}
         uses: actions/cache@v4
         with:
           path: docs/build
@@ -139,21 +140,22 @@ jobs:
 
       - name: Build docs
         timeout-minutes: 10
+        if: ${{ !cancelled() }}
         run: pdm run docs
 
       - name: Setup Github Pages
         timeout-minutes: 10
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: actions/configure-pages@v5
 
       - name: Upload docs to Github Pages
         timeout-minutes: 10
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: './docs/build'
 
       - name: Deploy GitHub Pages
         timeout-minutes: 10
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         uses: actions/deploy-pages@v4
