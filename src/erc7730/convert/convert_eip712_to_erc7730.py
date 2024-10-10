@@ -130,8 +130,16 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
         }
         match len(roots := set(schema.keys()) - referenced_types - {"EIP712Domain"}):
             case 0:
-                return out.error("Primary type not found on EIP-712 schema, it has circular references")
+                return out.error(
+                    title="Invalid EIP-712 schema",
+                    message="Primary type could not be determined on EIP-712 schema, as all types are referenced by"
+                    "other types. Please make sure your schema has a root type.",
+                )
             case 1:
                 return next(iter(roots))
             case _:
-                return out.error(f"Cannot determine primary type on EIP-712 schema, it has orphan types: {roots}")
+                return out.error(
+                    title="Invalid EIP-712 schema",
+                    message="Primary type could not be determined on EIP-712 schema, as several types are not"
+                    "referenced by any other type. Please make sure your schema has a single root type.",
+                )

@@ -29,13 +29,3 @@ ContractAddress = Annotated[
         pattern=r"^[a-zA-Z0-9_\-]+$",  # FIXME constraints
     ),
 ]
-
-Path = Annotated[
-    str,
-    Field(
-        title="Path",
-        description="A path referencing values in the serialized structured data, the format specification file or in"
-        "the container",
-        pattern=r"^[a-zA-Z0-9.\[\]_@\$\#]+",
-    ),
-]

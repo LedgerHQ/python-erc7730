@@ -58,15 +58,18 @@ class TokenAmountParameters(Model):
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: str = Field(
-        title="Token Path", description="The path to the token address in the structured data, or in the ERC 7730 file."
+    tokenPath: str | None = Field(
+        title="Token Path",
+        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker"
+        "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
+        '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: str | None = Field(
+    nativeCurrencyAddress: str | list[str] | None = Field(
         default=None,
         title="Native Currency Address",
-        description="An address equal to this value is interpreted as an amount in native currency rather than a"
-        "token.",
+        description="An address or array of addresses, any of which are interpreted as an amount in native currency"
+        "rather than a token.",
     )
 
     threshold: str | None = Field(
@@ -269,6 +272,14 @@ class FormatBase(Model):
         description="A list of fields that are required to be displayed to the user. A field that has a formatter and"
         "is not in this list is optional. A field that does not have a formatter should be silent, ie not"
         "shown.",
+    )
+
+    excluded: list[str] | None = Field(
+        default=None,
+        title="Excluded fields",
+        description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
+        "has no formatter and is not declared in this list MAY be considered as an error by the wallet when"
+        "interpreting the descriptor.",
     )
 
     screens: dict[str, list[Screen]] | None = Field(

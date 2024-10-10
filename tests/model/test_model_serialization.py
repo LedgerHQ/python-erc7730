@@ -20,6 +20,9 @@ def test_schema(input_file: Path) -> None:
     """Test model serializes to JSON that matches the schema."""
     assert_valid_erc_7730(InputERC7730Descriptor.load(input_file))
 
+def test_poap() -> None:
+    """Test model serializes to JSON that matches the schema."""
+    InputERC7730Descriptor.load(Path("/home/jnicoulaud/work/ledger/backend/cal/python-erc7730/python-erc7730-1/tests/registries/clear-signing-erc7730-registry/registry/poap/calldata-PoapBridge.json"))
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_round_trip(input_file: Path) -> None:

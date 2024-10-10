@@ -1,0 +1,31 @@
+@media (min-width: 1200px) {
+    .container {
+        max-width:1200px
+    }
+}
+
+@media (min-width: 1400px) {
+    .container {
+        max-width:1400px
+    }
+}
+
+@media (min-width: 1600px) {
+    .container {
+        max-width:1600px
+    }
+}
+
+@media (min-width: 1800px) {
+    .container {
+        max-width:1800px
+    }
+}
+
+#content ol, #content ul:not(.search) {
+    margin-top: 0.2rem;
+}
+
+#content ol p, #content ol>li, #content ul:not(.search) p, #content ul:not(.search)>li {
+    margin-top: 0.2rem;
+}

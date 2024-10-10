@@ -85,7 +85,11 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if isinstance(context, InputEIP712Context):
             return cls._convert_context_eip712(context, out)
 
-        return out.error(f"Invalid context type: {type(context)}")
+        return out.error(
+            title="Invalid context type",
+            message=f"Descriptor has an invalid context type: {type(context)}. Context type should be either contract"
+            f"or eip712.",
+        )
 
     @classmethod
     def _convert_context_contract(
@@ -117,7 +121,11 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if isinstance(abis, list):
             return abis
 
-        return out.error(f"Invalid ABIs type: {type(abis)}")
+        return out.error(
+            title="Invalid ABIs type",
+            message=f"Descriptor contains invalid value for ABIs: {type(abis)}, it should either be an URL or a JSON"
+            f"representation of the ABIs.",
+        )
 
     @classmethod
     def _convert_context_eip712(cls, context: InputEIP712Context, out: OutputAdder) -> ResolvedEIP712Context | None:
@@ -160,7 +168,11 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if isinstance(schema, EIP712JsonSchema):
             return schema
 
-        return out.error(f"Invalid EIP-712 schema type: {type(schema)}")
+        return out.error(
+            title="Invalid EIP-712 schema type",
+            message=f"Descriptor contains invalid value for EIP-712 schema: {type(schema)}, it should either be an URL"
+            f"or a JSON representation of the schema.",
+        )
 
     @classmethod
     def _convert_display(cls, display: InputDisplay, out: OutputAdder) -> ResolvedDisplay | None:
@@ -228,7 +240,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             return params
         if isinstance(params, InputEnumParameters):
             return cls._convert_enum_parameters(params, out)
-        return out.error(f"Invalid field parameters type: {type(params)}")
+        return out.error(title="Invalid field parameters", message=f"Invalid field parameters type: {type(params)}")
 
     @classmethod
     def _convert_enum_parameters(cls, params: InputEnumParameters, out: OutputAdder) -> ResolvedEnumParameters | None:
@@ -267,7 +279,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             return cls._convert_field_description(field, out)
         if isinstance(field, InputNestedFields):
             return cls._convert_nested_fields(field, out)
-        return out.error(f"Invalid field type: {type(field)}")
+        return out.error(title="Invalid field type", message=f"Invalid field type: {type(field)}")
 
     @classmethod
     def _convert_nested_fields(cls, fields: InputNestedFields, out: OutputAdder) -> ResolvedNestedFields | None:
