@@ -1,8 +1,8 @@
 import os
-from typing import final, override
+from typing import Any, final, override
 
 import requests
-from pydantic import AnyUrl, RootModel
+from pydantic import AnyUrl, RootModel, TypeAdapter
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
@@ -176,20 +176,18 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_display(cls, display: InputDisplay, out: OutputAdder) -> ResolvedDisplay | None:
-        if display.definitions is None:
-            definitions = None
-        else:
-            definitions = {}
+        definitions: dict[str, ResolvedFieldDefinition] = {}
+        if display.definitions is not None:
             for definition_key, definition in display.definitions.items():
                 if (resolved_definition := cls._convert_field_definition(definition, out)) is not None:
                     definitions[definition_key] = resolved_definition
 
         formats = {}
         for format_key, format in display.formats.items():
-            if (resolved_format := cls._convert_format(format, out)) is not None:
+            if (resolved_format := cls._convert_format(format, definitions, out)) is not None:
                 formats[format_key] = resolved_format
 
-        return ResolvedDisplay(definitions=definitions, formats=formats)
+        return ResolvedDisplay(formats=formats)
 
     @classmethod
     def _convert_field_definition(
@@ -247,8 +245,10 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         return ResolvedEnumParameters.model_validate({"$ref": params.ref})  # TODO must inline here
 
     @classmethod
-    def _convert_format(cls, format: InputFormat, error: OutputAdder) -> ResolvedFormat | None:
-        fields = cls._convert_fields(format.fields, error)
+    def _convert_format(
+        cls, format: InputFormat, definitions: dict[str, ResolvedFieldDefinition], error: OutputAdder
+    ) -> ResolvedFormat | None:
+        fields = cls._convert_fields(format.fields, definitions, error)
 
         if fields is None:
             return None
@@ -264,26 +264,32 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _convert_fields(cls, fields: list[InputField], out: OutputAdder) -> list[ResolvedField] | None:
+    def _convert_fields(
+        cls, fields: list[InputField], definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+    ) -> list[ResolvedField] | None:
         resolved_fields = []
         for input_format in fields:
-            if (resolved_field := cls._convert_field(input_format, out)) is not None:
+            if (resolved_field := cls._convert_field(input_format, definitions, out)) is not None:
                 resolved_fields.append(resolved_field)
         return resolved_fields
 
     @classmethod
-    def _convert_field(cls, field: InputField, out: OutputAdder) -> ResolvedField | None:
+    def _convert_field(
+        cls, field: InputField, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+    ) -> ResolvedField | None:
         if isinstance(field, InputReference):
-            return cls._convert_reference(field, out)
+            return cls._convert_reference(field, definitions, out)
         if isinstance(field, InputFieldDescription):
             return cls._convert_field_description(field, out)
         if isinstance(field, InputNestedFields):
-            return cls._convert_nested_fields(field, out)
+            return cls._convert_nested_fields(field, definitions, out)
         return out.error(title="Invalid field type", message=f"Invalid field type: {type(field)}")
 
     @classmethod
-    def _convert_nested_fields(cls, fields: InputNestedFields, out: OutputAdder) -> ResolvedNestedFields | None:
-        resolved_fields = cls._convert_fields(fields.fields, out)
+    def _convert_nested_fields(
+        cls, fields: InputNestedFields, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+    ) -> ResolvedNestedFields | None:
+        resolved_fields = cls._convert_fields(fields.fields, definitions, out)
 
         if resolved_fields is None:
             return None
@@ -291,8 +297,24 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         return ResolvedNestedFields(path=fields.path, fields=resolved_fields)
 
     @classmethod
-    def _convert_reference(cls, reference: InputReference, out: OutputAdder) -> ResolvedField | None:
-        raise NotImplementedError("_convert_reference is not implemented")  # TODO
+    def _convert_reference(
+        cls, reference: InputReference, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+    ) -> ResolvedField | None:
+        if (definition := definitions.get(reference.ref)) is None:
+            return out.error(title="Invalid reference", message=f"Reference {reference.ref} not found in definitions.")
+
+        params: dict[str, Any] = {}
+        if (definition_params := definition.params) is not None:
+            params.update(definition_params.model_dump())
+        if (reference_params := reference.params) is not None:
+            params.update(reference_params)
+
+        return ResolvedFieldDescription(
+            path=reference.path,
+            label=definition.label,
+            format=definition.format,
+            params=TypeAdapter(ResolvedFieldParameters).validate_python(params) if params else None,
+        )
 
     @classmethod
     def _adapt_github_uri(cls, url: AnyUrl) -> AnyUrl:

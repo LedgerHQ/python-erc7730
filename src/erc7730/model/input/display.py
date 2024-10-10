@@ -1,4 +1,4 @@
-from typing import Annotated, ForwardRef
+from typing import Annotated, Any, ForwardRef
 
 from pydantic import Discriminator, Field, Tag
 
@@ -35,7 +35,7 @@ class InputReference(FieldsBase):
         "key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
     )
 
-    params: dict[str, str] | None = Field(  # FIXME typing is wrong
+    params: dict[str, Any] | None = Field(  # FIXME typing is wrong
         default=None,
         title="Parameters",
         description="Parameters override. These values takes precedence over the ones in the definition itself.",

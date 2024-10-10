@@ -2,9 +2,12 @@
 Package implementing an object model for ERC-7730 input descriptors.
 
 This model represents descriptors before resolution phase:
- - URLs have been not been fetched yet
- - References have not been inlined
- - Selectors have not been converted to 4 bytes form
+    - URLs have been not been fetched yet
+    - Contract addresses have not been normalized to lowercase
+    - References have not been inlined
+    - Constants have not been inlined
+    - Field definitions have not been inlined
+    - Selectors have been converted to 4 bytes form
 """
 
 from pydantic import Field

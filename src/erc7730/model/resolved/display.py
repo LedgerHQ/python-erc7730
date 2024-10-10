@@ -42,7 +42,7 @@ ResolvedFieldParameters = Annotated[
 
 class ResolvedFieldDefinition(Model):
     """
-    TODO this should be removed from the resolved state and only have ResolvedFieldDescription
+    A field formatter, containing formatting information of a single field in a message.
     """
 
     id: Id | None = Field(
@@ -112,14 +112,6 @@ class ResolvedDisplay(Model):
     """
     Display Formatting Info Section.
     """
-
-    # FIXME there should be no definitions anymore in resolved state
-    definitions: dict[str, ResolvedFieldDefinition] | None = Field(
-        default=None,
-        title="Common Formatter Definitions",
-        description="A set of definitions that can be used to share formatting information between multiple messages /"
-        "functions. The definitions can be referenced by the key name in an internal path.",
-    )
 
     formats: dict[str, ResolvedFormat] = Field(
         title="List of field formats",
