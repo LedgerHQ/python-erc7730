@@ -99,7 +99,7 @@ jobs:
 
       - name: Setup Graphviz
         timeout-minutes: 10
-        uses: ts-graphviz/setup-graphviz@v2
+        run: sudo apt install graphviz graphviz-dev
 
       - name: Install dependencies
         timeout-minutes: 10
