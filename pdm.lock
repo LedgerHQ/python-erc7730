@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:cb7602fcedc286747534d704570b978a02f11eedaf42e46e84a3b2eaf5f393c9"
+content_hash = "sha256:13ea853f888e9228d45ab4487ee2aa4d9b12c14b9dc6db9889ae592c0d038faa"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -1411,6 +1411,20 @@ dependencies = [
 files = [
     {file = "sphinxcontrib_typer-0.5.0-py3-none-any.whl", hash = "sha256:780ca6b5f85105e5f8a1d2168fd490a6411c209e2a8e2ec84d387f0d6fba0ce1"},
     {file = "sphinxcontrib_typer-0.5.0.tar.gz", hash = "sha256:cc8937020bd804deb3f5abd5628c0e39cc2859e1a076307c1397b42594c4d33b"},
+]
+
+[[package]]
+name = "syrupy"
+version = "4.7.2"
+requires_python = ">=3.8.1"
+summary = "Pytest Snapshot Test Utility"
+groups = ["dev"]
+dependencies = [
+    "pytest<9.0.0,>=7.0.0",
+]
+files = [
+    {file = "syrupy-4.7.2-py3-none-any.whl", hash = "sha256:eae7ba6be5aed190237caa93be288e97ca1eec5ca58760e4818972a10c4acc64"},
+    {file = "syrupy-4.7.2.tar.gz", hash = "sha256:ea45e099f242de1bb53018c238f408a5bb6c82007bc687aefcbeaa0e1c2e935a"},
 ]
 
 [[package]]
