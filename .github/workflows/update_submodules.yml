@@ -52,7 +52,7 @@ jobs:
           [[ -n "$(git status -s)" ]] && echo "changes=true" >> $GITHUB_OUTPUT || true
 
       - name: Create pull request
-        if: ${{ !cancelled() && steps.changes.outputs.changes == 'true' && steps.update.outcome != 'success' }}
+        if: ${{ !cancelled() && steps.changes.outputs.changes == 'true' }}
         timeout-minutes: 10
         uses: peter-evans/create-pull-request@v6
         with:
