@@ -2,7 +2,7 @@ import os
 from typing import Any, final, override
 
 import requests
-from pydantic import AnyUrl, RootModel, TypeAdapter
+from pydantic import AnyUrl, RootModel
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
@@ -30,6 +30,7 @@ from erc7730.model.input.display import (
     InputNestedFields,
     InputReference,
 )
+from erc7730.model.path import DescriptorPath, Field
 from erc7730.model.resolved.context import (
     ResolvedContract,
     ResolvedContractContext,
@@ -57,9 +58,9 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     After conversion, the descriptor is in resolved form:
      - URLs have been fetched
      - Contract addresses have been normalized to lowercase (TODO not implemented)
-     - References have been inlined (TODO not implemented)
+     - References have been inlined
      - Constants have been inlined (TODO not implemented)
-     - Field definitions have been inlined (TODO not implemented)
+     - Field definitions have been inlined
      - Selectors have been converted to 4 bytes form (TODO not implemented)
     """
 
@@ -301,7 +302,30 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _convert_reference(
         cls, reference: InputReference, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
     ) -> ResolvedField | None:
-        if (definition := definitions.get(reference.ref)) is None:
+        # TODO: move to some utils
+        def _strip_prefix(path: DescriptorPath, prefix: DescriptorPath) -> DescriptorPath:
+            if len(path.elements) < len(prefix.elements):
+                raise ValueError(f"Path {path} does not start with prefix {prefix}.")
+            for i, element in enumerate(prefix.elements):
+                if path.elements[i] != element:
+                    raise ValueError(f"Path {path} does not start with prefix {prefix}.")
+            return DescriptorPath(elements=path.elements[len(prefix.elements) :])
+
+        if not isinstance(reference.path, DescriptorPath):
+            return out.error("Reference path must be a descriptor path.")
+
+        prefix = DescriptorPath(elements=[Field(identifier="display"), Field(identifier="definitions")])
+        try:
+            tail = _strip_prefix(reference.ref, prefix)
+        except ValueError as e:
+            return out.error(str(e))
+        if len(tail.elements) != 1:
+            return out.error(f"Reference path must have exactly one element after {prefix}.")
+        if not isinstance(element := tail.elements[0], Field):
+            return out.error("Reference must point to a field.")
+        definition_id = element.identifier
+
+        if (definition := definitions.get(definition_id)) is None:
             return out.error(title="Invalid reference", message=f"Reference {reference.ref} not found in definitions.")
 
         params: dict[str, Any] = {}
@@ -310,11 +334,15 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if (reference_params := reference.params) is not None:
             params.update(reference_params)
 
+        resolved_params: ResolvedFieldParameters | None = (
+            RootModel(ResolvedFieldParameters).model_validate(params).root if params else None
+        )
+
         return ResolvedFieldDescription(
             path=reference.path,
             label=definition.label,
-            format=definition.format,
-            params=TypeAdapter(ResolvedFieldParameters).validate_python(params) if params else None,
+            format=FieldFormat(definition.format),
+            params=resolved_params,
         )
 
     @classmethod

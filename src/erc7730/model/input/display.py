@@ -14,6 +14,7 @@ from erc7730.model.display import (
     TokenAmountParameters,
     UnitParameters,
 )
+from erc7730.model.input.path import InputPath
 from erc7730.model.types import Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
@@ -28,7 +29,7 @@ class InputReference(FieldsBase):
     It is used to share definitions between multiple messages / functions.
     """
 
-    ref: str = Field(
+    ref: InputPath = Field(
         alias="$ref",
         title="Internal Definition",
         description="An internal definition that should be used as the field formatting definition. The value is the"
