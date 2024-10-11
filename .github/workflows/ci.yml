@@ -47,6 +47,7 @@ jobs:
             ci
             sources
             dependencies
+            submodules
           add_comment: true
 
       - name: Get API keys
