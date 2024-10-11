@@ -311,8 +311,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                     raise ValueError(f"Path {path} does not start with prefix {prefix}.")
             return DescriptorPath(elements=path.elements[len(prefix.elements) :])
 
-        if not isinstance(reference.path, DescriptorPath):
-            return out.error("Reference path must be a descriptor path.")
+        if not isinstance(reference.ref, DescriptorPath):
+            return out.error(f"Reference path must be a descriptor path, got {reference.ref}.")
 
         prefix = DescriptorPath(elements=[Field(identifier="display"), Field(identifier="definitions")])
         try:
@@ -335,7 +335,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             params.update(reference_params)
 
         resolved_params: ResolvedFieldParameters | None = (
-            RootModel(ResolvedFieldParameters).model_validate(params).root if params else None
+            RootModel(ResolvedFieldParameters).model_validate(params).root if params else None  # type:ignore
         )
 
         return ResolvedFieldDescription(
