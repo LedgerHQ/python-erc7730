@@ -24,10 +24,6 @@ jobs:
         timeout-minutes: 10
         uses: actions/checkout@v4
 
-      - name: Setup Graphviz
-        timeout-minutes: 10
-        run: sudo apt install graphviz graphviz-dev
-
       - name: Setup python / PDM
         timeout-minutes: 10
         uses: ./.github/actions/pdm

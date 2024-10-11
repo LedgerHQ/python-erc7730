@@ -68,10 +68,6 @@ jobs:
         timeout-minutes: 10
         uses: ./.github/actions/pdm
 
-      - name: Setup Graphviz
-        timeout-minutes: 10
-        run: sudo apt install graphviz graphviz-dev
-
       - name: Install dependencies
         timeout-minutes: 10
         run: pdm install --dev --check --frozen-lockfile
