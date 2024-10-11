@@ -138,6 +138,11 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
             case FieldFormat.TOKEN_AMOUNT:
                 if field.params is not None and isinstance(field.params, TokenAmountParameters):
                     asset_path = field.params.tokenPath if prefix is None else f"{prefix}.{field.params.tokenPath}"
+
+                    # FIXME edge case for referencing verifyingContract, this will be handled cleanly in #65
+                    if asset_path == "@.to":
+                        asset_path = None
+
                 field_format = LegacyEIP712Format.AMOUNT
             case FieldFormat.AMOUNT:
                 field_format = LegacyEIP712Format.AMOUNT

@@ -3,7 +3,7 @@ name = "erc7730"
 description = "ERC-7730 descriptors validation and utilities."
 authors = [{ name = "Ledger" }]
 maintainers = [{ name = "Ledger" }]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 readme = "README.md"
 dynamic = ["version"]
 requires-python = ">= 3.12, <3.13"
@@ -35,6 +35,10 @@ dependencies = [
 Homepage = "https://ledgerhq.github.io/python-erc7730"
 Documentation = "https://ledgerhq.github.io/python-erc7730"
 Repository = "https://github.com/LedgerHQ/python-erc7730"
+
+[build-system]
+requires = ["pdm-pep517>=1.0.0"]
+build-backend = "pdm.pep517.api"
 
 [project.scripts]
 erc7730 = "erc7730.main:app"
