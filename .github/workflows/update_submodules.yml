@@ -1,4 +1,5 @@
-name: update submodules
+---
+name: 🔁 update submodules
 
 on:
   schedule:
@@ -12,8 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  HEAD_BRANCH: "update_submodules"
-  BASE_BRANCH: "main"
+  BRANCH: "main"
 
 jobs:
   update_submodules:
@@ -28,32 +28,42 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+          token: ${{ secrets.CI_BOT_TOKEN }}
 
-      - name: Fetch all branches
+      - name: Checkout ${{ env.BRANCH }} branch
         timeout-minutes: 10
-        run: git fetch origin +refs/heads/*:refs/remotes/origin/*
-
-      - name: Update Submodules
-        id: submodules
-        uses: sgoudham/update-git-submodules@v2.1.1
+        run: git checkout ${{ env.BRANCH }}
 
       - name: Get date
-        run: echo "CURRENT_DATE=$(date)" >> $GITHUB_ENV
+        timeout-minutes: 10
+        run: echo "CURRENT_DATE=$(date +"%Y-%m-%d %H:%M")" >> $GITHUB_ENV
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v7
+      - name: Update submodules
+        id: submodules
+        timeout-minutes: 10
+        uses: sgoudham/update-git-submodules@v2.1.1
+
+      - name: Check submodules changes
+        id: changes
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          git status -s
+          [[ -n "$(git status -s)" ]] && echo "changes=true" >> $GITHUB_OUTPUT || true
+
+      - name: Create pull request
+        if: ${{ !cancelled() && steps.changes.outputs.changes == 'true' }}
+        timeout-minutes: 10
+        uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ secrets.CI_BOT_TOKEN }}
-          commit-message: Update submodules
-          signoff: false
           author: ${{ secrets.CI_BOT_USERNAME }} <${{ secrets.CI_BOT_USERNAME }}@users.noreply.github.com>
-          branch: ${{ env.HEAD_BRANCH }}
-          base: ${{ env.BASE_BRANCH }}
+          branch: ${{ env.BRANCH }}-update-submodules
+          base: ${{ env.BRANCH }}
           delete-branch: false
-          add-paths: |
-            inputs/*
-            outputs/*
+          commit-message: 'chore: update submodules - ${{ env.CURRENT_DATE }}'
           title: 'chore: update submodules - ${{ env.CURRENT_DATE }}'
           body: ${{ steps.submodules.outputs.prBody }}
-          labels: assets,automerge
+          labels: submodules
           draft: false
+          signoff: false

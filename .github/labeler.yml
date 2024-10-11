@@ -16,4 +16,4 @@ dependencies:
 
 submodules:
   - changed-files:
-      - any-glob-to-any-file: ['clear-signing-erc7730-registry']
+      - any-glob-to-any-file: ['tests/registries']
