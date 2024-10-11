@@ -64,8 +64,6 @@ Descriptors can be manipulated in 2 forms:
  :noindex:
  :model-show-config-summary: False
  :model-show-field-summary: False
- :model-erdantic-figure: True
- :model-erdantic-figure-collapsed: False
 ```
 
 #### resolved data model
@@ -75,8 +73,6 @@ Descriptors can be manipulated in 2 forms:
  :noindex:
  :model-show-config-summary: False
  :model-show-field-summary: False
- :model-erdantic-figure: True
- :model-erdantic-figure-collapsed: False
 ```
 
 ### `erc7730.lint`

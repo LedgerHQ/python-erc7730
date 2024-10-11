@@ -1,4 +1,4 @@
-name: release drafter
+name: 🤖 release drafter
 
 on:
   push:
@@ -15,7 +15,8 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    runs-on: ledgerhq-shared-small
+    runs-on: public-ledgerhq-shared-small
+    name: update release draft
     steps:
       - name: update release draft
         uses: release-drafter/release-drafter@v6

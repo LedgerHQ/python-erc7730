@@ -1,4 +1,4 @@
-name: update dependencies
+name: 🔁 update dependencies
 
 on:
   schedule:
@@ -17,16 +17,12 @@ concurrency:
 jobs:
   ci:
     name: update dependencies
-    runs-on: ledgerhq-shared-small
+    runs-on: public-ledgerhq-shared-small
     timeout-minutes: 30
     steps:
       - name: Checkout
         timeout-minutes: 10
         uses: actions/checkout@v4
-
-      - name: Setup Graphviz
-        timeout-minutes: 10
-        uses: ts-graphviz/setup-graphviz@v2
 
       - name: Setup python / PDM
         timeout-minutes: 10
@@ -44,5 +40,3 @@ jobs:
           unconstrained: false
           install-plugins: false
           sign-off-commit: false
-        env:
-          FURY_TOKEN: ${{ secrets.PYPI_DEPLOY_TOKEN}}

@@ -17,7 +17,7 @@ You can validate your setup by running the `erc7730` command:
 :preferred: svg
 :theme: dark
 :width: 100
-:prog: cal
+:prog: erc7730
 ```
 
 ## Commands

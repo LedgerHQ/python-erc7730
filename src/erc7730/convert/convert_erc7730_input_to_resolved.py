@@ -259,6 +259,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 "intent": format.intent,
                 "fields": fields,
                 "required": format.required,
+                "excluded": format.excluded,
                 "screens": format.screens,
             }
         )
