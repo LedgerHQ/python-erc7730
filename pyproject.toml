@@ -108,8 +108,7 @@ addopts = [
     "--cov-report=xml:tests/.coverage.xml",
     "--cov-report=term",
     "--cov-branch",
-    "--benchmark-disable",
-    "--snapshot-patch-pycharm-diff"
+    "--benchmark-disable"
 ]
 
 [tool.coverage.paths]
@@ -153,4 +152,4 @@ exclude_dirs = ["tests"]
 
 [tool.codespell]
 ignore-words = ".codespellignore"
-skip = "pdm.lock"
+skip = "pdm.lock,*.ambr"

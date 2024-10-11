@@ -18,7 +18,7 @@ from tests.dict_utils import del_by_path, is_in_path, map_by_path
 from tests.files import ERC7730_EIP712_DESCRIPTORS, LEGACY_EIP712_DESCRIPTORS
 
 
-def _adapt_and_comapre_erc7730(input: InputERC7730Descriptor, output: InputERC7730Descriptor) -> None:
+def _adapt_and_compare_erc7730(input: InputERC7730Descriptor, output: InputERC7730Descriptor) -> None:
     input_dict, output_dict = json.loads(model_to_json_str(input)), json.loads(model_to_json_str(output))
 
     # $schema is not present in EIP-712
@@ -58,6 +58,7 @@ def _adapt_and_comapre_erc7730(input: InputERC7730Descriptor, output: InputERC77
             # Remove ERC-7730 specific fields
             del_by_path(message, "$id")
             del_by_path(message, "required")
+            del_by_path(message, "excluded")
             del_by_path(message, "screens")
             if "fields" in message:
                 for field in message["fields"]:
@@ -91,7 +92,7 @@ def test_roundtrip_from_erc7730(input_file: Path) -> None:
     assert output_erc7730_descriptor is not None
     if isinstance(output_erc7730_descriptor, dict):
         pytest.skip("Multiple descriptors tests not supported")
-    _adapt_and_comapre_erc7730(input_erc7730_descriptor, output_erc7730_descriptor)
+    _adapt_and_compare_erc7730(input_erc7730_descriptor, output_erc7730_descriptor)
 
 
 @pytest.mark.parametrize("input_file", LEGACY_EIP712_DESCRIPTORS, ids=path_id)
