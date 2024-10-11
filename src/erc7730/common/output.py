@@ -91,7 +91,6 @@ class ListOutputAdder(OutputAdder, BaseModel):
         self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.ERROR))
 
 
-@final
 class ConsoleOutputAdder(OutputAdder):
     """An output adder that prints to the console."""
 
@@ -151,6 +150,44 @@ class ConsoleOutputAdder(OutputAdder):
         log += f"[/{style}]{message}"
 
         print(log)
+
+
+class RaisingOutputAdder(ConsoleOutputAdder):
+    """An output adder that raises warnings/errors, otherwise prints to the console."""
+
+    @override
+    def warning(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self.has_warnings = True
+        self._raise(Output.Level.WARNING, message, file, line, title)
+
+    @override
+    def error(
+        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
+    ) -> None:
+        self.has_errors = True
+        self._raise(Output.Level.ERROR, message, file, line, title)
+
+    @classmethod
+    def _raise(
+        cls,
+        level: Output.Level,
+        message: str,
+        file: FilePath | None = None,
+        line: int | None = None,
+        title: str | None = None,
+    ) -> None:
+        log = f"{level.name}: "
+        if file is not None:
+            log += f"file={file.name}"
+        if line is not None:
+            log += f"line {line}: "
+        if title is not None:
+            log += f"{title}: "
+        log += f"{message}"
+
+        raise Exception(log)
 
 
 @final
