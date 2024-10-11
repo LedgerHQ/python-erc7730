@@ -1,4 +1,4 @@
-name: update dependencies
+name: 🔁 update dependencies
 
 on:
   schedule:
@@ -44,5 +44,3 @@ jobs:
           unconstrained: false
           install-plugins: false
           sign-off-commit: false
-        env:
-          FURY_TOKEN: ${{ secrets.PYPI_DEPLOY_TOKEN}}

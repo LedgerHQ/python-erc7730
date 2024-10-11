@@ -1,4 +1,4 @@
-name: release
+name: ✨ release
 
 on:
   release:
@@ -37,8 +37,6 @@ jobs:
         run: |
           pdm install --dev --check --frozen-lockfile
           pdm install --plugins
-        env:
-          FURY_TOKEN: ${{ secrets.PYPI_DEPLOY_TOKEN}}
 
       - name: Build library artifacts
         timeout-minutes: 10
