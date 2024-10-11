@@ -1,4 +1,5 @@
-from pydantic import AnyUrl, Field
+from pydantic import Field
+from pydantic_string_url import HttpUrl
 
 from erc7730.model.abi import ABI
 from erc7730.model.base import Model
@@ -21,7 +22,7 @@ class ResolvedContract(BindingContext):
         description="The ABI of the target contract. This must an array of ABI objects.",
     )
 
-    addressMatcher: AnyUrl | None = Field(
+    addressMatcher: HttpUrl | None = Field(
         default=None,
         title="Address Matcher",
         description="An URL of a contract address matcher that should be used to match the contract address.",

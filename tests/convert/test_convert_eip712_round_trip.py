@@ -12,13 +12,41 @@ from erc7730.convert.convert_erc7730_input_to_resolved import ERC7730InputToReso
 from erc7730.convert.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
 from erc7730.model.display import FieldFormat
 from erc7730.model.input.descriptor import InputERC7730Descriptor
-from tests.assertions import assert_dict_equals, assert_model_json_equals
+from tests.assertions import assert_dict_equals
 from tests.cases import path_id
 from tests.dict_utils import del_by_path, is_in_path, map_by_path
 from tests.files import ERC7730_EIP712_DESCRIPTORS, LEGACY_EIP712_DESCRIPTORS
+from tests.skip import single_or_skip
 
 
-def _adapt_and_compare_erc7730(input: InputERC7730Descriptor, output: InputERC7730Descriptor) -> None:
+@pytest.mark.parametrize("input_file", ERC7730_EIP712_DESCRIPTORS, ids=path_id)
+def test_roundtrip_from_erc7730(input_file: Path) -> None:
+    input_erc7730_descriptor = InputERC7730Descriptor.load(input_file)
+    resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
+    resolved_erc7730_descriptor = single_or_skip(resolved_erc7730_descriptor)
+    legacy_eip712_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
+    legacy_eip712_descriptor = single_or_skip(legacy_eip712_descriptor)
+    output_erc7730_descriptor = convert_and_print_errors(legacy_eip712_descriptor, EIP712toERC7730Converter())
+    output_erc7730_descriptor = single_or_skip(output_erc7730_descriptor)
+    _assert_erc7730_json_equals_with_tolerance(input_erc7730_descriptor, output_erc7730_descriptor)
+
+
+@pytest.mark.parametrize("input_file", LEGACY_EIP712_DESCRIPTORS, ids=path_id)
+def test_roundtrip_from_legacy_eip712(input_file: Path) -> None:
+    if str(input_file).endswith("/uniswap/eip712.json"):
+        pytest.skip("Several Uniswap messages have same primary types so they collide")
+
+    input_legacy_eip712_descriptor = model_from_json_file_with_includes(input_file, EIP712DAppDescriptor)
+    input_erc7730_descriptor = convert_and_print_errors(input_legacy_eip712_descriptor, EIP712toERC7730Converter())
+    input_erc7730_descriptor = single_or_skip(input_erc7730_descriptor)
+    resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
+    resolved_erc7730_descriptor = single_or_skip(resolved_erc7730_descriptor)
+    output_legacy_eip712_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
+    output_legacy_eip712_descriptor = single_or_skip(output_legacy_eip712_descriptor)
+    _assert_eip712_json_equals_with_tolerance(input_legacy_eip712_descriptor, output_legacy_eip712_descriptor)
+
+
+def _assert_erc7730_json_equals_with_tolerance(input: InputERC7730Descriptor, output: InputERC7730Descriptor) -> None:
     input_dict, output_dict = json.loads(model_to_json_str(input)), json.loads(model_to_json_str(output))
 
     # $schema is not present in EIP-712
@@ -77,37 +105,18 @@ def _adapt_and_compare_erc7730(input: InputERC7730Descriptor, output: InputERC77
     assert_dict_equals(input_dict, output_dict)
 
 
-@pytest.mark.parametrize("input_file", ERC7730_EIP712_DESCRIPTORS, ids=path_id)
-def test_roundtrip_from_erc7730(input_file: Path) -> None:
-    input_erc7730_descriptor = InputERC7730Descriptor.load(input_file)
-    resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
-    assert resolved_erc7730_descriptor is not None
-    if isinstance(resolved_erc7730_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
-    legacy_eip712_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
-    assert legacy_eip712_descriptor is not None
-    if isinstance(legacy_eip712_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
-    output_erc7730_descriptor = convert_and_print_errors(legacy_eip712_descriptor, EIP712toERC7730Converter())
-    assert output_erc7730_descriptor is not None
-    if isinstance(output_erc7730_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
-    _adapt_and_compare_erc7730(input_erc7730_descriptor, output_erc7730_descriptor)
+def _assert_eip712_json_equals_with_tolerance(input: EIP712DAppDescriptor, output: EIP712DAppDescriptor) -> None:
+    input_dict, output_dict = json.loads(model_to_json_str(input)), json.loads(model_to_json_str(output))
 
+    def cleanup_dapp_descriptor(dapp: dict[str, Any]) -> Any:
+        for contract in dapp["contracts"]:
+            for message in contract["messages"]:
+                for field in message["mapper"]["fields"]:
+                    field.pop("coinRef", None)  # TODO unnecessary after eip712 3.0.0 update
+                    if field.get("format") == "raw":
+                        field.pop("format", None)  # TODO unnecessary after eip712 3.0.0 update
 
-@pytest.mark.parametrize("input_file", LEGACY_EIP712_DESCRIPTORS, ids=path_id)
-def test_roundtrip_from_legacy_eip712(input_file: Path) -> None:
-    input_legacy_eip712_descriptor = model_from_json_file_with_includes(input_file, EIP712DAppDescriptor)
-    input_erc7730_descriptor = convert_and_print_errors(input_legacy_eip712_descriptor, EIP712toERC7730Converter())
-    assert input_erc7730_descriptor is not None
-    if isinstance(input_erc7730_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
-    resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
-    assert resolved_erc7730_descriptor is not None
-    if isinstance(resolved_erc7730_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
-    output_legacy_eip712_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
-    assert output_legacy_eip712_descriptor is not None
-    if isinstance(output_legacy_eip712_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
-    assert_model_json_equals(input_legacy_eip712_descriptor, output_legacy_eip712_descriptor)
+    cleanup_dapp_descriptor(input_dict)
+    cleanup_dapp_descriptor(output_dict)
+
+    assert_dict_equals(input_dict, output_dict)

@@ -2,7 +2,8 @@ import os
 from typing import Any, final, override
 
 import requests
-from pydantic import AnyUrl, RootModel
+from pydantic import RootModel
+from pydantic_string_url import HttpUrl
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
@@ -115,8 +116,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _convert_abis(cls, abis: list[ABI] | AnyUrl, out: OutputAdder) -> list[ABI] | None:
-        if isinstance(abis, AnyUrl):
+    def _convert_abis(cls, abis: list[ABI] | HttpUrl, out: OutputAdder) -> list[ABI] | None:
+        if isinstance(abis, HttpUrl):
             return cls._get_abi_from_url(abis)
 
         if isinstance(abis, list):
@@ -153,7 +154,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_schemas(
-        cls, schemas: list[EIP712JsonSchema | AnyUrl], out: OutputAdder
+        cls, schemas: list[EIP712JsonSchema | HttpUrl], out: OutputAdder
     ) -> list[EIP712JsonSchema] | None:
         resolved_schemas = []
         for schema in schemas:
@@ -162,8 +163,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         return resolved_schemas
 
     @classmethod
-    def _convert_schema(cls, schema: EIP712JsonSchema | AnyUrl, out: OutputAdder) -> EIP712JsonSchema | None:
-        if isinstance(schema, AnyUrl):
+    def _convert_schema(cls, schema: EIP712JsonSchema | HttpUrl, out: OutputAdder) -> EIP712JsonSchema | None:
+        if isinstance(schema, HttpUrl):
             return cls._get_schema_from_url(schema)
 
         if isinstance(schema, EIP712JsonSchema):
@@ -346,36 +347,35 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _adapt_github_uri(cls, url: AnyUrl) -> AnyUrl:
-        if url.host == "github.com":
-            return AnyUrl(
-                str(url).replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/")
+    def _adapt_github_uri(cls, url: HttpUrl) -> HttpUrl:
+        if url.startswith("https://github.com"):
+            return HttpUrl(
+                url.replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/")
             )
         else:
             return url
 
     @classmethod
-    def _adapt_etherscan_uri(cls, url: AnyUrl) -> AnyUrl:
+    def _adapt_etherscan_uri(cls, url: HttpUrl) -> HttpUrl:
         if (api_key := os.environ.get("ETHERSCAN_API_KEY")) is not None:
-            return AnyUrl(f"{url}&apikey={api_key}")
+            return HttpUrl(f"{url}&apikey={api_key}")
         else:
             return url
 
     @classmethod
-    def _get_schema_from_url(cls, url: AnyUrl) -> EIP712JsonSchema:
-        resp = requests.get(cls._adapt_github_uri(url), timeout=10)  # type:ignore
+    def _get_schema_from_url(cls, url: HttpUrl) -> EIP712JsonSchema:
+        resp = requests.get(cls._adapt_github_uri(url), timeout=10)
         resp.raise_for_status()
         return EIP712JsonSchema.model_validate(resp.json())
 
     @classmethod
-    def _get_abi_from_url(cls, url: AnyUrl) -> list[ABI]:
-        match url.host:
-            case "api.etherscan.io":
-                # TODO use client? Do we want to parse URL? Or use deployments?
-                resp = requests.get(cls._adapt_etherscan_uri(url), timeout=10)  # type:ignore
-                resp.raise_for_status()
-                return RootModel[list[ABI]].model_validate_json(resp.json()["result"]).root
-            case _:
-                resp = requests.get(cls._adapt_github_uri(url), timeout=10)  # type:ignore
-                resp.raise_for_status()
-                return RootModel[list[ABI]].model_validate(resp.json()).root
+    def _get_abi_from_url(cls, url: HttpUrl) -> list[ABI]:
+        if url.startswith("https://api.etherscan.io"):
+            # TODO use client? Do we want to parse URL? Or use deployments?
+            resp = requests.get(cls._adapt_etherscan_uri(url), timeout=10)
+            resp.raise_for_status()
+            return RootModel[list[ABI]].model_validate_json(resp.json()["result"]).root
+        else:
+            resp = requests.get(cls._adapt_github_uri(url), timeout=10)
+            resp.raise_for_status()
+            return RootModel[list[ABI]].model_validate(resp.json()).root

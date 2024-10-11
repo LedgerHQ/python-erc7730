@@ -1374,7 +1374,7 @@
       "info": {
         "legalName": "Aave DAO",
         "lastUpdate": "2020-11-30T09:25:48Z",
-        "url": "https://aave.com/"
+        "url": "https://aave.com"
       },
       "constants": {
         "max": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
@@ -5281,7 +5281,7 @@
       "info": {
         "legalName": "Lido DAO",
         "lastUpdate": "2021-02-19T04:37:20Z",
-        "url": "https://lido.fi/"
+        "url": "https://lido.fi"
       }
     },
     "display": {
@@ -5827,7 +5827,7 @@
       "info": {
         "legalName": "Lido DAO",
         "lastUpdate": "2021-02-19T04:37:20Z",
-        "url": "https://lido.fi/"
+        "url": "https://lido.fi"
       },
       "constants": {
         "stETHaddress": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84"

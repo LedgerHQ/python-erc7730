@@ -9,17 +9,14 @@ from erc7730.model.input.descriptor import InputERC7730Descriptor
 from tests.cases import path_id
 from tests.files import ERC7730_EIP712_DESCRIPTORS
 from tests.schemas import assert_valid_legacy_eip_712
+from tests.skip import single_or_skip
 
 
 @pytest.mark.parametrize("input_file", ERC7730_EIP712_DESCRIPTORS, ids=path_id)
 def test_convert_erc7730_registry_files(input_file: Path) -> None:
     input_erc7730_descriptor = InputERC7730Descriptor.load(input_file)
     resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
-    assert resolved_erc7730_descriptor is not None
-    if isinstance(resolved_erc7730_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
+    resolved_erc7730_descriptor = single_or_skip(resolved_erc7730_descriptor)
     output_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
-    assert output_descriptor is not None
-    if isinstance(output_descriptor, dict):
-        pytest.skip("Multiple descriptors tests not supported")
+    output_descriptor = single_or_skip(output_descriptor)
     assert_valid_legacy_eip_712(output_descriptor)

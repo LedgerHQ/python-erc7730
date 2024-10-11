@@ -29,6 +29,7 @@ dependencies = [
     "rich",
     "typer",
     "lark>=1.2.2",
+    "pydantic-string-url>=1.0.2",
 ]
 
 [project.urls]

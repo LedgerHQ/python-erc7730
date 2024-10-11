@@ -1,4 +1,5 @@
-from pydantic import AnyUrl, Field
+from pydantic import Field
+from pydantic_string_url import HttpUrl
 
 from erc7730.model.abi import ABI
 from erc7730.model.base import Model
@@ -14,13 +15,13 @@ class InputContract(BindingContext):
     contract.
     """
 
-    abi: list[ABI] | AnyUrl = Field(
+    abi: list[ABI] | HttpUrl = Field(
         title="ABI",
         description="The ABI of the target contract. This can be either an array of ABI objects or an URL pointing to"
         "the ABI.",
     )
 
-    addressMatcher: AnyUrl | None = Field(
+    addressMatcher: HttpUrl | None = Field(
         None,
         title="Address Matcher",
         description="An URL of a contract address matcher that should be used to match the contract address.",
@@ -53,7 +54,7 @@ class InputEIP712(BindingContext):
         description="The domain separator value that must be matched by the message. In hex string representation.",
     )
 
-    schemas: list[EIP712JsonSchema | AnyUrl] = Field(
+    schemas: list[EIP712JsonSchema | HttpUrl] = Field(
         title="EIP-712 messages schemas", description="Schemas of all messages."
     )
 

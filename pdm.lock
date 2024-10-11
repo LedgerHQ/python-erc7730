@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:13ea853f888e9228d45ab4487ee2aa4d9b12c14b9dc6db9889ae592c0d038faa"
+content_hash = "sha256:3c513c40637727fa3635c7986f737cc56f84ce54f0591fa760e2f83b83820a66"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -835,6 +835,20 @@ dependencies = [
 files = [
     {file = "pydantic_settings-2.5.2-py3-none-any.whl", hash = "sha256:2c912e55fd5794a59bf8c832b9de832dcfdf4778d79ff79b708744eed499a907"},
     {file = "pydantic_settings-2.5.2.tar.gz", hash = "sha256:f90b139682bee4d2065273d5185d71d37ea46cfe57e1b5ae184fc6a0b2484ca0"},
+]
+
+[[package]]
+name = "pydantic-string-url"
+version = "1.0.2"
+requires_python = "<4.0.0,>=3.8.1"
+summary = "Pydantic URL types that are based on the str class."
+groups = ["default"]
+dependencies = [
+    "pydantic<3.0.0,>=2.7.1",
+]
+files = [
+    {file = "pydantic_string_url-1.0.2-py3-none-any.whl", hash = "sha256:9f97d415aa99f392d08882f2702f7eda9b8f979bb2526dbf75df9bc9ff062f21"},
+    {file = "pydantic_string_url-1.0.2.tar.gz", hash = "sha256:fa7690f7231b47ac89e2f0546ef1137af182bcaa9c93f9a3c0deaff2afbb79ca"},
 ]
 
 [[package]]

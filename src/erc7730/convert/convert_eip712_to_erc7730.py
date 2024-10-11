@@ -9,7 +9,8 @@ from eip712 import (
 from eip712 import (
     EIP712Format as LegacyEIP712Format,
 )
-from pydantic import AnyUrl, RootModel
+from pydantic import RootModel
+from pydantic_string_url import HttpUrl
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
@@ -48,7 +49,7 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
 
         for contract in descriptor.contracts:
             formats: dict[str, InputFormat] = {}
-            schemas: list[EIP712JsonSchema | AnyUrl] = []
+            schemas: list[EIP712JsonSchema | HttpUrl] = []
 
             for message in contract.messages:
                 # TODO Improve typing on EIP-712 library to use dict[EIP712Type, list[EIP712Field]]
@@ -111,7 +112,12 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
                     params=TokenAmountParameters(tokenPath=field.assetPath),
                 )
             case LegacyEIP712Format.AMOUNT:
-                return InputFieldDescription(path=field.path, label=field.label, format=FieldFormat.AMOUNT, params=None)
+                return InputFieldDescription(
+                    path=field.path,
+                    label=field.label,
+                    format=FieldFormat.TOKEN_AMOUNT,
+                    params=TokenAmountParameters(tokenPath="@.to"),
+                )
             case LegacyEIP712Format.DATETIME:
                 return InputFieldDescription(
                     path=field.path,

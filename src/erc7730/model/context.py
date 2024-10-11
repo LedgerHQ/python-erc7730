@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from pydantic import AnyUrl, Field
+from pydantic import Field
+from pydantic_string_url import HttpUrl
 
 from erc7730.model.base import Model
 from erc7730.model.types import ContractAddress
@@ -40,7 +41,7 @@ class EIP712Schema(Model):
     EIP-712 message schema.
     """
 
-    eip712Schema: AnyUrl | EIP712JsonSchema = Field(
+    eip712Schema: HttpUrl | EIP712JsonSchema = Field(
         title="EIP-712 message schema", description="The EIP-712 message schema."
     )
 

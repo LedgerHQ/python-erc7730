@@ -18,6 +18,10 @@ from tests.schemas import assert_valid_erc_7730
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_schema(input_file: Path) -> None:
     """Test model serializes to JSON that matches the schema."""
+
+    if input_file.name in {"eip712-rarible-erc-1155.json", "eip712-rarible-erc-721.json"}:
+        pytest.skip("Rarible EIP-712 schemas are missing EIP712Domain")
+
     assert_valid_erc_7730(InputERC7730Descriptor.load(input_file))
 
 
