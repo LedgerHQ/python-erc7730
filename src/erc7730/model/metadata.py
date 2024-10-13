@@ -27,6 +27,7 @@ class OwnerInfo(Model):
     )
 
     lastUpdate: datetime | None = Field(
+        default=None,
         title="Last Update of the contract / message",
         description="The date of the last update of the contract / message.",
     )
@@ -86,7 +87,7 @@ class Metadata(Model):
     constants: dict[str, str] | None = Field(
         default=None,
         title="Constant values",
-        description="A set of values that can be used in format parameters. Can be referenced with a path expression"
+        description="A set of valnues that can be used in format parameters. Can be referenced with a path expression"
         "like $.metadata.constants.CONSTANT_NAME",
     )
 
