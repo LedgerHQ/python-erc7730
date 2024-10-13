@@ -87,7 +87,7 @@ class Metadata(Model):
     constants: dict[str, str] | None = Field(
         default=None,
         title="Constant values",
-        description="A set of valnues that can be used in format parameters. Can be referenced with a path expression"
+        description="A set of values that can be used in format parameters. Can be referenced with a path expression"
         "like $.metadata.constants.CONSTANT_NAME",
     )
 
