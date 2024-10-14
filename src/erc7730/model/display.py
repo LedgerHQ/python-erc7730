@@ -59,6 +59,7 @@ class TokenAmountParameters(Model):
     """
 
     tokenPath: str | None = Field(
+        default=None,
         title="Token Path",
         description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
         "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
