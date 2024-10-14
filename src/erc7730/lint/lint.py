@@ -5,7 +5,7 @@ from rich import print
 
 from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
 from erc7730.common.output import ConsoleOutputAdder, FileOutputAdder, GithubAnnotationsAdder, OutputAdder
-from erc7730.convert.convert_erc7730_input_to_resolved import ERC7730InputToResolved
+from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.lint_base import MultiLinter
 from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
@@ -14,7 +14,7 @@ from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinte
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
-def lint_all_and_print_errors(paths: list[Path], gha: bool) -> bool:
+def lint_all_and_print_errors(paths: list[Path], gha: bool = False) -> bool:
     out = GithubAnnotationsAdder() if gha else ConsoleOutputAdder()
 
     lint_all(paths, out)

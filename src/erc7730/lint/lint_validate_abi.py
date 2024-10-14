@@ -1,7 +1,7 @@
 from typing import final, override
 
+from erc7730.common import client
 from erc7730.common.abi import compute_signature, get_functions
-from erc7730.common.client.etherscan import get_contract_abis
 from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
 from erc7730.model.resolved.context import ResolvedContractContext, ResolvedEIP712Context
@@ -36,7 +36,7 @@ class ValidateABILinter(ERC7730Linter):
         if (deployments := context.contract.deployments) is None:
             return
         for deployment in deployments:
-            if (abis := get_contract_abis(deployment.chainId, deployment.address)) is None:
+            if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
                 continue
 
             reference_abis = get_functions(abis)

@@ -60,7 +60,7 @@ class TokenAmountParameters(Model):
 
     tokenPath: str | None = Field(
         title="Token Path",
-        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker"
+        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
         "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
         '"Unknown token" warning.',
     )
@@ -68,14 +68,14 @@ class TokenAmountParameters(Model):
     nativeCurrencyAddress: str | list[str] | None = Field(
         default=None,
         title="Native Currency Address",
-        description="An address or array of addresses, any of which are interpreted as an amount in native currency"
+        description="An address or array of addresses, any of which are interpreted as an amount in native currency "
         "rather than a token.",
     )
 
     threshold: str | None = Field(
         default=None,
         title="Unlimited Threshold",
-        description="The threshold above which the amount should be displayed using the message parameter rather than"
+        description="The threshold above which the amount should be displayed using the message parameter rather than "
         "the real amount.",
     )
 
@@ -145,18 +145,20 @@ class AddressNameParameters(Model):
     Address Names Formatting Parameters.
     """
 
-    type: AddressNameType | None = Field(
+    types: list[AddressNameType] | None = Field(
         default=None,
         title="Address Type",
-        description="The type of address to display. Restrict allowable sources of names and MAY lead to additional"
-        "checks from wallets.",
+        description="An array of expected types of the address. If set, the wallet SHOULD check that the address "
+        "matches one of the types provided.",
+        min_length=1,
     )
 
     sources: list[AddressNameSources] | None = Field(
         default=None,
         title="Trusted Sources",
-        description="Trusted Sources for names, in order of preferences. See specification for more details on sources"
-        "values.",
+        description="An array of acceptable sources for names (see next section). If set, the wallet SHOULD restrict "
+        "name lookup to relevant sources.",
+        min_length=1,
     )
 
 
@@ -171,8 +173,7 @@ class CallDataParameters(Model):
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: str | None = Field(
-        default=None,
+    calleePath: str = Field(
         title="Callee Path",
         description="The path to the address of the contract being called by this embedded calldata.",
     )
@@ -195,12 +196,16 @@ class UnitParameters(Model):
 
     base: str = Field(
         title="Unit base symbol",
-        description="The base symbol of the unit, displayed after the converted value. It can be an SI unit symbol or"
+        description="The base symbol of the unit, displayed after the converted value. It can be an SI unit symbol or "
         "acceptable dimensionless symbols like % or bps.",
     )
 
     decimals: int | None = Field(
-        default=None, title="Decimals", description="The number of decimals of the value, used to convert to a float."
+        default=None,
+        title="Decimals",
+        description="The number of decimals of the value, used to convert to a float.",
+        ge=0,
+        le=255,
     )
 
     prefix: bool | None = Field(
@@ -225,8 +230,8 @@ class FieldsBase(Model):
 
     path: str = Field(
         title="Path",
-        description="A path to the field in the structured data. The path is a JSON path expression that can be used to"
-        "extract the field value from the structured data.",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
+        "to extract the field value from the structured data.",
     )
 
 
@@ -256,7 +261,7 @@ class FormatBase(Model):
         alias="$id",
         default=None,
         title="Id",
-        description="An internal identifier that can be used either for clarity specifying what the element is or as a"
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a "
         "reference in device specific sections.",
     )
 
@@ -269,7 +274,7 @@ class FormatBase(Model):
     required: list[str] | None = Field(
         default=None,
         title="Required fields",
-        description="A list of fields that are required to be displayed to the user. A field that has a formatter and"
+        description="A list of fields that are required to be displayed to the user. A field that has a formatter and "
         "is not in this list is optional. A field that does not have a formatter should be silent, ie not"
         "shown.",
     )
@@ -285,8 +290,8 @@ class FormatBase(Model):
     screens: dict[str, list[Screen]] | None = Field(
         default=None,
         title="Screens grouping information",
-        description="Screens section is used to group multiple fields to display into screens. Each key is a wallet"
-        "type name. The format of the screens is wallet type dependent, as well as what can be done (reordering"
-        "fields, max number of screens, etc...). See each wallet manufacturer documentation for more"
+        description="Screens section is used to group multiple fields to display into screens. Each key is a wallet "
+        "type name. The format of the screens is wallet type dependent, as well as what can be done (reordering "
+        "fields, max number of screens, etc...). See each wallet manufacturer documentation for more "
         "information.",
     )

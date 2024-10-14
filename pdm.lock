@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:3c513c40637727fa3635c7986f737cc56f84ce54f0591fa760e2f83b83820a66"
+content_hash = "sha256:128502b8e3a0d1933c6432d95b50366c599abf5dc2296343b46e7f8e901ae9b0"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -751,16 +751,6 @@ files = [
 ]
 
 [[package]]
-name = "py-cpuinfo"
-version = "9.0.0"
-summary = "Get CPU info with pure Python"
-groups = ["dev"]
-files = [
-    {file = "py-cpuinfo-9.0.0.tar.gz", hash = "sha256:3cdbbf3fac90dc6f118bfd64384f309edeadd902d7c8fb17f02ffa1fc3f49690"},
-    {file = "py_cpuinfo-9.0.0-py3-none-any.whl", hash = "sha256:859625bc251f64e21f077d099d4162689c762b5d6a4c3c97553d56241c9674d5"},
-]
-
-[[package]]
 name = "pycryptodome"
 version = "3.21.0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
@@ -897,23 +887,6 @@ files = [
 ]
 
 [[package]]
-name = "pytest-benchmark"
-version = "4.0.0"
-requires_python = ">=3.7"
-summary = "A ``pytest`` fixture for benchmarking code. It will group the tests into rounds that are calibrated to the chosen timer."
-groups = ["dev"]
-dependencies = [
-    "pathlib2; python_version < \"3.4\"",
-    "py-cpuinfo",
-    "pytest>=3.8",
-    "statistics; python_version < \"3.4\"",
-]
-files = [
-    {file = "pytest-benchmark-4.0.0.tar.gz", hash = "sha256:fb0785b83efe599a6a956361c0691ae1dbb5318018561af10f3e915caa0048d1"},
-    {file = "pytest_benchmark-4.0.0-py3-none-any.whl", hash = "sha256:fdb7db64e31c8b277dff9850d2a2556d8b60bcb0ea6524e36e28ffd7c87f71d6"},
-]
-
-[[package]]
 name = "pytest-cov"
 version = "5.0.0"
 requires_python = ">=3.8"
@@ -926,19 +899,6 @@ dependencies = [
 files = [
     {file = "pytest-cov-5.0.0.tar.gz", hash = "sha256:5837b58e9f6ebd335b0f8060eecce69b662415b16dc503883a02f45dfeb14857"},
     {file = "pytest_cov-5.0.0-py3-none-any.whl", hash = "sha256:4f0764a1219df53214206bf1feea4633c3b558a2925c8b59f144f682861ce652"},
-]
-
-[[package]]
-name = "pytest-datadir-ng"
-version = "1.1.1"
-summary = "Fixtures for pytest allowing test functions/methods to easily retrieve test resources from the local filesystem."
-groups = ["dev"]
-dependencies = [
-    "pytest",
-]
-files = [
-    {file = "pytest-datadir-ng-1.1.1.tar.gz", hash = "sha256:0d9e0212eaa4d0440a4b7c3d2df4b4b7eeebde1854ab383c5aff590764ad8a52"},
-    {file = "pytest_datadir_ng-1.1.1-py2.py3-none-any.whl", hash = "sha256:7fec7a4996a12529a935512c128624fa7289495b520fd31b4645c3a71daa394e"},
 ]
 
 [[package]]
@@ -983,20 +943,6 @@ dependencies = [
 files = [
     {file = "pytest-sugar-1.0.0.tar.gz", hash = "sha256:6422e83258f5b0c04ce7c632176c7732cab5fdb909cb39cca5c9139f81276c0a"},
     {file = "pytest_sugar-1.0.0-py3-none-any.whl", hash = "sha256:70ebcd8fc5795dc457ff8b69d266a4e2e8a74ae0c3edc749381c64b5246c8dfd"},
-]
-
-[[package]]
-name = "pytest-timeout"
-version = "2.3.1"
-requires_python = ">=3.7"
-summary = "pytest plugin to abort hanging tests"
-groups = ["dev"]
-dependencies = [
-    "pytest>=7.0.0",
-]
-files = [
-    {file = "pytest-timeout-2.3.1.tar.gz", hash = "sha256:12397729125c6ecbdaca01035b9e5239d4db97352320af155b3f5de1ba5165d9"},
-    {file = "pytest_timeout-2.3.1-py3-none-any.whl", hash = "sha256:68188cb703edfc6a18fad98dc25a3c61e9f24d644b0b70f33af545219fc7813e"},
 ]
 
 [[package]]
@@ -1425,20 +1371,6 @@ dependencies = [
 files = [
     {file = "sphinxcontrib_typer-0.5.0-py3-none-any.whl", hash = "sha256:780ca6b5f85105e5f8a1d2168fd490a6411c209e2a8e2ec84d387f0d6fba0ce1"},
     {file = "sphinxcontrib_typer-0.5.0.tar.gz", hash = "sha256:cc8937020bd804deb3f5abd5628c0e39cc2859e1a076307c1397b42594c4d33b"},
-]
-
-[[package]]
-name = "syrupy"
-version = "4.7.2"
-requires_python = ">=3.8.1"
-summary = "Pytest Snapshot Test Utility"
-groups = ["dev"]
-dependencies = [
-    "pytest<9.0.0,>=7.0.0",
-]
-files = [
-    {file = "syrupy-4.7.2-py3-none-any.whl", hash = "sha256:eae7ba6be5aed190237caa93be288e97ca1eec5ca58760e4818972a10c4acc64"},
-    {file = "syrupy-4.7.2.tar.gz", hash = "sha256:ea45e099f242de1bb53018c238f408a5bb6c82007bc687aefcbeaa0e1c2e935a"},
 ]
 
 [[package]]

@@ -28,6 +28,7 @@ class OwnerInfo(Model):
     )
 
     lastUpdate: datetime | None = Field(
+        default=None,
         title="Last Update of the contract / message",
         description="The date of the last update of the contract / message.",
     )
@@ -52,7 +53,10 @@ class TokenInfo(Model):
     )
 
     decimals: int = Field(
-        title="Token Decimals", description="The number of decimals of the token ticker, used to display amounts."
+        title="Token Decimals",
+        description="The number of decimals of the token ticker, used to display amounts.",
+        ge=0,
+        le=255,
     )
 
 

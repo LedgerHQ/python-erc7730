@@ -1,0 +1,83 @@
+{
+    "$schema": "../../../registries/clear-signing-erc7730-registry/specs/erc7730-v1.schema.json",
+    "context": {
+        "eip712": {
+            "deployments": [
+                {
+                    "chainId": 1,
+                    "address": "0x0000000000000000000000000000000000000000"
+                }
+            ],
+            "schemas": [
+                {
+                    "primaryType": "TestPrimaryType",
+                    "types": {
+                        "EIP712Domain": [
+                            {
+                                "name": "name",
+                                "type": "string"
+                            },
+                            {
+                                "name": "chainId",
+                                "type": "uint256"
+                            },
+                            {
+                                "name": "verifyingContract",
+                                "type": "address"
+                            }
+                        ],
+                        "TestPrimaryType": [
+                            {
+                                "name": "token1",
+                                "type": "address"
+                            },
+                            {
+                                "name": "token2",
+                                "type": "address"
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    },
+    "metadata": {},
+    "display": {
+        "formats": {
+            "TestPrimaryType": {
+                "fields": [
+                    {
+                        "path": "param1",
+                        "label": "With minimal set of parameters specified",
+                        "format": "tokenAmount"
+                    },
+                    {
+                        "path": "param1",
+                        "label": "With all parameters specified, string nativeCurrencyAddress",
+                        "format": "tokenAmount",
+                        "params": {
+                            "tokenPath": "token1",
+                            "nativeCurrencyAddress": "0x0000000000000000000000000000000000000001",
+                            "threshold": "0xFFFFFFFF",
+                            "message": "Max"
+                        }
+                    },
+                    {
+                        "path": "param1",
+                        "label": "With all parameters specified, array nativeCurrencyAddress",
+                        "format": "tokenAmount",
+                        "params": {
+                            "tokenPath": "token1",
+                            "nativeCurrencyAddress": [
+                                "0x0000000000000000000000000000000000000001",
+                                "0x0000000000000000000000000000000000000002"
+                            ],
+                            "threshold": "0xFFFFFFFF",
+                            "message": "Max"
+                        }
+                    }
+                ]
+            }
+        }
+    }
+}

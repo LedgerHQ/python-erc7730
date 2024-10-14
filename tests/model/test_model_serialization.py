@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 import pytest
-from pydantic import RootModel, ValidationError
+from pydantic import RootModel
 
 from erc7730.common.json import read_json_with_includes
 from erc7730.common.pydantic import model_from_json_str, model_to_json_str
@@ -11,7 +11,7 @@ from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import InputDisplay
 from tests.assertions import assert_dict_equals
 from tests.cases import path_id
-from tests.files import ERC7730_DESCRIPTORS, TEST_RESOURCES
+from tests.files import ERC7730_DESCRIPTORS
 from tests.schemas import assert_valid_erc_7730
 
 
@@ -19,8 +19,11 @@ from tests.schemas import assert_valid_erc_7730
 def test_schema(input_file: Path) -> None:
     """Test model serializes to JSON that matches the schema."""
 
+    # TODO: invalid files in registry
     if input_file.name in {"eip712-rarible-erc-1155.json", "eip712-rarible-erc-721.json"}:
         pytest.skip("Rarible EIP-712 schemas are missing EIP712Domain")
+    if input_file.name in {"calldata-lpv2.json", "calldata-AugustusSwapper.json"}:
+        pytest.skip("addressName `type` must be changed to `types`")
 
     assert_valid_erc_7730(InputERC7730Descriptor.load(input_file))
 
@@ -28,6 +31,11 @@ def test_schema(input_file: Path) -> None:
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_round_trip(input_file: Path) -> None:
     """Test model serializes back to same JSON."""
+
+    # TODO: invalid files in registry
+    if input_file.name in {"calldata-lpv2.json", "calldata-AugustusSwapper.json"}:
+        pytest.skip("addressName `type` must be changed to `types`")
+
     actual = json.loads(InputERC7730Descriptor.load(input_file).to_json_string())
     expected = read_json_with_includes(input_file)
     assert_dict_equals(expected, actual)
@@ -67,10 +75,3 @@ def test_22_screens_serialization_not_symmetric() -> None:
     )
     output_json_str = model_to_json_str(model_from_json_str(input_json_str, InputDisplay))
     assert_dict_equals(json.loads(input_json_str), json.loads(output_json_str))
-
-
-@pytest.mark.skip("Deactivated because another fix is in progress with different regex")  # FIXME ?
-@pytest.mark.raises(exception=ValidationError)
-def test_invalid_paths() -> None:
-    """Test deserialization does not allow invalid paths."""
-    InputERC7730Descriptor.load(TEST_RESOURCES / "eip712_wrong_path.json")

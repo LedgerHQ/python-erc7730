@@ -1,0 +1,45 @@
+{
+    "$schema": "../../../registries/clear-signing-erc7730-registry/specs/erc7730-v1.schema.json",
+    "context": {
+        "contract": {
+            "deployments": [
+                {
+                    "chainId": 1,
+                    "address": "0x0000000000000000000000000000000000000000"
+                }
+            ],
+            "abi": [
+                {
+                    "type": "function",
+                    "name": "function1",
+                    "inputs": [
+                        {
+                            "name": "param1",
+                            "type": "bytes4"
+                        }
+                    ],
+                    "outputs": [
+                        {
+                            "name": "",
+                            "type": "address"
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    "metadata": {},
+    "display": {
+        "formats": {
+            "function1(bytes4)": {
+                "fields": [
+                    {
+                        "path": "param1",
+                        "label": "Param 1",
+                        "format": "raw"
+                    }
+                ]
+            }
+        }
+    }
+}

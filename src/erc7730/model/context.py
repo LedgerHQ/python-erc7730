@@ -98,4 +98,5 @@ class BindingContext(Model):
         title="Deployments",
         description="An array of deployments describing where the contract is deployed. The target contract (Tx to or"
         "factory) MUST match one of those deployments.",
+        min_length=1,
     )

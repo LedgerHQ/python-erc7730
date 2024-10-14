@@ -1,8 +1,6 @@
 from erc7730.common.abi import compute_paths, compute_signature, reduce_signature, signature_to_selector
 from erc7730.model.abi import Component, Function, InputOutput
 
-# Thank you Github Copilot for generating the tests below!
-
 
 def test_reduce_signature_no_params() -> None:
     signature = "transfer()"

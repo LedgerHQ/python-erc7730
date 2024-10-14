@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict
 from erc7730.common.pydantic import (
     model_from_json_file_with_includes,
     model_from_json_file_with_includes_or_none,
+    model_to_json_file,
     model_to_json_str,
 )
 
@@ -55,6 +56,12 @@ class Model(BaseModel):
         :raises Exception: if the file has validation errors
         """
         return model_from_json_file_with_includes_or_none(path, cls)
+
+    def save(self, path: Path) -> None:
+        """
+        Write a model to a JSON file, creating parent directories as needed.
+        """
+        model_to_json_file(path, self)
 
     def to_json_string(self) -> str:
         """

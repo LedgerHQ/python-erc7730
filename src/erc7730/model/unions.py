@@ -36,8 +36,8 @@ def field_parameters_discriminator(v: Any) -> str | None:
         return "unit"
     if has_property(v, "$ref") or has_property(v, "ref"):  # $ref is aliased
         return "enum"
-    if has_property(v, "type"):
-        return "address_name"
-    if has_property(v, "selector"):
+    if has_property(v, "calleePath") or has_property(v, "selector"):
         return "call_data"
+    if has_property(v, "sources") or has_property(v, "types"):
+        return "address_name"
     return None

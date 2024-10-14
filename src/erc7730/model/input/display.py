@@ -32,11 +32,18 @@ class InputReference(FieldsBase):
     ref: InputPath = Field(
         alias="$ref",
         title="Internal Definition",
-        description="An internal definition that should be used as the field formatting definition. The value is the"
+        description="An internal definition that should be used as the field formatting definition. The value is the "
         "key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
     )
 
-    params: dict[str, Any] | None = Field(  # FIXME typing is wrong
+    label: str | None = Field(
+        default=None,
+        title="Field Label",
+        description="The label of the field, that will be displayed to the user in front of the formatted field value. "
+        "Overrides the label in the referenced definition if set.",
+    )
+
+    params: dict[str, Any] | None = Field(
         default=None,
         title="Parameters",
         description="Parameters override. These values takes precedence over the ones in the definition itself.",
@@ -76,7 +83,7 @@ class InputFieldDefinition(Model):
         alias="$id",
         default=None,
         title="Id",
-        description="An internal identifier that can be used either for clarity specifying what the element is or as a"
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a "
         "reference in device specific sections.",
     )
 
@@ -145,13 +152,13 @@ class InputDisplay(Model):
     definitions: dict[str, InputFieldDefinition] | None = Field(
         default=None,
         title="Common Formatter Definitions",
-        description="A set of definitions that can be used to share formatting information between multiple messages /"
+        description="A set of definitions that can be used to share formatting information between multiple messages / "
         "functions. The definitions can be referenced by the key name in an internal path.",
     )
 
     formats: dict[str, InputFormat] = Field(
         title="List of field formats",
-        description="The list includes formatting info for each field of a structure. This list is indexed by a key"
-        "identifying uniquely the message's type in the abi. For smartcontracts, it is the selector of the"
+        description="The list includes formatting info for each field of a structure. This list is indexed by a key "
+        "identifying uniquely the message's type in the abi. For smartcontracts, it is the selector of the "
         "function or its signature; and for EIP712 messages it is the primaryType of the message.",
     )

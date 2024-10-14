@@ -7,9 +7,9 @@ from typer import Argument, Exit, Option, Typer
 from erc7730.common.output import ConsoleOutputAdder
 from erc7730.common.pydantic import model_from_json_file_with_includes
 from erc7730.convert.convert import convert_to_file_and_print_errors
-from erc7730.convert.convert_eip712_to_erc7730 import EIP712toERC7730Converter
-from erc7730.convert.convert_erc7730_input_to_resolved import ERC7730InputToResolved
-from erc7730.convert.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
+from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
+from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
+from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.lint.lint import lint_all_and_print_errors
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 
