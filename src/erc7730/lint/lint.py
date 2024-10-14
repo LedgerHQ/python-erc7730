@@ -85,7 +85,8 @@ def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder) -> None:
             if loc == ():
                 adder.error(title="Validation error", message=str(ex))
             else:
-                adder.error(title=f"{loc} is invalid", message=ex["msg"])
+                loc_str = ".".join(map(str,loc))
+                adder.error(title=f"{loc_str}", message=ex["msg"])
     except Exception as e:
         # TODO unwrap pydantic validation errors here to provide more user-friendly error messages
         adder.error(title="Failed to parse descriptor", message=str(e))
