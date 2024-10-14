@@ -1,5 +1,7 @@
 from typing import final, override
 
+from pydantic import ValidationError
+
 from erc7730.common import client
 from erc7730.common.abi import compute_signature, get_functions
 from erc7730.common.output import OutputAdder
@@ -36,7 +38,14 @@ class ValidateABILinter(ERC7730Linter):
         if (deployments := context.contract.deployments) is None:
             return
         for deployment in deployments:
-            if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
+            try:
+                if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
+                    continue
+            except ValidationError:
+                out.warning(
+                    title=f"Could not fetch ABI for chain_id={deployment.chainId}",
+                    message=f"Could not fetch ABI for chain_id={deployment.chainId}, ABI will not be validated",
+                )
                 continue
 
             reference_abis = get_functions(abis)
