@@ -26,7 +26,7 @@ def field_parameters_discriminator(v: Any) -> str | None:
     :param v: deserialized raw data
     :return: the discriminator tag
     """
-    if has_property(v, "tokenPath"):
+    if has_property(v, "tokenPath") or has_property(v, "nativeCurrencyAddress"):
         return "token_amount"
     if has_property(v, "encoding"):
         return "date"
