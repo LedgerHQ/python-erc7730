@@ -20,11 +20,6 @@ def test_registry_files(input_file: Path) -> None:
     """
     Test converting ERC-7730 registry files from input to resolved form.
     """
-
-    # TODO: invalid files in registry
-    if input_file.name in {"calldata-lpv2.json", "calldata-AugustusSwapper.json"}:
-        pytest.skip("addressName `type` must be changed to `types`")
-
     convert_and_raise_errors(InputERC7730Descriptor.load(input_file), ERC7730InputToResolved())
 
 
@@ -212,7 +207,9 @@ def test_by_reference(testcase: TestCase) -> None:
         assert expected_error in str(exc_info.value)
     else:
         resolved_descriptor_path = DATA / f"{testcase.id}_resolved.json"
-        actual_descriptor = single_or_skip(convert_and_raise_errors(input_descriptor, ERC7730InputToResolved()))
+        actual_descriptor: ResolvedERC7730Descriptor = single_or_skip(
+            convert_and_raise_errors(input_descriptor, ERC7730InputToResolved())
+        )
         if UPDATE_REFERENCES:
             actual_descriptor.save(resolved_descriptor_path)
             pytest.fail(f"Reference {resolved_descriptor_path} updated, please set UPDATE_REFERENCES back to False")
