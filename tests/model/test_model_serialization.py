@@ -22,8 +22,6 @@ def test_schema(input_file: Path) -> None:
     # TODO: invalid files in registry
     if input_file.name in {"eip712-rarible-erc-1155.json", "eip712-rarible-erc-721.json"}:
         pytest.skip("Rarible EIP-712 schemas are missing EIP712Domain")
-    if input_file.name in {"calldata-lpv2.json", "calldata-AugustusSwapper.json"}:
-        pytest.skip("addressName `type` must be changed to `types`")
 
     assert_valid_erc_7730(InputERC7730Descriptor.load(input_file))
 
@@ -31,11 +29,6 @@ def test_schema(input_file: Path) -> None:
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_round_trip(input_file: Path) -> None:
     """Test model serializes back to same JSON."""
-
-    # TODO: invalid files in registry
-    if input_file.name in {"calldata-lpv2.json", "calldata-AugustusSwapper.json"}:
-        pytest.skip("addressName `type` must be changed to `types`")
-
     actual = json.loads(InputERC7730Descriptor.load(input_file).to_json_string())
     expected = read_json_with_includes(input_file)
     assert_dict_equals(expected, actual)

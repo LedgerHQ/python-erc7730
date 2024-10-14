@@ -14,7 +14,7 @@ def test_registry_files(input_file: Path) -> None:
     """
 
     # TODO: invalid files in registry
-    if input_file.name in {"calldata-lpv2.json", "calldata-AugustusSwapper.json"}:
+    if input_file.name in {"calldata-AugustusSwapper.json"}:
         pytest.skip("addressName `type` must be changed to `types`")
 
     assert lint_all_and_print_errors([input_file])
