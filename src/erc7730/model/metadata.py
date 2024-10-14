@@ -27,6 +27,7 @@ class OwnerInfo(Model):
     )
 
     lastUpdate: datetime | None = Field(
+        default=None,
         title="Last Update of the contract / message",
         description="The date of the last update of the contract / message.",
     )
