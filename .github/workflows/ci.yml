@@ -28,7 +28,8 @@ jobs:
         timeout-minutes: 10
         uses: actions/checkout@v4
         with:
-          submodules: "true"
+          fetch-depth: 0
+          submodules: "recursive"
 
       - name: Pull request | Add labels
         timeout-minutes: 30
