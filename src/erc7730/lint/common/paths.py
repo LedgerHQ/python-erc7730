@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import cast
 
@@ -10,15 +11,20 @@ from erc7730.model.resolved.display import (
     TokenAmountParameters,
 )
 
-ARRAY_SUFFIX = "[]"
+_ARRAY_SUFFIX = "[]"
+
+_INDICE_ARRAY = re.compile(r"\[-?\d+\]")
+_SLICE_ARRAY = re.compile(r"\.\[-?\d+:-?\d+\]")
 
 
 def _append_path(root: str, path: str) -> str:
     return f"{root}.{path}" if root else path
 
 
-def _remove_slicing(token_path: str) -> str:
-    return token_path.split("[")[0]
+def _cleanup_brackets(token_path: str) -> str:
+    without_slices = re.sub(_SLICE_ARRAY, "", token_path)  # remove slicing syntax
+    without_indices = re.sub(_INDICE_ARRAY, _ARRAY_SUFFIX, without_slices)  # keep only array syntax
+    return without_indices
 
 
 def compute_eip712_paths(schema: EIP712JsonSchema) -> set[str]:
@@ -30,9 +36,9 @@ def compute_eip712_paths(schema: EIP712JsonSchema) -> set[str]:
         for domain in current_type:
             new_path = _append_path(path, domain.name)
             domain_type = domain.type
-            if domain_type.endswith(ARRAY_SUFFIX):
-                domain_type = _remove_slicing(domain_type)
-                new_path += f".{ARRAY_SUFFIX}"
+            if domain_type.endswith(_ARRAY_SUFFIX):
+                domain_type = domain_type[: -len(_ARRAY_SUFFIX)]
+                new_path += f".{_ARRAY_SUFFIX}"
             if domain_type in types:
                 append_paths(new_path, types[domain_type], types, paths)
             else:
@@ -57,6 +63,7 @@ def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
     paths = FormatPaths(data_paths=set(), format_paths=set(), container_paths=set())
 
     def add_path(root: str, path: str) -> None:
+        path = _cleanup_brackets(path)
         if path.startswith("@."):
             paths.container_paths.add(path[2:])
         elif path.startswith("$."):
@@ -76,7 +83,7 @@ def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
                         and isinstance(params, TokenAmountParameters)
                         and (token_path := params.tokenPath) is not None
                     ):
-                        add_path(path, _remove_slicing(token_path).strip("."))
+                        add_path(path, token_path)
                 case ResolvedNestedFields():
                     for nested_field in field.fields:
                         append_paths(_append_path(path, field.path), cast(ResolvedField, nested_field))
