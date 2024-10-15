@@ -7,10 +7,11 @@ from eth_utils.abi import abi_to_signature, function_signature_to_4byte_selector
 
 from erc7730.model.abi import ABI, Component, Function, InputOutput
 
-_SOLIDITY_IDENTIFIER = r"[a-zA-Z$_][a-zA-Z$_0-9]*"
-_SOLIDITY_PARAMETER_LIST = r"(" + _SOLIDITY_IDENTIFIER + r" *(" + _SOLIDITY_IDENTIFIER + r") *,? *)*"
-_SOLIDITY_FUNCTION = r" *(" + _SOLIDITY_IDENTIFIER + r") *\((" + _SOLIDITY_PARAMETER_LIST + r")\)"
-_SOLIDITY_FUNCTION_RE = re.compile(_SOLIDITY_FUNCTION)
+_SIGNATURE_SPACES_PRE_CLEANUP = r"(,|\()( +)"
+_SIGNATURE_CLEANUP = r"( +[^,\(\)]*)(\(|,|\))"
+
+_SIGNATURE_SPACES_PRE_CLEANUP_RE = re.compile(_SIGNATURE_SPACES_PRE_CLEANUP)
+_SIGNATURE_CLEANUP_RE = re.compile(_SIGNATURE_CLEANUP)
 
 
 def _append_path(root: str, path: str) -> str:
@@ -23,10 +24,11 @@ def compute_paths(abi: Function) -> set[str]:
     def append_paths(path: str, params: list[InputOutput] | list[Component] | None, paths: set[str]) -> None:
         if params:
             for param in params:
+                name = param.name + ".[]" if param.type.endswith("[]") else param.name
                 if param.components:
-                    append_paths(_append_path(path, param.name), param.components, paths)  # type: ignore
+                    append_paths(_append_path(path, name), param.components, paths)  # type: ignore
                 else:
-                    paths.add(_append_path(path, param.name))
+                    paths.add(_append_path(path, name))
 
     paths: set[str] = set()
     append_paths("", abi.inputs, paths)
@@ -39,14 +41,12 @@ def compute_signature(abi: Function) -> str:
     return abi_to_signature(abi_function)
 
 
-def reduce_signature(signature: str) -> str | None:
-    """Remove parameter names from a function signature. return None if the signature is invalid."""
-    if match := _SOLIDITY_FUNCTION_RE.fullmatch(signature):
-        function_name = match.group(1)
-        parameters = match.group(2).split(",")
-        parameters_types = [param.strip().partition(" ")[0] for param in parameters]
-        return f"{function_name}({','.join(parameters_types)})"
-    return None
+def reduce_signature(signature: str) -> str:
+    """Remove parameter names and spaces from a function signature. Behaviour is undefined on invalid signature."""
+    # Note: Implementation is hackish, but as parameter types can be tuples that can be nested,
+    # it would require a full parser to do it properly.
+    # Test coverage should be enough to ensure it works as expected on valid signatures.
+    return re.sub(_SIGNATURE_CLEANUP_RE, r"\2", re.sub(_SIGNATURE_SPACES_PRE_CLEANUP_RE, r"\1", signature))
 
 
 def signature_to_selector(signature: str) -> str:

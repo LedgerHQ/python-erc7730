@@ -1,28 +1,42 @@
+import pytest
+
 from erc7730.common.abi import compute_paths, compute_signature, reduce_signature, signature_to_selector
 from erc7730.model.abi import Component, Function, InputOutput
 
 
-def test_reduce_signature_no_params() -> None:
-    signature = "transfer()"
-    expected = "transfer()"
+@pytest.mark.parametrize(
+    "signature, expected",
+    [
+        # no param, no space
+        ("transfer()", "transfer()"),
+        # one param, no space
+        ("transfer(address)", "transfer(address)"),
+        # multiple params, expected spaces, no names
+        ("mintToken(uint256, uint256, address, uint256, bytes)", "mintToken(uint256,uint256,address,uint256,bytes)"),
+        # multiple params, expected spaces, names
+        (
+            "mintToken(uint256 eventId, uint256 tokenId, address receiver, uint256 expirationTime, bytes signature)",
+            "mintToken(uint256,uint256,address,uint256,bytes)",
+        ),
+        # multiple params, spaces everywhere, names, end with tuple
+        (
+            "f1( uint256[] _a , address _o , ( uint256 v , uint256 d ) _p )",
+            "f1(uint256[],address,(uint256,uint256))",
+        ),
+        # multiple params, spaces everywhere, names, tuple in middle
+        (
+            "f2( uint256[] _a , ( uint256 v , uint256 d ) _p , address _o )",
+            "f2(uint256[],(uint256,uint256),address)",
+        ),
+        # multiple params, spaces everywhere, names, nested tuples
+        (
+            "f3( uint256[] _a , ( uint256 v , ( bytes s , address a ) , uint256 d ) _p , address _o )",
+            "f3(uint256[],(uint256,(bytes,address),uint256),address)",
+        ),
+    ],
+)
+def test_reduce_signature(signature: str, expected: str) -> None:
     assert reduce_signature(signature) == expected
-
-
-def test_reduce_signature_without_names() -> None:
-    signature = "transfer(address)"
-    expected = "transfer(address)"
-    assert reduce_signature(signature) == expected
-
-
-def test_reduce_signature_with_names_and_spaces() -> None:
-    signature = "mintToken(uint256 eventId, uint256 tokenId, address receiver, uint256 expirationTime, bytes signature)"
-    expected = "mintToken(uint256,uint256,address,uint256,bytes)"
-    assert reduce_signature(signature) == expected
-
-
-def test_reduce_signature_invalid() -> None:
-    signature = "invalid_signature"
-    assert reduce_signature(signature) is None
 
 
 def test_compute_signature_no_params() -> None:
@@ -99,10 +113,10 @@ def test_compute_paths_with_multiple_nested_params() -> None:
                 components=[
                     Component(name="baz", type="uint256"),
                     Component(name="qux", type="address"),
-                    Component(name="nested", type="tuple", components=[Component(name="deep", type="string")]),
+                    Component(name="nested", type="tuple[]", components=[Component(name="deep", type="string")]),
                 ],
             )
         ],
     )
-    expected = {"bar.baz", "bar.qux", "bar.nested.deep"}
+    expected = {"bar.baz", "bar.qux", "bar.nested.[].deep"}
     assert compute_paths(abi) == expected
