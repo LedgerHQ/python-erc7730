@@ -1,6 +1,11 @@
 import pytest
 
-from erc7730.common.abi import compute_paths, compute_signature, reduce_signature, signature_to_selector
+from erc7730.common.abi import (
+    compute_paths,
+    compute_signature,
+    reduce_signature,
+    signature_to_selector,
+)
 from erc7730.model.abi import Component, Function, InputOutput
 
 
@@ -36,6 +41,7 @@ from erc7730.model.abi import Component, Function, InputOutput
     ],
 )
 def test_reduce_signature(signature: str, expected: str) -> None:
+    # This test covers both parse_signature and compute_signature
     assert reduce_signature(signature) == expected
 
 

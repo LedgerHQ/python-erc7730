@@ -1,17 +1,91 @@
-import re
 from dataclasses import dataclass
-from typing import cast
+from typing import Any, cast
 
 from eth_typing import ABIFunction
 from eth_utils.abi import abi_to_signature, function_signature_to_4byte_selector
+from lark import Lark, UnexpectedInput
+from lark.visitors import Transformer_InPlaceRecursive
 
 from erc7730.model.abi import ABI, Component, Function, InputOutput
 
-_SIGNATURE_SPACES_PRE_CLEANUP = r"(,|\()( +)"
-_SIGNATURE_CLEANUP = r"( +[^,\(\)]*)(\(|,|\))"
+_SIGNATURE_PARSER = parser = Lark(
+    grammar=r"""
+            function: identifier "(" top_level_params ")"
+            
+            top_level_params: (top_level_param ("," top_level_param)*)?
+            ?top_level_param: named_top_level_param | named_top_level_tuple
+            
+            inner_params: (inner_param ("," inner_param)*)?
+            ?inner_param: named_inner_param | named_inner_tuple
 
-_SIGNATURE_SPACES_PRE_CLEANUP_RE = re.compile(_SIGNATURE_SPACES_PRE_CLEANUP)
-_SIGNATURE_CLEANUP_RE = re.compile(_SIGNATURE_CLEANUP)
+            ?tuple: "(" inner_params ")"
+            
+            named_inner_param: type identifier?
+            named_inner_tuple:  tuple identifier?
+            
+            named_top_level_param: type identifier?
+            named_top_level_tuple:  tuple identifier?
+
+            array: "[]"
+            identifier: /[a-zA-Z$_][a-zA-Z0-9$_]*/
+            type: identifier array?
+
+            %ignore " "
+            """,
+    start="function",
+)
+
+
+class FunctionTransformer(Transformer_InPlaceRecursive):
+    """Visitor to transform the parsed function AST into function domain model objects."""
+
+    def function(self, ast: Any) -> Function:
+        (name, inputs) = ast
+        return Function(name=name, inputs=inputs)
+
+    def top_level_params(self, ast: Any) -> list[InputOutput]:
+        return ast
+
+    def inner_params(self, ast: Any) -> list[Component]:
+        return ast
+
+    def named_top_level_param(self, ast: Any) -> InputOutput:
+        if len(ast) == 1:
+            return InputOutput(name="_", type=ast[0])
+        (type_, name) = ast
+        return InputOutput(name=name, type=type_)
+
+    def named_top_level_tuple(self, ast: Any) -> InputOutput:
+        if len(ast) == 1:
+            return InputOutput(name="_", type="tuple", components=ast[0])
+        (components, name) = ast
+        return InputOutput(name=name, type="tuple", components=components)
+
+    def named_inner_param(self, ast: Any) -> Component:
+        if len(ast) == 1:
+            return Component(name="_", type=ast[0])
+        (type_, name) = ast
+        return Component(name=name, type=type_)
+
+    def named_inner_tuple(self, ast: Any) -> Component:
+        if len(ast) == 1:
+            return Component(name="_", type="tuple", components=ast[0])
+        (components, name) = ast
+        return Component(name=name, type="tuple", components=components)
+
+    def array(self, ast: Any) -> str:
+        return "[]"
+
+    def identifier(self, ast: Any) -> str:
+        (value,) = ast
+        return value
+
+    def type(self, ast: Any) -> str:
+        if len(ast) == 1:
+            return ast[0]
+
+        (value, array) = ast
+        return value + array
 
 
 def _append_path(root: str, path: str) -> str:
@@ -42,11 +116,16 @@ def compute_signature(abi: Function) -> str:
 
 
 def reduce_signature(signature: str) -> str:
-    """Remove parameter names and spaces from a function signature. Behaviour is undefined on invalid signature."""
-    # Note: Implementation is hackish, but as parameter types can be tuples that can be nested,
-    # it would require a full parser to do it properly.
-    # Test coverage should be enough to ensure it works as expected on valid signatures.
-    return re.sub(_SIGNATURE_CLEANUP_RE, r"\2", re.sub(_SIGNATURE_SPACES_PRE_CLEANUP_RE, r"\1", signature))
+    """Remove parameter names and spaces from a function signature."""
+    return compute_signature(parse_signature(signature))
+
+
+def parse_signature(signature: str) -> Function:
+    """Parse a function signature."""
+    try:
+        return FunctionTransformer().transform(_SIGNATURE_PARSER.parse(signature))
+    except UnexpectedInput as e:
+        raise ValueError(f"Invalid signature: {signature}") from e
 
 
 def signature_to_selector(signature: str) -> str:

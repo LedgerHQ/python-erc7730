@@ -1,5 +1,6 @@
+import json
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, assert_never
 
 from eip712 import EIP712DAppDescriptor
 from typer import Argument, Exit, Option, Typer
@@ -11,7 +12,10 @@ from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
 from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.lint.lint import lint_all_and_print_errors
+from erc7730.model import ERC7730ModelType
+from erc7730.model.base import Model
 from erc7730.model.input.descriptor import InputERC7730Descriptor
+from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
 app = Typer(
     name="erc7730",
@@ -29,6 +33,28 @@ convert_app = Typer(
     """,
 )
 app.add_typer(convert_app)
+
+
+@app.command(
+    name="schema",
+    short_help="Print ERC-7730 descriptor JSON schema.",
+    help="""
+    Print ERC-7730 descriptor JSON schema.
+    """,
+)
+def schema(
+    model_type: Annotated[ERC7730ModelType, Argument(help="The descriptor form ")] = ERC7730ModelType.INPUT,
+) -> None:
+    descriptor_type: type[Model]
+    match model_type:
+        case ERC7730ModelType.INPUT:
+            descriptor_type = InputERC7730Descriptor
+        case ERC7730ModelType.RESOLVED:
+            descriptor_type = ResolvedERC7730Descriptor
+        case _:
+            assert_never(model_type)
+
+    print(json.dumps(descriptor_type.model_json_schema(by_alias=True), indent=4))
 
 
 @app.command(
