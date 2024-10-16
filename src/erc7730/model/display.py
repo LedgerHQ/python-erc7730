@@ -107,18 +107,6 @@ class Screen(RootModel[dict[str, Any]]):
     """
 
 
-class FieldsBase(Model):
-    """
-    A field formatter, containing formatting information of a single field in a message.
-    """
-
-    path: str = Field(
-        title="Path",
-        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
-        "to extract the field value from the structured data.",
-    )
-
-
 SimpleIntent = Annotated[
     str,
     Field(

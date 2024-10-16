@@ -8,9 +8,9 @@ from erc7730.model.display import (
     AddressNameType,
     DateEncoding,
     FieldFormat,
-    FieldsBase,
     FormatBase,
 )
+from erc7730.model.resolved.path import ResolvedPath
 from erc7730.model.types import Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
@@ -22,7 +22,7 @@ class ResolvedTokenAmountParameters(Model):
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: str | None = Field(
+    tokenPath: ResolvedPath | None = Field(
         default=None,
         title="Token Path",
         description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
@@ -84,7 +84,7 @@ class ResolvedCallDataParameters(Model):
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: str = Field(
+    calleePath: ResolvedPath = Field(
         title="Callee Path",
         description="The path to the address of the contract being called by this embedded calldata.",
     )
@@ -95,7 +95,7 @@ class ResolvedNftNameParameters(Model):
     NFT Names Formatting Parameters.
     """
 
-    collectionPath: str = Field(
+    collectionPath: ResolvedPath = Field(
         title="Collection Path", description="The path to the collection in the structured data."
     )
 
@@ -184,13 +184,25 @@ class ResolvedFieldDefinition(Model):
     )
 
 
-class ResolvedFieldDescription(ResolvedFieldDefinition, FieldsBase):
+class ResolvedFieldBase(Model):
+    """
+    A field formatter, containing formatting information of a single field in a message.
+    """
+
+    path: ResolvedPath = Field(
+        title="Path",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
+        "to extract the field value from the structured data.",
+    )
+
+
+class ResolvedFieldDescription(ResolvedFieldBase, ResolvedFieldDefinition):
     """
     A field formatter, containing formatting information of a single field in a message.
     """
 
 
-class ResolvedNestedFields(FieldsBase):
+class ResolvedNestedFields(ResolvedFieldBase):
     """
     A single set of field formats, allowing recursivity in the schema.
 

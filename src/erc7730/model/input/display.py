@@ -8,7 +8,6 @@ from erc7730.model.display import (
     AddressNameType,
     DateEncoding,
     FieldFormat,
-    FieldsBase,
     FormatBase,
 )
 from erc7730.model.input.path import InputPath
@@ -18,7 +17,19 @@ from erc7730.model.unions import field_discriminator, field_parameters_discrimin
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class InputReference(FieldsBase):
+class InputFieldBase(Model):
+    """
+    A field formatter, containing formatting information of a single field in a message.
+    """
+
+    path: str = Field(
+        title="Path",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
+        "to extract the field value from the structured data.",
+    )
+
+
+class InputReference(InputFieldBase):
     """
     A reference to a shared definition that should be used as the field formatting definition.
 
@@ -218,13 +229,13 @@ class InputFieldDefinition(Model):
     )
 
 
-class InputFieldDescription(InputFieldDefinition, FieldsBase):
+class InputFieldDescription(InputFieldBase, InputFieldDefinition):
     """
     A field formatter, containing formatting information of a single field in a message.
     """
 
 
-class InputNestedFields(FieldsBase):
+class InputNestedFields(InputFieldBase):
     """
     A single set of field formats, allowing recursivity in the schema.
 
