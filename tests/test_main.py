@@ -1,9 +1,11 @@
+import json
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from erc7730.main import app
+from erc7730.model import ERC7730ModelType
 from tests.cases import path_id
 from tests.files import ERC7730_DESCRIPTORS, ERC7730_EIP712_DESCRIPTORS, LEGACY_EIP712_DESCRIPTORS
 
@@ -16,6 +18,14 @@ def test_help() -> None:
     assert "ERC-7730" in out
     assert "convert" in out
     assert "lint" in out
+
+
+@pytest.mark.parametrize("model_type", list(ERC7730ModelType))
+def test_schema(model_type: ERC7730ModelType) -> None:
+    result = runner.invoke(app, ["schema", model_type])
+    out = "".join(result.stdout.splitlines())
+    assert result.exit_code == 0
+    assert json.loads(out) is not None
 
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
