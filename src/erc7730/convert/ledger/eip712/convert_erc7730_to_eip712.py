@@ -25,7 +25,6 @@ from erc7730.convert import ERC7730Converter
 from erc7730.model.context import Deployment, EIP712Field, EIP712JsonSchema
 from erc7730.model.display import (
     FieldFormat,
-    TokenAmountParameters,
 )
 from erc7730.model.resolved.context import ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
@@ -33,6 +32,7 @@ from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDescription,
     ResolvedNestedFields,
+    ResolvedTokenAmountParameters,
 )
 
 
@@ -136,7 +136,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
         field_format: LegacyEIP712Format | None = None
         match field.format:
             case FieldFormat.TOKEN_AMOUNT:
-                if field.params is not None and isinstance(field.params, TokenAmountParameters):
+                if field.params is not None and isinstance(field.params, ResolvedTokenAmountParameters):
                     asset_path = field.params.tokenPath if prefix is None else f"{prefix}.{field.params.tokenPath}"
 
                     # FIXME edge case for referencing verifyingContract, this will be handled cleanly in #65

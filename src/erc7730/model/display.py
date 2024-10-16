@@ -53,40 +53,6 @@ class FieldFormat(str, Enum):
     parameters."""
 
 
-class TokenAmountParameters(Model):
-    """
-    Token Amount Formatting Parameters.
-    """
-
-    tokenPath: str | None = Field(
-        default=None,
-        title="Token Path",
-        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
-        "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
-        '"Unknown token" warning.',
-    )
-
-    nativeCurrencyAddress: str | list[str] | None = Field(
-        default=None,
-        title="Native Currency Address",
-        description="An address or array of addresses, any of which are interpreted as an amount in native currency "
-        "rather than a token.",
-    )
-
-    threshold: str | None = Field(
-        default=None,
-        title="Unlimited Threshold",
-        description="The threshold above which the amount should be displayed using the message parameter rather than "
-        "the real amount.",
-    )
-
-    message: str | None = Field(
-        default=None,
-        title="Unlimited Message",
-        description="The message to display when the amount is above the threshold.",
-    )
-
-
 class DateEncoding(str, Enum):
     """
     The encoding for a date.
@@ -97,14 +63,6 @@ class DateEncoding(str, Enum):
 
     TIMESTAMP = "timestamp"
     """The date is encoded as a timestamp."""
-
-
-class DateParameters(Model):
-    """
-    Date Formatting Parameters
-    """
-
-    encoding: DateEncoding = Field(title="Date Encoding", description="The encoding of the date.")
 
 
 class AddressNameType(str, Enum):
@@ -139,81 +97,6 @@ class AddressNameSources(str, Enum):
 
     ENS = "ens"
     """Address MAY be replaced with an associated ENS domain."""
-
-
-class AddressNameParameters(Model):
-    """
-    Address Names Formatting Parameters.
-    """
-
-    types: list[AddressNameType] | None = Field(
-        default=None,
-        title="Address Type",
-        description="An array of expected types of the address. If set, the wallet SHOULD check that the address "
-        "matches one of the types provided.",
-        min_length=1,
-    )
-
-    sources: list[AddressNameSources] | None = Field(
-        default=None,
-        title="Trusted Sources",
-        description="An array of acceptable sources for names (see next section). If set, the wallet SHOULD restrict "
-        "name lookup to relevant sources.",
-        min_length=1,
-    )
-
-
-class CallDataParameters(Model):
-    """
-    Embedded Calldata Formatting Parameters.
-    """
-
-    selector: str | None = Field(
-        default=None,
-        title="Called Selector",
-        description="The selector being called, if not contained in the calldata. Hex string representation.",
-    )
-
-    calleePath: str = Field(
-        title="Callee Path",
-        description="The path to the address of the contract being called by this embedded calldata.",
-    )
-
-
-class NftNameParameters(Model):
-    """
-    NFT Names Formatting Parameters.
-    """
-
-    collectionPath: str = Field(
-        title="Collection Path", description="The path to the collection in the structured data."
-    )
-
-
-class UnitParameters(Model):
-    """
-    Unit Formatting Parameters.
-    """
-
-    base: str = Field(
-        title="Unit base symbol",
-        description="The base symbol of the unit, displayed after the converted value. It can be an SI unit symbol or "
-        "acceptable dimensionless symbols like % or bps.",
-    )
-
-    decimals: int | None = Field(
-        default=None,
-        title="Decimals",
-        description="The number of decimals of the value, used to convert to a float.",
-        ge=0,
-        le=255,
-    )
-
-    prefix: bool | None = Field(
-        default=None,
-        title="Prefix",
-        description="Whether the value should be converted to a prefixed unit, like k, M, G, etc.",
-    )
 
 
 class Screen(RootModel[dict[str, Any]]):

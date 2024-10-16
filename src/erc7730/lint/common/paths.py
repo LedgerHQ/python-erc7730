@@ -8,7 +8,7 @@ from erc7730.model.resolved.display import (
     ResolvedFieldDescription,
     ResolvedFormat,
     ResolvedNestedFields,
-    TokenAmountParameters,
+    ResolvedTokenAmountParameters,
 )
 
 _ARRAY_SUFFIX = "[]"
@@ -80,7 +80,7 @@ def compute_format_paths(format: ResolvedFormat) -> FormatPaths:
                     add_path(path, field.path)
                     if (
                         (params := field.params)
-                        and isinstance(params, TokenAmountParameters)
+                        and isinstance(params, ResolvedTokenAmountParameters)
                         and (token_path := params.tokenPath) is not None
                     ):
                         add_path(path, token_path)

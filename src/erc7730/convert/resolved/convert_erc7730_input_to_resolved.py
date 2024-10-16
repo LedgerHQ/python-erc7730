@@ -10,17 +10,14 @@ from erc7730.convert.resolved.references import convert_reference
 from erc7730.model.abi import ABI
 from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.display import (
-    AddressNameParameters,
-    CallDataParameters,
-    DateParameters,
     FieldFormat,
-    NftNameParameters,
-    TokenAmountParameters,
-    UnitParameters,
 )
 from erc7730.model.input.context import InputContract, InputContractContext, InputEIP712, InputEIP712Context
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import (
+    InputAddressNameParameters,
+    InputCallDataParameters,
+    InputDateParameters,
     InputDisplay,
     InputEnumParameters,
     InputField,
@@ -29,7 +26,10 @@ from erc7730.model.input.display import (
     InputFieldParameters,
     InputFormat,
     InputNestedFields,
+    InputNftNameParameters,
     InputReference,
+    InputTokenAmountParameters,
+    InputUnitParameters,
 )
 from erc7730.model.resolved.context import (
     ResolvedContract,
@@ -39,6 +39,9 @@ from erc7730.model.resolved.context import (
 )
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
+    ResolvedAddressNameParameters,
+    ResolvedCallDataParameters,
+    ResolvedDateParameters,
     ResolvedDisplay,
     ResolvedEnumParameters,
     ResolvedField,
@@ -47,6 +50,9 @@ from erc7730.model.resolved.display import (
     ResolvedFieldParameters,
     ResolvedFormat,
     ResolvedNestedFields,
+    ResolvedNftNameParameters,
+    ResolvedTokenAmountParameters,
+    ResolvedUnitParameters,
 )
 
 
@@ -225,18 +231,27 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _convert_field_parameters(
         cls, params: InputFieldParameters, out: OutputAdder
     ) -> ResolvedFieldParameters | None:
-        if isinstance(params, AddressNameParameters):
-            return params
-        if isinstance(params, CallDataParameters):
-            return params
-        if isinstance(params, TokenAmountParameters):
-            return params
-        if isinstance(params, NftNameParameters):
-            return params
-        if isinstance(params, DateParameters):
-            return params
-        if isinstance(params, UnitParameters):
-            return params
+        if isinstance(params, InputAddressNameParameters):
+            return ResolvedAddressNameParameters(types=params.types, sources=params.sources)
+        if isinstance(params, InputCallDataParameters):
+            return ResolvedCallDataParameters(selector=params.selector, calleePath=params.calleePath)
+        if isinstance(params, InputTokenAmountParameters):
+            return ResolvedTokenAmountParameters(
+                tokenPath=params.tokenPath,
+                nativeCurrencyAddress=params.nativeCurrencyAddress,
+                threshold=params.threshold,
+                message=params.message,
+            )
+        if isinstance(params, InputNftNameParameters):
+            return ResolvedNftNameParameters(collectionPath=params.collectionPath)
+        if isinstance(params, InputDateParameters):
+            return ResolvedDateParameters(encoding=params.encoding)
+        if isinstance(params, InputUnitParameters):
+            return ResolvedUnitParameters(
+                base=params.base,
+                decimals=params.decimals,
+                prefix=params.prefix,
+            )
         if isinstance(params, InputEnumParameters):
             return cls._convert_enum_parameters(params, out)
         return out.error(title="Invalid field parameters", message=f"Invalid field parameters type: {type(params)}")
