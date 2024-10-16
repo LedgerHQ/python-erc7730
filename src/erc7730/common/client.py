@@ -20,7 +20,7 @@ class ScanSite:
 SCAN_SITES = {
     1: ScanSite(host="api.etherscan.io", api_key="ETHERSCAN_API_KEY"),
     56: ScanSite(host="api.bscscan.com", api_key="BSCSCAN_API_KEY"),
-    137: ScanSite(host="api.polygonscan.io", api_key="POLYGONSCAN_API_KEY"),
+    137: ScanSite(host="api.polygonscan.com", api_key="POLYGONSCAN_API_KEY"),
     1101: ScanSite(host="api-zkevm.polygonscan.com", api_key="POLYGONSKEVMSCAN_API_KEY"),
     42161: ScanSite(host="api.arbiscan.io", api_key="ARBISCAN_API_KEY"),
     8453: ScanSite(host="api.basescan.io", api_key="BASESCAN_API_KEY"),
