@@ -132,6 +132,6 @@ def get_functions(abis: list[ABI]) -> Functions:
     for abi in abis:
         if abi.type == "function":
             functions.functions[function_to_selector(abi)] = abi
-            if abi.name in ("proxyType", "getImplementation", "implementation"):
+            if abi.name in ("proxyType", "getImplementation", "implementation", "proxy__getImplementation"):
                 functions.proxy = True
     return functions
