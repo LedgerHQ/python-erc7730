@@ -4,6 +4,7 @@ from typing import Annotated, Any
 from pydantic import Field, RootModel
 
 from erc7730.model.base import Model
+from erc7730.model.paths import DataPath
 from erc7730.model.types import Id
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -147,16 +148,17 @@ class FormatBase(Model):
         default=None,
         title="Required fields",
         description="A list of fields that are required to be displayed to the user. A field that has a formatter and "
-        "is not in this list is optional. A field that does not have a formatter should be silent, ie not"
+        "is not in this list is optional. A field that does not have a formatter should be silent, ie not "
         "shown.",
     )
 
-    excluded: list[str] | None = Field(
+    excluded: list[DataPath] | None = Field(
         default=None,
         title="Excluded fields",
         description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
-        "has no formatter and is not declared in this list MAY be considered as an error by the wallet when"
-        "interpreting the descriptor.",
+        "has no formatter and is not declared in this list MAY be considered as an error by the wallet when "
+        "interpreting the descriptor. The excluded paths should interpreted as prefixes, meaning that all fields under "
+        "excluded path should be ignored",
     )
 
     screens: dict[str, list[Screen]] | None = Field(

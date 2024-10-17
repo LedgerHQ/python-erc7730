@@ -1,14 +1,17 @@
-import re
 from typing import final, override
 
-from erc7730.common.abi import compute_abi_paths, function_to_selector, reduce_signature, signature_to_selector
+from erc7730.common.abi import function_to_selector, reduce_signature, signature_to_selector
 from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
-from erc7730.lint.common.paths import compute_eip712_paths, compute_format_paths
+from erc7730.model.paths import DataPath, Field
+from erc7730.model.paths.path_ops import data_path_ends_with, data_path_starts_with
+from erc7730.model.paths.path_resolver import compute_abi_paths, compute_eip712_paths, compute_format_paths
 from erc7730.model.resolved.context import EIP712JsonSchema, ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
-AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX = {r"(.+\.)?nonce"}
+AUTHORIZED_MISSING_DISPLAY_FIELDS = {
+    Field(identifier="nonce"),
+}
 
 
 @final
@@ -51,13 +54,13 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     for path in eip712_paths - format_paths:
                         allowed = False
                         for excluded_path in excluded:
-                            if path.startswith(excluded_path):
+                            if data_path_starts_with(path, excluded_path):
                                 allowed = True
                                 break
                         if allowed:
                             continue
 
-                        if any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
+                        if not any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
                             out.debug(
                                 title="Optional Display field missing",
                                 message=f"Display field for path `{path}` is missing for message {schema.primaryType}. "
@@ -99,7 +102,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
     @classmethod
     def _validate_abi_paths(cls, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor.context, ResolvedContractContext):
-            abi_paths_by_selector: dict[str, set[str]] = {}
+            abi_paths_by_selector: dict[str, set[DataPath]] = {}
             for abi in descriptor.context.contract.abi:
                 if abi.type == "function":
                     abi_paths_by_selector[function_to_selector(abi)] = compute_abi_paths(abi)
@@ -129,13 +132,13 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 for path in abi_paths - format_paths:
                     allowed = False
                     for excluded_path in excluded:
-                        if path.startswith(excluded_path):
+                        if data_path_starts_with(path, excluded_path):
                             allowed = True
                             break
                     if allowed:
                         continue
 
-                    if not any(re.fullmatch(regex, path) for regex in AUTHORIZED_MISSING_DISPLAY_FIELDS_REGEX):
+                    if not any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
                         out.debug(
                             title="Optional Display field missing",
                             message=f"Display field for path `{path}` is missing for selector {function}. If "

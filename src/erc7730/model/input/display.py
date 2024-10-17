@@ -22,7 +22,7 @@ class InputFieldBase(Model):
     A field formatter, containing formatting information of a single field in a message.
     """
 
-    path: str = Field(
+    path: InputPath = Field(
         title="Path",
         description="A path to the field in the structured data. The path is a JSON path expression that can be used "
         "to extract the field value from the structured data.",
@@ -63,7 +63,7 @@ class InputTokenAmountParameters(Model):
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: str | None = Field(
+    tokenPath: InputPath | None = Field(
         default=None,
         title="Token Path",
         description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
@@ -125,7 +125,7 @@ class InputCallDataParameters(Model):
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: str = Field(
+    calleePath: InputPath = Field(
         title="Callee Path",
         description="The path to the address of the contract being called by this embedded calldata.",
     )
@@ -136,7 +136,7 @@ class InputNftNameParameters(Model):
     NFT Names Formatting Parameters.
     """
 
-    collectionPath: str = Field(
+    collectionPath: InputPath = Field(
         title="Collection Path", description="The path to the collection in the structured data."
     )
 

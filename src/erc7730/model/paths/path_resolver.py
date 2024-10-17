@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from erc7730.model.abi import Component, Function, InputOutput
 from erc7730.model.context import EIP712Field, EIP712JsonSchema
 from erc7730.model.paths import EMPTY_DATA_PATH, Array, ContainerPath, DataPath, Field
-from erc7730.model.paths.path_ops import append_data_path
+from erc7730.model.paths.path_ops import data_path_append
 from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDescription,
@@ -74,12 +74,13 @@ def compute_eip712_paths(schema: EIP712JsonSchema) -> set[DataPath]:
 
     def append_paths(path: DataPath, current_type: list[EIP712Field]) -> None:
         for field in current_type:
-            new_path = append_data_path(path, Field(identifier=field.name))
+            new_path = data_path_append(path, Field(identifier=field.name))
             field_type = field.type
-            if field_type.endswith(_ARRAY_SUFFIX):
-                field_type = field_type[: -len(_ARRAY_SUFFIX)]
-                new_path = append_data_path(path, Array())
-            if (target_type := schema.types.get(field_type)) is not None:
+            if (field_element_type := field_type.rstrip("[]")) != field_type:
+                new_path = data_path_append(path, Array())
+            else:
+                field_element_type = field_type
+            if (target_type := schema.types.get(field_element_type)) is not None:
                 append_paths(new_path, target_type)
             else:
                 paths.add(new_path)
@@ -98,7 +99,7 @@ def compute_abi_paths(abi: Function) -> set[DataPath]:
         if params:
             for param in params:
                 param_name = param.name + ".[]" if param.type.endswith("[]") else param.name
-                param_path = append_data_path(path, Field(identifier=param_name))
+                param_path = data_path_append(path, Field(identifier=param_name))
                 if param.components:
                     append_paths(param_path, param.components)  # type: ignore
                 else:
