@@ -2,7 +2,9 @@ import re
 from dataclasses import dataclass
 from typing import cast
 
-from erc7730.model.context import EIP712Field, EIP712JsonSchema
+from eip712.model.schema import EIP712SchemaField
+
+from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDescription,
@@ -31,7 +33,7 @@ def compute_eip712_paths(schema: EIP712JsonSchema) -> set[str]:
     """Compute the sets of valid paths for an EIP712 schema."""
 
     def append_paths(
-        path: str, current_type: list[EIP712Field], types: dict[str, list[EIP712Field]], paths: set[str]
+        path: str, current_type: list[EIP712SchemaField], types: dict[str, list[EIP712SchemaField]], paths: set[str]
     ) -> None:
         for domain in current_type:
             new_path = _append_path(path, domain.name)

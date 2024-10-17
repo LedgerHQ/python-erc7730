@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:0e6085b4f541a9771002fe82c22e7a0b7e1f7a530f4a7536252fd6f526a74874"
+content_hash = "sha256:48ae2022d1d11a1f092dbf654eb0d3afb49f1ee13974370fd7b9cc528279a1a6"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -279,7 +279,7 @@ files = [
 
 [[package]]
 name = "eip712-clearsign"
-version = "3.0.0"
+version = "3.0.1"
 requires_python = "<3.13,>=3.12"
 summary = "ERC-7730 descriptors validation and utilities."
 groups = ["default"]
@@ -287,8 +287,8 @@ dependencies = [
     "pydantic>=2.8.2",
 ]
 files = [
-    {file = "eip712-clearsign-3.0.0.tar.gz", hash = "sha256:471507fd5e9177694ab509c6b652859a5290e13beb01c3df32757bbf21247d4b"},
-    {file = "eip712_clearsign-3.0.0-py3-none-any.whl", hash = "sha256:bbd3a7b7d39b28e21c362b35bf7428bca93ba32fd2087aaa7c9227886f9926eb"},
+    {file = "eip712-clearsign-3.0.1.tar.gz", hash = "sha256:674195529a62333b3d59c5152a3cff641ed92db28392807d61df39533946589e"},
+    {file = "eip712_clearsign-3.0.1-py3-none-any.whl", hash = "sha256:7a91d4853ae31e9cf01555e991dcaa1c8ccf4a4a0e569e5dae4727ef0f419e36"},
 ]
 
 [[package]]

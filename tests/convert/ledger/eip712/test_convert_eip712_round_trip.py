@@ -3,9 +3,10 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from eip712 import EIP712DAppDescriptor
+from eip712.convert.input_to_resolved import EIP712InputToResolvedConverter
+from eip712.model.input.descriptor import InputEIP712DAppDescriptor
 
-from erc7730.common.pydantic import model_from_json_file_with_includes, model_to_json_str
+from erc7730.common.pydantic import model_to_json_str
 from erc7730.convert.convert import convert_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
@@ -31,7 +32,8 @@ def test_roundtrip_from_erc7730(input_file: Path) -> None:
     resolved_erc7730_descriptor = single_or_skip(resolved_erc7730_descriptor)
     legacy_eip712_descriptor = convert_and_print_errors(resolved_erc7730_descriptor, ERC7730toEIP712Converter())
     legacy_eip712_descriptor = single_or_skip(legacy_eip712_descriptor)
-    output_erc7730_descriptor = convert_and_print_errors(legacy_eip712_descriptor, EIP712toERC7730Converter())
+    resolved_legacy_eip172_descriptor = EIP712InputToResolvedConverter().convert(legacy_eip712_descriptor)
+    output_erc7730_descriptor = convert_and_print_errors(resolved_legacy_eip172_descriptor, EIP712toERC7730Converter())
     output_erc7730_descriptor = single_or_skip(output_erc7730_descriptor)
     _assert_erc7730_json_equals_with_tolerance(input_erc7730_descriptor, output_erc7730_descriptor)
 
@@ -47,8 +49,9 @@ def test_roundtrip_from_legacy_eip712(input_file: Path) -> None:
     if str(input_file).endswith("/uniswap/eip712.json"):
         pytest.skip("Several Uniswap messages have same primary types so they collide")
 
-    input_legacy_eip712_descriptor = model_from_json_file_with_includes(input_file, EIP712DAppDescriptor)
-    input_erc7730_descriptor = convert_and_print_errors(input_legacy_eip712_descriptor, EIP712toERC7730Converter())
+    input_legacy_eip712_descriptor = InputEIP712DAppDescriptor.load(input_file)
+    resolved_legacy_eip172_descriptor = EIP712InputToResolvedConverter().convert(input_legacy_eip712_descriptor)
+    input_erc7730_descriptor = convert_and_print_errors(resolved_legacy_eip172_descriptor, EIP712toERC7730Converter())
     input_erc7730_descriptor = single_or_skip(input_erc7730_descriptor)
     resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
     resolved_erc7730_descriptor = single_or_skip(resolved_erc7730_descriptor)
@@ -116,16 +119,18 @@ def _assert_erc7730_json_equals_with_tolerance(input: InputERC7730Descriptor, ou
     assert_dict_equals(input_dict, output_dict)
 
 
-def _assert_eip712_json_equals_with_tolerance(input: EIP712DAppDescriptor, output: EIP712DAppDescriptor) -> None:
+def _assert_eip712_json_equals_with_tolerance(
+    input: InputEIP712DAppDescriptor, output: InputEIP712DAppDescriptor
+) -> None:
     input_dict, output_dict = json.loads(model_to_json_str(input)), json.loads(model_to_json_str(output))
 
+    # format is required in ERC-7730 schema, and missing format in EIP-712 is equivalent to raw
     def cleanup_dapp_descriptor(dapp: dict[str, Any]) -> Any:
         for contract in dapp["contracts"]:
             for message in contract["messages"]:
                 for field in message["mapper"]["fields"]:
-                    field.pop("coinRef", None)  # TODO unnecessary after eip712 3.0.0 update
                     if field.get("format") == "raw":
-                        field.pop("format", None)  # TODO unnecessary after eip712 3.0.0 update
+                        field.pop("format", None)
 
     cleanup_dapp_descriptor(input_dict)
     cleanup_dapp_descriptor(output_dict)

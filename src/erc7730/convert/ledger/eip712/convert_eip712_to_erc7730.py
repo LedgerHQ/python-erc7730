@@ -1,20 +1,15 @@
 from typing import assert_never, final, override
 
-from eip712 import (
-    EIP712DAppDescriptor as LegacyEIP712DAppDescriptor,
-)
-from eip712 import (
-    EIP712Field as LegacyEIP712Field,
-)
-from eip712 import (
-    EIP712Format as LegacyEIP712Format,
-)
-from pydantic import RootModel
+from eip712.model.resolved.descriptor import ResolvedEIP712DAppDescriptor
+from eip712.model.resolved.message import ResolvedEIP712MapperField
+from eip712.model.schema import EIP712SchemaField, EIP712Type
+from eip712.model.types import EIP712Format
+from eip712.utils import MissingRootTypeError, MultipleRootTypesError, get_primary_type
 from pydantic_string_url import HttpUrl
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, Domain, EIP712Field, EIP712JsonSchema, EIP712Type
+from erc7730.model.context import Deployment, Domain, EIP712JsonSchema
 from erc7730.model.display import (
     DateEncoding,
     DateParameters,
@@ -34,7 +29,7 @@ from erc7730.model.metadata import Metadata
 
 
 @final
-class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, InputERC7730Descriptor]):
+class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, InputERC7730Descriptor]):
     """
     Converts Ledger legacy EIP-712 descriptor to ERC-7730 descriptor.
 
@@ -43,7 +38,7 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
 
     @override
     def convert(
-        self, descriptor: LegacyEIP712DAppDescriptor, out: OutputAdder
+        self, descriptor: ResolvedEIP712DAppDescriptor, out: OutputAdder
     ) -> dict[str, InputERC7730Descriptor] | None:
         descriptors: dict[str, InputERC7730Descriptor] = {}
 
@@ -52,16 +47,10 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
             schemas: list[EIP712JsonSchema | HttpUrl] = []
 
             for message in contract.messages:
-                # TODO Improve typing on EIP-712 library to use dict[EIP712Type, list[EIP712Field]]
-                #  we serialize/deserialize here to be sure to have the proper types, as in some context we have dicts
-                #  instead of classes.
-                schema_dict = RootModel(message.schema_).model_dump()
-                schema = RootModel[dict[EIP712Type, list[EIP712Field]]].model_validate(schema_dict).root
-
-                if (primary_type := self._get_primary_type(schema, out)) is None:
+                if (primary_type := self._get_primary_type(message.schema_, out)) is None:
                     return None
 
-                schemas.append(EIP712JsonSchema(primaryType=primary_type, types=schema))
+                schemas.append(EIP712JsonSchema(primaryType=primary_type, types=message.schema_))
 
                 formats[primary_type] = InputFormat(
                     intent=message.mapper.label,
@@ -76,15 +65,15 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
                         domain=Domain(
                             name=descriptor.name,
                             version=None,
-                            chainId=descriptor.chain_id,
+                            chainId=descriptor.chainId,
                             verifyingContract=contract.address,
                         ),
                         schemas=schemas,
-                        deployments=[Deployment(chainId=descriptor.chain_id, address=contract.address)],
+                        deployments=[Deployment(chainId=descriptor.chainId, address=contract.address)],
                     )
                 ),
                 metadata=Metadata(
-                    owner=contract.name,
+                    owner=contract.contractName,
                     info=None,
                     token=None,
                     constants=None,
@@ -99,26 +88,28 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
         return descriptors
 
     @classmethod
-    def _convert_field(cls, field: LegacyEIP712Field) -> InputFieldDescription | InputReference | InputNestedFields:
+    def _convert_field(
+        cls, field: ResolvedEIP712MapperField
+    ) -> InputFieldDescription | InputReference | InputNestedFields:
         # FIXME must generate nested fields for arrays
         match field.format:
-            case LegacyEIP712Format.RAW | None:
+            case EIP712Format.RAW | None:
                 return InputFieldDescription(path=field.path, label=field.label, format=FieldFormat.RAW, params=None)
-            case LegacyEIP712Format.AMOUNT if field.assetPath is not None:
+            case EIP712Format.AMOUNT if field.assetPath is not None:
                 return InputFieldDescription(
                     path=field.path,
                     label=field.label,
                     format=FieldFormat.TOKEN_AMOUNT,
                     params=TokenAmountParameters(tokenPath=field.assetPath),
                 )
-            case LegacyEIP712Format.AMOUNT:
+            case EIP712Format.AMOUNT:
                 return InputFieldDescription(
                     path=field.path,
                     label=field.label,
                     format=FieldFormat.TOKEN_AMOUNT,
                     params=TokenAmountParameters(tokenPath="@.to"),
                 )
-            case LegacyEIP712Format.DATETIME:
+            case EIP712Format.DATETIME:
                 return InputFieldDescription(
                     path=field.path,
                     label=field.label,
@@ -129,23 +120,20 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
                 assert_never(field.format)
 
     @classmethod
-    def _get_primary_type(cls, schema: dict[EIP712Type, list[EIP712Field]], out: OutputAdder) -> EIP712Type | None:
-        # TODO _schema_top_level_type() is wrong on EIP-712 library (fails with "SomeType[]" syntax)
-        referenced_types = {
-            field.type.rstrip("[]") for type_name, type_fields in schema.items() for field in type_fields
-        }
-        match len(roots := set(schema.keys()) - referenced_types - {"EIP712Domain"}):
-            case 0:
-                return out.error(
-                    title="Invalid EIP-712 schema",
-                    message="Primary type could not be determined on EIP-712 schema, as all types are referenced by"
-                    "other types. Please make sure your schema has a root type.",
-                )
-            case 1:
-                return next(iter(roots))
-            case _:
-                return out.error(
-                    title="Invalid EIP-712 schema",
-                    message="Primary type could not be determined on EIP-712 schema, as several types are not"
-                    "referenced by any other type. Please make sure your schema has a single root type.",
-                )
+    def _get_primary_type(
+        cls, schema: dict[EIP712Type, list[EIP712SchemaField]], out: OutputAdder
+    ) -> EIP712Type | None:
+        try:
+            return get_primary_type(schema)
+        except MissingRootTypeError:
+            return out.error(
+                title="Invalid EIP-712 schema",
+                message="Primary type could not be determined on EIP-712 schema, as all types are referenced by"
+                "other types. Please make sure your schema has a root type.",
+            )
+        except MultipleRootTypesError:
+            return out.error(
+                title="Invalid EIP-712 schema",
+                message="Primary type could not be determined on EIP-712 schema, as several types are not"
+                "referenced by any other type. Please make sure your schema has a single root type.",
+            )

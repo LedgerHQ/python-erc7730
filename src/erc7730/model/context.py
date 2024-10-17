@@ -1,5 +1,4 @@
-from typing import Annotated
-
+from eip712.model.schema import EIP712SchemaField, EIP712Type
 from pydantic import Field
 from pydantic_string_url import HttpUrl
 
@@ -9,21 +8,6 @@ from erc7730.model.types import ContractAddress
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-EIP712Type = Annotated[
-    str, Field(title="EIP12 Type Identifier", description="An EIP-712 scalar or structured type identifier.")
-]
-
-
-class EIP712Field(Model):
-    """
-    EIP-712 field, which is a tuple of a name and a type.
-    """
-
-    name: str = Field(title="Name", description="The EIP-712 field name.")
-
-    type: EIP712Type = Field(title="Type", description="The EIP-712 field type identifier.")
-
-
 class EIP712JsonSchema(Model):
     """
     EIP-712 message schema.
@@ -31,7 +15,7 @@ class EIP712JsonSchema(Model):
 
     primaryType: EIP712Type = Field(title="Primary Type", description="The identifier of the schema primary type.")
 
-    types: dict[EIP712Type, list[EIP712Field]] = Field(
+    types: dict[EIP712Type, list[EIP712SchemaField]] = Field(
         title="Types", description="The schema types reachable from primary type."
     )
 

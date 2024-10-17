@@ -2,11 +2,11 @@ import json
 from pathlib import Path
 from typing import Annotated, assert_never
 
-from eip712 import EIP712DAppDescriptor
+from eip712.convert.input_to_resolved import EIP712InputToResolvedConverter
+from eip712.model.input.descriptor import InputEIP712DAppDescriptor
 from typer import Argument, Exit, Option, Typer
 
 from erc7730.common.output import ConsoleOutputAdder
-from erc7730.common.pydantic import model_from_json_file_with_includes
 from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
@@ -83,8 +83,10 @@ def convert_eip712_to_erc7730(
     input_eip712_path: Annotated[Path, Argument(help="The input EIP-712 file path")],
     output_erc7730_path: Annotated[Path, Argument(help="The output ERC-7730 file path")],
 ) -> None:
+    input_descriptor = InputEIP712DAppDescriptor.load(input_eip712_path)
+    resolved_descriptor = EIP712InputToResolvedConverter().convert(input_descriptor)
     if not convert_to_file_and_print_errors(
-        input_descriptor=model_from_json_file_with_includes(input_eip712_path, EIP712DAppDescriptor),
+        input_descriptor=resolved_descriptor,
         output_file=output_erc7730_path,
         converter=EIP712toERC7730Converter(),
     ):
