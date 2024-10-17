@@ -5,8 +5,17 @@ from lark.exceptions import VisitError
 from lark.visitors import Transformer_InPlaceRecursive
 from pydantic import TypeAdapter, ValidationError
 
-from erc7730.model.paths import Field, Array, ArrayIndex, ArrayElement, ArraySlice, ContainerField, DescriptorPath, \
-    ContainerPath, DataPath
+from erc7730.model.paths import (
+    Array,
+    ArrayElement,
+    ArrayIndex,
+    ArraySlice,
+    ContainerField,
+    ContainerPath,
+    DataPath,
+    DescriptorPath,
+    Field,
+)
 
 PATH_PARSER = Lark(
     grammar=r"""

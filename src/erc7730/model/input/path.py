@@ -12,7 +12,8 @@ from pydantic_core.core_schema import (
     to_string_ser_schema,
 )
 
-from erc7730.model.path import ContainerPath, DataPath, DescriptorPath, parse_path
+from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
+from erc7730.model.paths.path_parser import parse_path
 
 INPUT_PATH_JSON_SCHEMA = chain_schema([str_schema(), no_info_plain_validator_function(parse_path)])
 INPUT_PATH_CORE_SCHEMA = json_or_python_schema(

@@ -1,5 +1,4 @@
-from erc7730.model.path import DataPath, DataPathElement, DescriptorPath
-
+from erc7730.model.paths import DataPath, DataPathElement, DescriptorPath
 
 
 def strip_prefix(path: DescriptorPath, prefix: DescriptorPath) -> DescriptorPath:
@@ -27,7 +26,7 @@ def concat_data_path(parent: DataPath, child: DataPath) -> DataPath:
     :param child: child path
     :return: concatenated path
     """
-    raise NotImplementedError()
+    raise NotImplementedError()  # TODO
 
 
 def append_data_path(parent: DataPath, child: DataPathElement) -> DataPath:

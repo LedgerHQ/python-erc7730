@@ -2,7 +2,7 @@ from typing import Annotated
 
 from pydantic import AfterValidator, Field
 
-from erc7730.model.path import ContainerPath, DataPath
+from erc7730.model.paths import ContainerPath, DataPath
 
 
 def _validate_absolute(path: ContainerPath | DataPath) -> ContainerPath | DataPath:

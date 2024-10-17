@@ -1,7 +1,7 @@
 import re
 from typing import final, override
 
-from erc7730.common.abi import compute_paths, function_to_selector, reduce_signature, signature_to_selector
+from erc7730.common.abi import compute_abi_paths, function_to_selector, reduce_signature, signature_to_selector
 from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.common.paths import compute_eip712_paths, compute_format_paths
@@ -102,7 +102,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             abi_paths_by_selector: dict[str, set[str]] = {}
             for abi in descriptor.context.contract.abi:
                 if abi.type == "function":
-                    abi_paths_by_selector[function_to_selector(abi)] = compute_paths(abi)
+                    abi_paths_by_selector[function_to_selector(abi)] = compute_abi_paths(abi)
 
             for selector, fmt in descriptor.display.formats.items():
                 keccak = selector

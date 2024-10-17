@@ -2,7 +2,7 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from erc7730.model.input.path import InputPath, InputPathAsJson
-from erc7730.model.path import (
+from erc7730.model.paths import (
     Array,
     ArrayElement,
     ArraySlice,
@@ -11,8 +11,8 @@ from erc7730.model.path import (
     DataPath,
     DescriptorPath,
     Field,
-    parse_path,
 )
+from erc7730.model.paths.path_parser import parse_path
 from erc7730.model.resolved.path import ResolvedPath
 from tests.assertions import assert_json_str_equals
 
