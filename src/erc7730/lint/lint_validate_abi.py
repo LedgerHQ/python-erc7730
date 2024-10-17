@@ -54,17 +54,26 @@ class ValidateABILinter(ERC7730Linter):
             if reference_abis.proxy:
                 return out.info(
                     title="Proxy contract",
-                    message="Contract ABI on Etherscan is likely to be a proxy, validation skipped",
+                    message=(
+                        "Contract ABI on Blockchain Explorer for deployment "
+                        f"{deployment.chainId}/{deployment.address}  is likely to be a proxy, validation skipped"
+                    ),
                 )
 
             for selector, abi in descriptor_abis.functions.items():
                 if selector not in reference_abis.functions:
                     out.error(
                         title="Missing function",
-                        message=f"Function `{selector}/{compute_signature(abi)}` is not defined in Etherscan ABI",
+                        message=(
+                            f"Function `{selector}/{compute_signature(abi)}` is not defined "
+                            f"on Blockchain Explorer ABI for deployment {deployment.chainId}/{deployment.address}"
+                        ),
                     )
                 elif descriptor_abis.functions[selector] != reference_abis.functions[selector]:
                     out.warning(
                         title="Function mismatch",
-                        message=f"Function `{selector}/{compute_signature(abi)}` does not match Etherscan ABI",
+                        message=(
+                            f"Function `{selector}/{compute_signature(abi)}` does not match "
+                            f"Blockchain Explorer ABI for deployment {deployment.chainId}/{deployment.address}"
+                        ),
                     )
