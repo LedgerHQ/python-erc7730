@@ -10,21 +10,15 @@ from erc7730.model.abi import ABI, Component, Function, InputOutput
 
 _SIGNATURE_PARSER = parser = Lark(
     grammar=r"""
-            function: identifier "(" top_level_params ")"
+            function: identifier "(" params ")"
             
-            top_level_params: (top_level_param ("," top_level_param)*)?
-            ?top_level_param: named_top_level_param | named_top_level_tuple
-            
-            inner_params: (inner_param ("," inner_param)*)?
-            ?inner_param: named_inner_param | named_inner_tuple
+            params: (param ("," param)*)?
+            ?param: named_param | named_tuple
 
-            ?tuple: "(" inner_params ")"
-            
-            named_inner_param: type identifier?
-            named_inner_tuple:  tuple identifier?
-            
-            named_top_level_param: type identifier?
-            named_top_level_tuple:  tuple identifier?
+            ?tuple: "(" params ")"
+                       
+            named_param: type identifier?
+            named_tuple:  tuple identifier?
 
             array: "[]"
             identifier: /[a-zA-Z$_][a-zA-Z0-9$_]*/
@@ -41,33 +35,21 @@ class FunctionTransformer(Transformer_InPlaceRecursive):
 
     def function(self, ast: Any) -> Function:
         (name, inputs) = ast
-        return Function(name=name, inputs=inputs)
+        return Function(
+            name=name,
+            inputs=[InputOutput(name=input.name, type=input.type, components=input.components) for input in inputs],
+        )
 
-    def top_level_params(self, ast: Any) -> list[InputOutput]:
+    def params(self, ast: Any) -> list[Component]:
         return ast
 
-    def inner_params(self, ast: Any) -> list[Component]:
-        return ast
-
-    def named_top_level_param(self, ast: Any) -> InputOutput:
-        if len(ast) == 1:
-            return InputOutput(name="_", type=ast[0])
-        (type_, name) = ast
-        return InputOutput(name=name, type=type_)
-
-    def named_top_level_tuple(self, ast: Any) -> InputOutput:
-        if len(ast) == 1:
-            return InputOutput(name="_", type="tuple", components=ast[0])
-        (components, name) = ast
-        return InputOutput(name=name, type="tuple", components=components)
-
-    def named_inner_param(self, ast: Any) -> Component:
+    def named_param(self, ast: Any) -> Component:
         if len(ast) == 1:
             return Component(name="_", type=ast[0])
         (type_, name) = ast
         return Component(name=name, type=type_)
 
-    def named_inner_tuple(self, ast: Any) -> Component:
+    def named_tuple(self, ast: Any) -> Component:
         if len(ast) == 1:
             return Component(name="_", type="tuple", components=ast[0])
         (components, name) = ast
