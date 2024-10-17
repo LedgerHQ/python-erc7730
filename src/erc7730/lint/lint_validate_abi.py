@@ -50,30 +50,22 @@ class ValidateABILinter(ERC7730Linter):
 
             reference_abis = get_functions(abis)
             descriptor_abis = get_functions(context.contract.abi)
+            url = client.get_contract_url(deployment.chainId, deployment.address)
 
             if reference_abis.proxy:
                 return out.info(
                     title="Proxy contract",
-                    message=(
-                        "Contract ABI on Blockchain Explorer for deployment "
-                        f"{deployment.chainId}/{deployment.address}  is likely to be a proxy, validation skipped"
-                    ),
+                    message=f"Contract ABI {url} is likely to be a proxy, validation skipped",
                 )
 
             for selector, abi in descriptor_abis.functions.items():
                 if selector not in reference_abis.functions:
                     out.error(
                         title="Missing function",
-                        message=(
-                            f"Function `{selector}/{compute_signature(abi)}` is not defined "
-                            f"on Blockchain Explorer ABI for deployment {deployment.chainId}/{deployment.address}"
-                        ),
+                        message=f"Function `{selector}/{compute_signature(abi)}` is not defined on {url}",
                     )
                 elif descriptor_abis.functions[selector] != reference_abis.functions[selector]:
                     out.warning(
                         title="Function mismatch",
-                        message=(
-                            f"Function `{selector}/{compute_signature(abi)}` does not match "
-                            f"Blockchain Explorer ABI for deployment {deployment.chainId}/{deployment.address}"
-                        ),
+                        message=f"Function `{selector}/{compute_signature(abi)}` does not match {url}",
                     )
