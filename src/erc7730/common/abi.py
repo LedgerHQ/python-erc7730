@@ -70,27 +70,6 @@ class FunctionTransformer(Transformer_InPlaceRecursive):
         return value + array
 
 
-def _append_path(root: str, path: str) -> str:
-    return f"{root}.{path}" if root else path
-
-
-def compute_paths(abi: Function) -> set[str]:
-    """Compute the sets of valid paths for a Function."""
-
-    def append_paths(path: str, params: list[InputOutput] | list[Component] | None, paths: set[str]) -> None:
-        if params:
-            for param in params:
-                name = param.name + ".[]" if param.type.endswith("[]") else param.name
-                if param.components:
-                    append_paths(_append_path(path, name), param.components, paths)  # type: ignore
-                else:
-                    paths.add(_append_path(path, name))
-
-    paths: set[str] = set()
-    append_paths("", abi.inputs, paths)
-    return paths
-
-
 def compute_signature(abi: Function) -> str:
     """Compute the signature of a Function."""
     abi_function = cast(ABIFunction, abi.model_dump())

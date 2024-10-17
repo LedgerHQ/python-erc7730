@@ -5,7 +5,6 @@ from pydantic import RootModel
 from erc7730.common.options import first_not_none
 from erc7730.common.output import OutputAdder
 from erc7730.common.pydantic import model_to_json_dict
-from erc7730.convert.resolved.paths import strip_prefix
 from erc7730.model.display import (
     FieldFormat,
 )
@@ -13,7 +12,8 @@ from erc7730.model.input.display import (
     InputReference,
 )
 from erc7730.model.input.path import InputPath
-from erc7730.model.path import DescriptorPath, Field
+from erc7730.model.paths import DescriptorPath, Field
+from erc7730.model.paths.path_ops import descriptor_path_strip_prefix
 from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDefinition,
@@ -78,7 +78,7 @@ def _get_definition_id(ref: InputPath, out: OutputAdder) -> str | None:
         )
 
     try:
-        tail = strip_prefix(ref, DEFINITIONS_PATH)
+        tail = descriptor_path_strip_prefix(ref, DEFINITIONS_PATH)
     except ValueError:
         return out.error(
             title="Invalid definition reference path",

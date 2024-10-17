@@ -1,7 +1,6 @@
 import pytest
 
 from erc7730.common.abi import (
-    compute_paths,
     compute_signature,
     reduce_signature,
     signature_to_selector,
@@ -78,51 +77,3 @@ def test_signature_to_selector() -> None:
     signature = "transfer(address,uint256)"
     expected = "0xa9059cbb"
     assert signature_to_selector(signature) == expected
-
-
-def test_compute_paths_no_params() -> None:
-    abi = Function(name="transfer", inputs=[])
-    expected: set[str] = set()
-    assert compute_paths(abi) == expected
-
-
-def test_compute_paths_with_params() -> None:
-    abi = Function(
-        name="transfer", inputs=[InputOutput(name="to", type="address"), InputOutput(name="amount", type="uint256")]
-    )
-    expected = {"to", "amount"}
-    assert compute_paths(abi) == expected
-
-
-def test_compute_paths_with_nested_params() -> None:
-    abi = Function(
-        name="foo",
-        inputs=[
-            InputOutput(
-                name="bar",
-                type="tuple",
-                components=[Component(name="baz", type="uint256"), Component(name="qux", type="address")],
-            )
-        ],
-    )
-    expected = {"bar.baz", "bar.qux"}
-    assert compute_paths(abi) == expected
-
-
-def test_compute_paths_with_multiple_nested_params() -> None:
-    abi = Function(
-        name="foo",
-        inputs=[
-            InputOutput(
-                name="bar",
-                type="tuple",
-                components=[
-                    Component(name="baz", type="uint256"),
-                    Component(name="qux", type="address"),
-                    Component(name="nested", type="tuple[]", components=[Component(name="deep", type="string")]),
-                ],
-            )
-        ],
-    )
-    expected = {"bar.baz", "bar.qux", "bar.nested.[].deep"}
-    assert compute_paths(abi) == expected
