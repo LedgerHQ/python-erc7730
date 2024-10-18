@@ -180,7 +180,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _convert_field_description(
         cls, prefix: DataPath, definition: InputFieldDescription, out: OutputAdder
     ) -> ResolvedFieldDescription | None:
-        params = convert_field_parameters(definition.params, out) if definition.params is not None else None
+        params = convert_field_parameters(prefix, definition.params, out) if definition.params is not None else None
 
         return ResolvedFieldDescription.model_validate(
             {
@@ -233,7 +233,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     ) -> ResolvedField | None:
         match field:
             case InputReference():
-                return convert_reference(field, definitions, out)
+                return convert_reference(prefix, field, definitions, out)
             case InputFieldDescription():
                 return cls._convert_field_description(prefix, field, out)
             case InputNestedFields():
@@ -261,7 +261,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             case _:
                 assert_never(fields.path)
 
-        resolved_fields = cls._convert_fields(prefix, fields.fields, definitions, out)
+        resolved_fields = cls._convert_fields(path, fields.fields, definitions, out)
 
         if resolved_fields is None:
             return None

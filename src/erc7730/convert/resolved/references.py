@@ -15,7 +15,7 @@ from erc7730.model.input.display import (
     InputFieldParameters,
     InputReference,
 )
-from erc7730.model.paths import DescriptorPath, Field
+from erc7730.model.paths import DataPath, DescriptorPath, Field
 from erc7730.model.paths.path_ops import descriptor_path_strip_prefix, to_absolute
 from erc7730.model.resolved.display import (
     ResolvedField,
@@ -27,7 +27,7 @@ DEFINITIONS_PATH = DescriptorPath(elements=[Field(identifier="display"), Field(i
 
 
 def convert_reference(
-    reference: InputReference, definitions: dict[str, InputFieldDefinition], out: OutputAdder
+    prefix: DataPath, reference: InputReference, definitions: dict[str, InputFieldDefinition], out: OutputAdder
 ) -> ResolvedField | None:
     if (definition := _get_definition(reference.ref, definitions, out)) is None:
         return None
@@ -50,7 +50,7 @@ def convert_reference(
     if params:
         try:
             input_params: InputFieldParameters = TypeAdapter(InputFieldParameters).validate_json(json.dumps(params))
-            if (resolved_params := convert_field_parameters(input_params, out)) is None:
+            if (resolved_params := convert_field_parameters(prefix, input_params, out)) is None:
                 return None
         except ValidationError as e:
             return out.error(

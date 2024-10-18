@@ -56,7 +56,7 @@ def compute_eip712_schema_paths(schema: EIP712JsonSchema) -> set[DataPath]:
             sub_path = data_path_append(path, Field(identifier=field.name))
 
             if (field_type := field.type.rstrip("[]")) != field.type:
-                sub_path = data_path_append(path, Array())
+                sub_path = data_path_append(sub_path, Array())
                 paths.add(sub_path)
             else:
                 field_type = field.type
