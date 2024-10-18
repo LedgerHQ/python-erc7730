@@ -84,6 +84,9 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
         if not params:
             return None
         for param in params:
+            if len(param.name) == 0:
+                continue  # skip unnamed parameters
+
             sub_path = data_path_append(path, Field(identifier=param.name))
 
             param_type = param.type
