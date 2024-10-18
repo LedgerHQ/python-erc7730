@@ -50,12 +50,15 @@ def convert_field_parameters(params: InputFieldParameters, out: OutputAdder) -> 
 def convert_address_name_parameters(
     params: InputAddressNameParameters, out: OutputAdder
 ) -> ResolvedAddressNameParameters | None:
+    # TODO: resolution of descriptor paths not implemented
+    if isinstance(params.types, DescriptorPath) or isinstance(params.sources, DescriptorPath):
+        raise NotImplementedError("Resolution of descriptor paths not implemented")
     return ResolvedAddressNameParameters(types=params.types, sources=params.sources)
 
 
 def convert_calldata_parameters(params: InputCallDataParameters, out: OutputAdder) -> ResolvedCallDataParameters | None:
     # TODO: resolution of descriptor paths not implemented
-    if isinstance(params.calleePath, DescriptorPath):
+    if isinstance(params.selector, DescriptorPath) or isinstance(params.calleePath, DescriptorPath):
         raise NotImplementedError("Resolution of descriptor paths not implemented")
     return ResolvedCallDataParameters(
         selector=params.selector,
@@ -67,7 +70,12 @@ def convert_token_amount_parameters(
     params: InputTokenAmountParameters, out: OutputAdder
 ) -> ResolvedTokenAmountParameters | None:
     # TODO: resolution of descriptor paths not implemented
-    if isinstance(params.tokenPath, DescriptorPath) or isinstance(params.nativeCurrencyAddress, DescriptorPath):
+    if (
+        isinstance(params.tokenPath, DescriptorPath)
+        or isinstance(params.nativeCurrencyAddress, DescriptorPath)
+        or isinstance(params.threshold, DescriptorPath)
+        or isinstance(params.message, DescriptorPath)
+    ):
         raise NotImplementedError("Resolution of descriptor paths not implemented")
     return ResolvedTokenAmountParameters(
         tokenPath=None if params.tokenPath is None else to_absolute(params.tokenPath),
@@ -85,10 +93,18 @@ def convert_nft_parameters(params: InputNftNameParameters, out: OutputAdder) -> 
 
 
 def convert_date_parameters(params: InputDateParameters, out: OutputAdder) -> ResolvedDateParameters | None:
+    # TODO: resolution of descriptor paths not implemented
+    if isinstance(params.encoding, DescriptorPath):
+        raise NotImplementedError("Resolution of descriptor paths not implemented")
     return ResolvedDateParameters(encoding=params.encoding)
 
 
 def convert_unit_parameters(params: InputUnitParameters, out: OutputAdder) -> ResolvedUnitParameters | None:
+    # TODO: resolution of descriptor paths not implemented
+    if (isinstance(params.base, DescriptorPath) or isinstance(params.decimals, DescriptorPath)) or isinstance(
+        params.prefix, DescriptorPath
+    ):
+        raise NotImplementedError("Resolution of descriptor paths not implemented")
     return ResolvedUnitParameters(
         base=params.base,
         decimals=params.decimals,

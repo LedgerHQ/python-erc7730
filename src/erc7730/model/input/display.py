@@ -44,7 +44,7 @@ class InputReference(InputFieldBase):
         "key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
     )
 
-    label: str | None = Field(
+    label: str | DescriptorPathStr | None = Field(
         default=None,
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value. "
@@ -78,14 +78,14 @@ class InputTokenAmountParameters(Model):
         "rather than a token.",
     )
 
-    threshold: str | None = Field(
+    threshold: str | DescriptorPathStr | None = Field(
         default=None,
         title="Unlimited Threshold",
         description="The threshold above which the amount should be displayed using the message parameter rather than "
         "the real amount.",
     )
 
-    message: str | None = Field(
+    message: str | DescriptorPathStr | None = Field(
         default=None,
         title="Unlimited Message",
         description="The message to display when the amount is above the threshold.",
@@ -97,7 +97,7 @@ class InputAddressNameParameters(Model):
     Address Names Formatting Parameters.
     """
 
-    types: list[AddressNameType] | None = Field(
+    types: list[AddressNameType] | DescriptorPathStr | None = Field(
         default=None,
         title="Address Type",
         description="An array of expected types of the address. If set, the wallet SHOULD check that the address "
@@ -105,7 +105,7 @@ class InputAddressNameParameters(Model):
         min_length=1,
     )
 
-    sources: list[AddressNameSources] | None = Field(
+    sources: list[AddressNameSources] | DescriptorPathStr | None = Field(
         default=None,
         title="Trusted Sources",
         description="An array of acceptable sources for names (see next section). If set, the wallet SHOULD restrict "
@@ -119,13 +119,13 @@ class InputCallDataParameters(Model):
     Embedded Calldata Formatting Parameters.
     """
 
-    selector: str | None = Field(
+    selector: str | DescriptorPathStr | None = Field(
         default=None,
         title="Called Selector",
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: DataPathStr | ContainerPathStr = Field(
+    calleePath: DataPathStr | ContainerPathStr | DescriptorPathStr = Field(
         title="Callee Path",
         description="The path to the address of the contract being called by this embedded calldata.",
     )
@@ -136,7 +136,7 @@ class InputNftNameParameters(Model):
     NFT Names Formatting Parameters.
     """
 
-    collectionPath: DataPathStr | ContainerPathStr = Field(
+    collectionPath: DataPathStr | ContainerPathStr | DescriptorPathStr = Field(
         title="Collection Path", description="The path to the collection in the structured data."
     )
 
@@ -146,7 +146,7 @@ class InputDateParameters(Model):
     Date Formatting Parameters
     """
 
-    encoding: DateEncoding = Field(title="Date Encoding", description="The encoding of the date.")
+    encoding: DateEncoding | DescriptorPathStr = Field(title="Date Encoding", description="The encoding of the date.")
 
 
 class InputUnitParameters(Model):
@@ -154,13 +154,13 @@ class InputUnitParameters(Model):
     Unit Formatting Parameters.
     """
 
-    base: str = Field(
+    base: str | DescriptorPathStr = Field(
         title="Unit base symbol",
         description="The base symbol of the unit, displayed after the converted value. It can be an SI unit symbol or "
         "acceptable dimensionless symbols like % or bps.",
     )
 
-    decimals: int | None = Field(
+    decimals: int | DescriptorPathStr | None = Field(
         default=None,
         title="Decimals",
         description="The number of decimals of the value, used to convert to a float.",
@@ -168,7 +168,7 @@ class InputUnitParameters(Model):
         le=255,
     )
 
-    prefix: bool | None = Field(
+    prefix: bool | DescriptorPathStr | None = Field(
         default=None,
         title="Prefix",
         description="Whether the value should be converted to a prefixed unit, like k, M, G, etc.",
@@ -180,7 +180,7 @@ class InputEnumParameters(Model):
     Enum Formatting Parameters.
     """
 
-    ref: str = Field(
+    ref: DescriptorPathStr = Field(
         alias="$ref",
         title="Enum reference",
         description="The internal path to the enum definition used to convert this value.",
@@ -212,12 +212,12 @@ class InputFieldDefinition(Model):
         "reference in device specific sections.",
     )
 
-    label: str = Field(
+    label: str | DescriptorPathStr = Field(
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value.",
     )
 
-    format: FieldFormat | None = Field(
+    format: FieldFormat | DescriptorPathStr | None = Field(
         title="Field Format",
         description="The format of the field, that will be used to format the field value in a human readable way.",
     )
@@ -268,7 +268,7 @@ class InputFormat(FormatBase):
         title="Field Formats set", description="An array containing the ordered definitions of fields formats."
     )
 
-    required: list[DataPathStr | ContainerPathStr] | None = Field(
+    required: list[DataPathStr | ContainerPathStr] | DescriptorPathStr | None = Field(
         default=None,
         title="Required fields",
         description="A list of fields that are required to be displayed to the user. A field that has a formatter and "
@@ -276,7 +276,7 @@ class InputFormat(FormatBase):
         "shown.",
     )
 
-    excluded: list[DataPathStr] | None = Field(
+    excluded: list[DataPathStr] | DescriptorPathStr | None = Field(
         default=None,
         title="Excluded fields",
         description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
