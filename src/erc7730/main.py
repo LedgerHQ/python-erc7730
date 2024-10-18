@@ -72,6 +72,30 @@ def lint(
         raise Exit(1)
 
 
+@app.command(
+    name="resolve",
+    short_help="Convert descriptor to resolved form.",
+    help="""
+    Convert descriptor to resolved form:
+        - URLs fetched
+        - Contract addresses normalized to lowercase
+        - References inlined
+        - Constants inlined
+        - Field definitions inlined
+        - Selectors converted to 4 bytes form
+    
+    See `erc7730 schema resolved` for the resolved descriptor schema.
+    """,
+)
+def resolve(
+    input_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
+) -> None:
+    input_descriptor = InputERC7730Descriptor.load(input_path)
+    if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
+        raise Exit(1)
+    print(resolved_descriptor.to_json_string())
+
+
 @convert_app.command(
     name="eip712-to-erc7730",
     short_help="Convert a legacy EIP-712 descriptor file to an ERC-7730 file.",
