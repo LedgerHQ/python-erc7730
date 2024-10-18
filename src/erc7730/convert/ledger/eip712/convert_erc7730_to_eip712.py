@@ -14,7 +14,7 @@ from erc7730.model.display import (
     FieldFormat,
 )
 from erc7730.model.paths import ContainerField, ContainerPath, DataPath
-from erc7730.model.paths.path_ops import data_path_concat
+from erc7730.model.paths.path_ops import data_path_concat, to_relative
 from erc7730.model.resolved.context import ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
@@ -181,8 +181,8 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
                 assert_never(field.format)
 
         return InputEIP712MapperField(
-            path=".".join(str(e) for e in field_path.elements),
+            path=str(to_relative(field_path)),
             label=field.label,
-            assetPath=asset_path,
+            assetPath=None if asset_path is None else str(to_relative(asset_path)),
             format=field_format,
         )

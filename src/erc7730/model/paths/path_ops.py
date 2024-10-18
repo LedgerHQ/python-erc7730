@@ -155,3 +155,19 @@ def to_absolute(path: DataPath | ContainerPath) -> DataPath | ContainerPath:
             return path
         case _:
             assert_never(path)
+
+
+def to_relative(path: DataPath | ContainerPath) -> DataPath | ContainerPath:
+    """
+    Convert a path to a relative path.
+
+    :param path: data path
+    :return: absolute path
+    """
+    match path:
+        case DataPath():
+            return path.model_copy(update={"absolute": False})
+        case ContainerPath():
+            return path
+        case _:
+            assert_never(path)
