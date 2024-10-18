@@ -43,11 +43,20 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param1",
                         "label": "Param 1",
                         "format": "date",
                         "params": {
                             "encoding": "blockheight"
+                        },
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
                         }
                     }
                 ]

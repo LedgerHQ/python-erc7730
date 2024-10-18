@@ -43,7 +43,6 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param1",
                         "label": "Param 1",
                         "format": "addressName",
                         "params": {
@@ -57,6 +56,16 @@
                             "sources": [
                                 "local",
                                 "ens"
+                            ]
+                        },
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
                             ]
                         }
                     }

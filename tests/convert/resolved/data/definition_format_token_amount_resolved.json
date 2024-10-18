@@ -47,11 +47,29 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param1",
                         "label": "Param 1",
                         "format": "tokenAmount",
                         "params": {
-                            "tokenPath": "token1"
+                            "tokenPath": {
+                                "type": "data",
+                                "absolute": true,
+                                "elements": [
+                                    {
+                                        "type": "field",
+                                        "identifier": "token1"
+                                    }
+                                ]
+                            }
+                        },
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
                         }
                     }
                 ]

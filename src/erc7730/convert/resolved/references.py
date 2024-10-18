@@ -12,7 +12,7 @@ from erc7730.model.input.display import (
     InputReference,
 )
 from erc7730.model.paths import DescriptorPath, Field
-from erc7730.model.paths.path_ops import descriptor_path_strip_prefix
+from erc7730.model.paths.path_ops import descriptor_path_strip_prefix, to_absolute
 from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDefinition,
@@ -47,7 +47,7 @@ def convert_reference(
     )
 
     return ResolvedFieldDescription(
-        path=reference.path,
+        path=to_absolute(reference.path),
         label=label,
         format=FieldFormat(definition.format),
         params=resolved_params,
