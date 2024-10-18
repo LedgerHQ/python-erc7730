@@ -3,7 +3,7 @@ from pydantic import Field
 from pydantic_string_url import HttpUrl
 
 from erc7730.model.base import Model
-from erc7730.model.types import ContractAddress
+from erc7730.model.types import Address
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
@@ -43,7 +43,7 @@ class Domain(Model):
 
     chainId: int | None = Field(default=None, title="Chain ID", description="The EIP-155 chain id.")
 
-    verifyingContract: ContractAddress | None = Field(
+    verifyingContract: Address | None = Field(
         default=None, title="Verifying Contract", description="The EIP-712 verifying contract address."
     )
 
@@ -57,7 +57,7 @@ class Deployment(Model):
 
     chainId: int = Field(title="Chain ID", description="The deployment EIP-155 chain id.")
 
-    address: ContractAddress = Field(title="Contract Address", description="The deployment contract address.")
+    address: Address = Field(title="Contract Address", description="The deployment contract address.")
 
 
 class Factory(Model):

@@ -19,7 +19,7 @@ Id = Annotated[
     ),
 ]
 
-ContractAddress = Annotated[
+Address = Annotated[
     str,
     Field(
         title="Contract Address",

@@ -43,7 +43,16 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param1",
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "Param 1 - with blockheight encoding",
                         "format": "date",
                         "params": {
@@ -51,7 +60,16 @@
                         }
                     },
                     {
-                        "path": "param1",
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "Param 1 - with timestamp encoding",
                         "format": "date",
                         "params": {

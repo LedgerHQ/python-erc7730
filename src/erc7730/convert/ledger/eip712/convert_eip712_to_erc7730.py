@@ -12,20 +12,21 @@ from erc7730.convert import ERC7730Converter
 from erc7730.model.context import Deployment, Domain, EIP712JsonSchema
 from erc7730.model.display import (
     DateEncoding,
-    DateParameters,
     FieldFormat,
-    TokenAmountParameters,
 )
 from erc7730.model.input.context import InputEIP712, InputEIP712Context
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import (
+    InputDateParameters,
     InputDisplay,
     InputFieldDescription,
     InputFormat,
     InputNestedFields,
     InputReference,
+    InputTokenAmountParameters,
 )
 from erc7730.model.metadata import Metadata
+from erc7730.model.paths import ContainerField, ContainerPath
 
 
 @final
@@ -100,21 +101,21 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
                     path=field.path,
                     label=field.label,
                     format=FieldFormat.TOKEN_AMOUNT,
-                    params=TokenAmountParameters(tokenPath=field.assetPath),
+                    params=InputTokenAmountParameters(tokenPath=field.assetPath),
                 )
             case EIP712Format.AMOUNT:
                 return InputFieldDescription(
                     path=field.path,
                     label=field.label,
                     format=FieldFormat.TOKEN_AMOUNT,
-                    params=TokenAmountParameters(tokenPath="@.to"),
+                    params=InputTokenAmountParameters(tokenPath=ContainerPath(field=ContainerField.TO)),
                 )
             case EIP712Format.DATETIME:
                 return InputFieldDescription(
                     path=field.path,
                     label=field.label,
                     format=FieldFormat.DATE,
-                    params=DateParameters(encoding=DateEncoding.TIMESTAMP),
+                    params=InputDateParameters(encoding=DateEncoding.TIMESTAMP),
                 )
             case _:
                 assert_never(field.format)

@@ -1,13 +1,8 @@
 from enum import StrEnum, auto
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Literal, Self, override
 
-from lark import Lark, UnexpectedInput
-from lark.exceptions import VisitError
-from lark.visitors import Transformer_InPlaceRecursive
 from pydantic import Field as PydanticField
 from pydantic import (
-    TypeAdapter,
-    ValidationError,
     model_validator,
 )
 
@@ -39,6 +34,7 @@ class Field(Model):
         pattern=r"^[a-zA-Z0-9_]+$",
     )
 
+    @override
     def __str__(self) -> str:
         return self.identifier
 
@@ -57,6 +53,7 @@ class ArrayElement(Model):
         description="The index of the element in the array. It can be negative to count from the end of the array.",
     )
 
+    @override
     def __str__(self) -> str:
         return f"[{self.index}]"
 
@@ -72,14 +69,12 @@ class ArraySlice(Model):
 
     start: ArrayIndex = PydanticField(
         title="Slice Start Index",
-        description="The start index of the slice. Must be positive and lower than the end index.",
-        ge=0,
+        description="The start index of the slice. Must be lower than the end index.",
     )
 
     end: ArrayIndex = PydanticField(
         title="Slice End Index",
-        description="The end index of the slice. Must be positive and greater than the start index.",
-        ge=0,
+        description="The end index of the slice. Must be greater than the start index.",
     )
 
     @model_validator(mode="after")
@@ -101,6 +96,7 @@ class Array(Model):
         description="The path component type identifier (discriminator for path components discriminated union).",
     )
 
+    @override
     def __str__(self) -> str:
         return "[]"
 
@@ -132,7 +128,6 @@ DataPathElement = Annotated[
     ),
 ]
 
-
 DescriptorPathElement = Annotated[
     Field | ArrayElement,
     PydanticField(
@@ -162,6 +157,7 @@ class ContainerPath(Model):
         description="The referenced field in the container, only some well-known values are allowed.",
     )
 
+    @override
     def __str__(self) -> str:
         return f"@.{self.field}"
 
@@ -190,11 +186,15 @@ class DataPath(Model):
         title="Elements",
         description="The path elements, as a list of references to be interpreted left to right from the structured"
         "data root to reach the referenced value(s).",
-        min_length=1,
     )
 
+    @override
     def __str__(self) -> str:
         return f'{"#." if self.absolute else ""}{".".join(str(e) for e in self.elements)}'
+
+    @override
+    def __hash__(self) -> int:
+        return hash(str(self))
 
 
 class DescriptorPath(Model):
@@ -216,105 +216,16 @@ class DescriptorPath(Model):
         title="Elements",
         description="The path elements, as a list of references to be interpreted left to right from the current file"
         "root to reach the referenced value.",
-        min_length=1,
     )
 
+    @override
     def __str__(self) -> str:
         return f'$.{".".join(str(e) for e in self.elements)}'
 
-
-PATH_PARSER = Lark(
-    grammar=r"""
-        ?path: descriptor_path | container_path | data_path
-    
-        descriptor_path: "$." descriptor_path_component ("." descriptor_path_component)*
-        ?descriptor_path_component: field | array_element
-    
-        container_path: "@." container_field
-        !container_field: "from" | "to" | "value"
-    
-        ?data_path: absolute_data_path | relative_data_path
-        absolute_data_path: "#." data_path_component ("." data_path_component)*
-        relative_data_path: data_path_component ("." data_path_component)*
-        ?data_path_component: field | array | array_element | array_slice
-
-        field: /[a-zA-Z0-9_]+/
-        array: "[]"
-        array_index: /-?[0-9]+/
-        array_element: "[" array_index "]"
-        array_slice: "[" array_index ":" array_index "]"
-    """,
-    start="path",
-)
+    @override
+    def __hash__(self) -> int:
+        return hash(str(self))
 
 
-class PathTransformer(Transformer_InPlaceRecursive):
-    """Visitor to transform the parsed path AST into path domain model objects."""
-
-    def field(self, ast: Any) -> Field:
-        (value,) = ast
-        return Field(identifier=value.value)
-
-    def array(self, ast: Any) -> Array:
-        return Array()
-
-    def array_index(self, ast: Any) -> ArrayIndex:
-        (value,) = ast
-        return TypeAdapter(ArrayIndex).validate_strings(value)
-
-    def array_element(self, ast: Any) -> ArrayElement:
-        (value,) = ast
-        return ArrayElement(index=value)
-
-    def array_slice(self, ast: Any) -> ArraySlice:
-        (start, end) = ast
-        return ArraySlice(start=start, end=end)
-
-    def container_field(self, ast: Any) -> ContainerField:
-        (value,) = ast
-        return ContainerField(value)
-
-    def descriptor_path(self, ast: Any) -> DescriptorPath:
-        return DescriptorPath(elements=ast)
-
-    def container_path(self, ast: Any) -> ContainerPath:
-        (value,) = ast
-        return ContainerPath(field=value)
-
-    def absolute_data_path(self, ast: Any) -> DataPath:
-        return DataPath(elements=ast, absolute=True)
-
-    def relative_data_path(self, ast: Any) -> DataPath:
-        return DataPath(elements=ast, absolute=False)
-
-
-PATH_TRANSFORMER = PathTransformer()
-
-
-def parse_path(path: str) -> ContainerPath | DataPath | DescriptorPath:
-    """
-    Parse a path string into a domain model object.
-
-    :param path: the path input string
-    :return: an union of all possible path types
-    :raises ValueError: if the input string is not a valid path
-    :raises Exception: if the path parsing fails for an unexpected reason
-    """
-    try:
-        return PATH_TRANSFORMER.transform(PATH_PARSER.parse(path))
-    except UnexpectedInput as e:
-        # TODO improve error reporting, see:
-        #  https://github.com/lark-parser/lark/blob/master/examples/advanced/error_reporting_lalr.py
-        raise ValueError(f"""Invalid path "{path}": {e}""") from None
-    except VisitError as e:
-        if isinstance(e.orig_exc, ValidationError):
-            raise ValueError(f"""Invalid path "{path}": {e.orig_exc}`""") from None
-        raise Exception(
-            f"""Failed to parse path "{path}": {e}`\n"""
-            "This is most likely a bug in the ERC-7730 library, please report it to authors."
-        ) from e
-    except Exception as e:
-        raise Exception(
-            f"""Failed to parse path "{path}": {e}`\n"""
-            "This is most likely a bug in the ERC-7730 library, please report it to authors."
-        ) from e
+ROOT_DATA_PATH = DataPath(absolute=True, elements=[])
+ROOT_DESCRIPTOR_PATH = DescriptorPath(elements=[])

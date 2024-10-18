@@ -4,24 +4,32 @@ from pydantic import Discriminator, Field, Tag
 
 from erc7730.model.base import Model
 from erc7730.model.display import (
-    AddressNameParameters,
-    CallDataParameters,
-    DateParameters,
+    AddressNameSources,
+    AddressNameType,
+    DateEncoding,
     FieldFormat,
-    FieldsBase,
     FormatBase,
-    NftNameParameters,
-    TokenAmountParameters,
-    UnitParameters,
 )
-from erc7730.model.input.path import InputPath
-from erc7730.model.types import Id
+from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
+from erc7730.model.types import Address, Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class InputReference(FieldsBase):
+class InputFieldBase(Model):
+    """
+    A field formatter, containing formatting information of a single field in a message.
+    """
+
+    path: DataPathStr | ContainerPathStr = Field(
+        title="Path",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
+        "to extract the field value from the structured data.",
+    )
+
+
+class InputReference(InputFieldBase):
     """
     A reference to a shared definition that should be used as the field formatting definition.
 
@@ -29,7 +37,7 @@ class InputReference(FieldsBase):
     It is used to share definitions between multiple messages / functions.
     """
 
-    ref: InputPath = Field(
+    ref: DescriptorPathStr = Field(
         alias="$ref",
         title="Internal Definition",
         description="An internal definition that should be used as the field formatting definition. The value is the "
@@ -50,12 +58,129 @@ class InputReference(FieldsBase):
     )
 
 
+class InputTokenAmountParameters(Model):
+    """
+    Token Amount Formatting Parameters.
+    """
+
+    tokenPath: DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Token Path",
+        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
+        "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
+        '"Unknown token" warning.',
+    )
+
+    nativeCurrencyAddress: Address | list[Address] | DescriptorPathStr | None = Field(
+        default=None,
+        title="Native Currency Address",
+        description="An address or array of addresses, any of which are interpreted as an amount in native currency "
+        "rather than a token.",
+    )
+
+    threshold: str | DescriptorPathStr | None = Field(
+        default=None,
+        title="Unlimited Threshold",
+        description="The threshold above which the amount should be displayed using the message parameter rather than "
+        "the real amount.",
+    )
+
+    message: str | DescriptorPathStr | None = Field(
+        default=None,
+        title="Unlimited Message",
+        description="The message to display when the amount is above the threshold.",
+    )
+
+
+class InputAddressNameParameters(Model):
+    """
+    Address Names Formatting Parameters.
+    """
+
+    types: list[AddressNameType] | DescriptorPathStr | None = Field(
+        default=None,
+        title="Address Type",
+        description="An array of expected types of the address. If set, the wallet SHOULD check that the address "
+        "matches one of the types provided.",
+        min_length=1,
+    )
+
+    sources: list[AddressNameSources] | DescriptorPathStr | None = Field(
+        default=None,
+        title="Trusted Sources",
+        description="An array of acceptable sources for names (see next section). If set, the wallet SHOULD restrict "
+        "name lookup to relevant sources.",
+        min_length=1,
+    )
+
+
+class InputCallDataParameters(Model):
+    """
+    Embedded Calldata Formatting Parameters.
+    """
+
+    selector: str | DescriptorPathStr | None = Field(
+        default=None,
+        title="Called Selector",
+        description="The selector being called, if not contained in the calldata. Hex string representation.",
+    )
+
+    calleePath: DataPathStr | ContainerPathStr | DescriptorPathStr = Field(
+        title="Callee Path",
+        description="The path to the address of the contract being called by this embedded calldata.",
+    )
+
+
+class InputNftNameParameters(Model):
+    """
+    NFT Names Formatting Parameters.
+    """
+
+    collectionPath: DataPathStr | ContainerPathStr | DescriptorPathStr = Field(
+        title="Collection Path", description="The path to the collection in the structured data."
+    )
+
+
+class InputDateParameters(Model):
+    """
+    Date Formatting Parameters
+    """
+
+    encoding: DateEncoding | DescriptorPathStr = Field(title="Date Encoding", description="The encoding of the date.")
+
+
+class InputUnitParameters(Model):
+    """
+    Unit Formatting Parameters.
+    """
+
+    base: str | DescriptorPathStr = Field(
+        title="Unit base symbol",
+        description="The base symbol of the unit, displayed after the converted value. It can be an SI unit symbol or "
+        "acceptable dimensionless symbols like % or bps.",
+    )
+
+    decimals: int | DescriptorPathStr | None = Field(
+        default=None,
+        title="Decimals",
+        description="The number of decimals of the value, used to convert to a float.",
+        ge=0,
+        le=255,
+    )
+
+    prefix: bool | DescriptorPathStr | None = Field(
+        default=None,
+        title="Prefix",
+        description="Whether the value should be converted to a prefixed unit, like k, M, G, etc.",
+    )
+
+
 class InputEnumParameters(Model):
     """
     Enum Formatting Parameters.
     """
 
-    ref: str = Field(
+    ref: DescriptorPathStr = Field(
         alias="$ref",
         title="Enum reference",
         description="The internal path to the enum definition used to convert this value.",
@@ -63,12 +188,12 @@ class InputEnumParameters(Model):
 
 
 InputFieldParameters = Annotated[
-    Annotated[AddressNameParameters, Tag("address_name")]
-    | Annotated[CallDataParameters, Tag("call_data")]
-    | Annotated[TokenAmountParameters, Tag("token_amount")]
-    | Annotated[NftNameParameters, Tag("nft_name")]
-    | Annotated[DateParameters, Tag("date")]
-    | Annotated[UnitParameters, Tag("unit")]
+    Annotated[InputAddressNameParameters, Tag("address_name")]
+    | Annotated[InputCallDataParameters, Tag("call_data")]
+    | Annotated[InputTokenAmountParameters, Tag("token_amount")]
+    | Annotated[InputNftNameParameters, Tag("nft_name")]
+    | Annotated[InputDateParameters, Tag("date")]
+    | Annotated[InputUnitParameters, Tag("unit")]
     | Annotated[InputEnumParameters, Tag("enum")],
     Discriminator(field_parameters_discriminator),
 ]
@@ -92,7 +217,7 @@ class InputFieldDefinition(Model):
         description="The label of the field, that will be displayed to the user in front of the formatted field value.",
     )
 
-    format: FieldFormat | None = Field(
+    format: FieldFormat | DescriptorPathStr | None = Field(
         title="Field Format",
         description="The format of the field, that will be used to format the field value in a human readable way.",
     )
@@ -104,13 +229,13 @@ class InputFieldDefinition(Model):
     )
 
 
-class InputFieldDescription(InputFieldDefinition, FieldsBase):
+class InputFieldDescription(InputFieldBase, InputFieldDefinition):
     """
     A field formatter, containing formatting information of a single field in a message.
     """
 
 
-class InputNestedFields(FieldsBase):
+class InputNestedFields(InputFieldBase):
     """
     A single set of field formats, allowing recursivity in the schema.
 
@@ -141,6 +266,23 @@ class InputFormat(FormatBase):
 
     fields: list[InputField] = Field(
         title="Field Formats set", description="An array containing the ordered definitions of fields formats."
+    )
+
+    required: list[DataPathStr | ContainerPathStr] | DescriptorPathStr | None = Field(
+        default=None,
+        title="Required fields",
+        description="A list of fields that are required to be displayed to the user. A field that has a formatter and "
+        "is not in this list is optional. A field that does not have a formatter should be silent, ie not "
+        "shown.",
+    )
+
+    excluded: list[DataPathStr] | DescriptorPathStr | None = Field(
+        default=None,
+        title="Excluded fields",
+        description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
+        "has no formatter and is not declared in this list MAY be considered as an error by the wallet when "
+        "interpreting the descriptor. The excluded paths should interpreted as prefixes, meaning that all fields under "
+        "excluded path should be ignored",
     )
 
 

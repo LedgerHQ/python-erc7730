@@ -43,12 +43,30 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param1",
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "Minimal parameters set",
                         "format": "addressName"
                     },
                     {
-                        "path": "param1",
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "types specified",
                         "format": "addressName",
                         "params": {
@@ -62,7 +80,16 @@
                         }
                     },
                     {
-                        "path": "param1",
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "sources specified",
                         "format": "addressName",
                         "params": {
@@ -73,7 +100,16 @@
                         }
                     },
                     {
-                        "path": "param1",
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "All parameters specified",
                         "format": "addressName",
                         "params": {
