@@ -121,9 +121,9 @@ def compute_format_schema_paths(format: ResolvedFormat) -> FormatPaths:
                     assert_never(path)
 
         def append_paths(field: ResolvedField) -> None:
+            add_path(field.path)
             match field:
                 case ResolvedFieldDescription():
-                    add_path(field.path)
                     match field.params:
                         case None:
                             pass
