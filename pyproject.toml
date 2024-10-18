@@ -20,7 +20,7 @@ classifiers = [
 
 dependencies = [
     "pydantic>=2.8.2",
-    "eip712-clearsign>=2.1.0",
+    "eip712-clearsign>=3.0.1",
     "requests>=2.32.3",
     "typer>=0.12.5",
     "eth-utils>=5.0.0",
@@ -82,7 +82,7 @@ dev = [
     "autodoc-pydantic>=2.2.0",
     "myst-parser[linkify]>=4.0.0",
     "ruff>=0.6.3",
-    "ruff-lsp>=0.0.55"
+    "ruff-lsp>=0.0.55",
 ]
 
 [tool.pdm.version]
@@ -104,7 +104,7 @@ addopts = [
     "--cov=src",
     "--cov-report=xml:tests/.coverage.xml",
     "--cov-report=term",
-    "--cov-branch"
+    "--cov-branch",
 ]
 
 [tool.coverage.paths]
