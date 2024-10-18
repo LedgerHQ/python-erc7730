@@ -10,7 +10,7 @@ from erc7730.model.display import (
     FieldFormat,
     FormatBase,
 )
-from erc7730.model.paths import DataPath
+from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.resolved.path import ResolvedPath
 from erc7730.model.types import Address, Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
@@ -234,7 +234,7 @@ class ResolvedFormat(FormatBase):
         title="Field Formats set", description="An array containing the ordered definitions of fields formats."
     )
 
-    required: list[DataPath] | None = Field(
+    required: list[DataPath | ContainerPath] | None = Field(
         default=None,
         title="Required fields",
         description="A list of fields that are required to be displayed to the user. A field that has a formatter and "

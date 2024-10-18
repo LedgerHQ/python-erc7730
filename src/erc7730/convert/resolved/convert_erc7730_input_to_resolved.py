@@ -32,7 +32,7 @@ from erc7730.model.input.display import (
     InputUnitParameters,
 )
 from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath, DescriptorPath
-from erc7730.model.paths.path_ops import data_path_concat, to_absolute
+from erc7730.model.paths.path_ops import data_or_container_path_concat, data_path_concat, to_absolute
 from erc7730.model.resolved.context import (
     ResolvedContract,
     ResolvedContractContext,
@@ -223,7 +223,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         return ResolvedFieldDescription.model_validate(
             {
                 "$id": definition.id,
-                "path": data_path_concat(prefix, definition.path),
+                "path": data_or_container_path_concat(prefix, definition.path),
                 "label": definition.label,
                 "format": FieldFormat(definition.format) if definition.format is not None else None,
                 "params": params,
@@ -245,7 +245,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                     raise NotImplementedError("Resolution of descriptor paths not implemented")
                 return ResolvedCallDataParameters(
                     selector=params.selector,
-                    calleePath=to_absolute(params.calleePath),  # type:ignore
+                    calleePath=to_absolute(params.calleePath),
                 )
             case InputTokenAmountParameters():
                 # TODO: resolution of descriptor paths not implemented
@@ -254,7 +254,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 ):
                     raise NotImplementedError("Resolution of descriptor paths not implemented")
                 return ResolvedTokenAmountParameters(
-                    tokenPath=to_absolute(params.tokenPath),
+                    tokenPath=None if params.tokenPath is None else to_absolute(params.tokenPath),
                     nativeCurrencyAddress=params.nativeCurrencyAddress,
                     threshold=params.threshold,
                     message=params.message,
@@ -263,9 +263,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 # TODO: resolution of descriptor paths not implemented
                 if isinstance(params.collectionPath, DescriptorPath):
                     raise NotImplementedError("Resolution of descriptor paths not implemented")
-                return ResolvedNftNameParameters(
-                    collectionPath=to_absolute(params.collectionPath)  # type:ignore
-                )
+                return ResolvedNftNameParameters(collectionPath=to_absolute(params.collectionPath))
             case InputDateParameters():
                 return ResolvedDateParameters(encoding=params.encoding)
             case InputUnitParameters():

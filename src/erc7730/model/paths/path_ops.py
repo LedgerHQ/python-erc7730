@@ -111,6 +111,25 @@ def data_path_concat(parent: DataPath | None, child: DataPath) -> DataPath:
     return DataPath(absolute=parent.absolute, elements=[*parent.elements, *child.elements])
 
 
+def data_or_container_path_concat(parent: DataPath | None, child: DataPath | ContainerPath) -> DataPath | ContainerPath:
+    """
+    Concatenate a data path with either another data path, or a container path.
+
+    :param parent: parent path
+    :param child: child path
+    :return: concatenated path
+    """
+    if parent is None:
+        return child
+    match child:
+        case DataPath() as child:
+            return data_path_concat(parent, child)
+        case ContainerPath() as child:
+            return child
+        case _:
+            assert_never(child)
+
+
 def data_path_append(parent: DataPath, child: DataPathElement) -> DataPath:
     """
     Concatenate two data paths.

@@ -276,7 +276,7 @@ class InputFormat(FormatBase):
         "shown.",
     )
 
-    excluded: list[DataPathStr | ContainerPathStr] | None = Field(
+    excluded: list[DataPathStr] | None = Field(
         default=None,
         title="Excluded fields",
         description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
