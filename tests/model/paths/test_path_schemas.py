@@ -20,6 +20,14 @@ def test_compute_abi_paths_with_params() -> None:
     assert compute_abi_schema_paths(abi) == expected
 
 
+def test_compute_abi_paths_with_slicable_params() -> None:
+    abi = Function(
+        name="transfer", inputs=[InputOutput(name="to", type="bytes"), InputOutput(name="amount", type="uint256")]
+    )
+    expected = {parse_path("#.to"), parse_path("#.to.[]"), parse_path("#.amount")}
+    assert compute_abi_schema_paths(abi) == expected
+
+
 def test_compute_abi_paths_with_nested_params() -> None:
     abi = Function(
         name="foo",
@@ -43,7 +51,7 @@ def test_compute_abi_paths_with_multiple_nested_params() -> None:
                 name="bar",
                 type="tuple",
                 components=[
-                    Component(name="baz", type="uint256"),
+                    Component(name="baz", type="bytes"),
                     Component(name="qux", type="address"),
                     Component(name="nested", type="tuple[]", components=[Component(name="deep", type="string")]),
                 ],
@@ -52,11 +60,24 @@ def test_compute_abi_paths_with_multiple_nested_params() -> None:
     )
     expected = {
         parse_path("#.bar.baz"),
+        parse_path("#.bar.baz.[]"),
         parse_path("#.bar.qux"),
         parse_path("#.bar.nested.[]"),
         parse_path("#.bar.nested.[].deep"),
     }
     assert compute_abi_schema_paths(abi) == expected
+
+
+def test_compute_eip712_paths_with_slicable_params() -> None:
+    schema = EIP712JsonSchema(
+        primaryType="Foo",
+        types={"Foo": [EIP712SchemaField(name="bar", type="bytes")]},
+    )
+    expected = {
+        parse_path("#.bar"),
+        parse_path("#.bar.[]"),
+    }
+    assert compute_eip712_schema_paths(schema) == expected
 
 
 def test_compute_eip712_paths_with_multiple_nested_params() -> None:
@@ -67,17 +88,18 @@ def test_compute_eip712_paths_with_multiple_nested_params() -> None:
                 EIP712SchemaField(name="bar", type="Bar"),
             ],
             "Bar": [
-                EIP712SchemaField(name="baz", type="uint256"),
+                EIP712SchemaField(name="baz", type="bytes"),
                 EIP712SchemaField(name="qux", type="uint256"),
                 EIP712SchemaField(name="nested", type="Nested[]"),
             ],
             "Nested": [
-                EIP712SchemaField(name="deep", type="bytes"),
+                EIP712SchemaField(name="deep", type="uint256"),
             ],
         },
     )
     expected = {
         parse_path("#.bar.baz"),
+        parse_path("#.bar.baz.[]"),
         parse_path("#.bar.qux"),
         parse_path("#.bar.nested.[]"),
         parse_path("#.bar.nested.[].deep"),

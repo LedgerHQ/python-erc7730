@@ -53,17 +53,21 @@ def compute_eip712_schema_paths(schema: EIP712JsonSchema) -> set[DataPath]:
 
     def append_paths(path: DataPath, current_type: list[EIP712SchemaField]) -> None:
         for field in current_type:
+            if len(field.name) == 0:
+                continue  # skip unnamed parameters
+
             sub_path = data_path_append(path, Field(identifier=field.name))
 
-            if (field_type := field.type.rstrip("[]")) != field.type:
+            field_base_type = field.type.rstrip("[]")
+
+            if field_base_type in {"bytes"}:
+                paths.add(data_path_append(sub_path, Array()))
+
+            if field_base_type != field.type:
                 sub_path = data_path_append(sub_path, Array())
                 paths.add(sub_path)
 
-            if field_type in {"bytes"}:
-                sub_path = data_path_append(sub_path, Array())
-                paths.add(sub_path)
-
-            if (target_type := schema.types.get(field_type)) is not None:
+            if (target_type := schema.types.get(field_base_type)) is not None:
                 append_paths(sub_path, target_type)
             else:
                 paths.add(sub_path)
@@ -91,11 +95,12 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
 
             sub_path = data_path_append(path, Field(identifier=param.name))
 
-            if (param_type := param.type.rstrip("[]")) != param.type:
-                sub_path = data_path_append(sub_path, Array())
-                paths.add(sub_path)
+            param_base_type = param.type.rstrip("[]")
 
-            if param_type in {"bytes"}:
+            if param_base_type in {"bytes"}:
+                paths.add(data_path_append(sub_path, Array()))
+
+            if param_base_type != param.type:
                 sub_path = data_path_append(sub_path, Array())
                 paths.add(sub_path)
 
