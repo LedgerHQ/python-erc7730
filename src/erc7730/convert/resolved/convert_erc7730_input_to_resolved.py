@@ -170,16 +170,9 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_display(cls, display: InputDisplay, out: OutputAdder) -> ResolvedDisplay | None:
-        definitions: dict[str, ResolvedFieldDefinition] = {}
-        if display.definitions is not None:
-            definition: InputFieldDefinition
-            for definition_key, definition in display.definitions.items():
-                if (resolved_definition := cls._convert_field_definition(definition, out)) is not None:
-                    definitions[definition_key] = resolved_definition
-
         formats = {}
         for format_key, format in display.formats.items():
-            if (resolved_format := cls._convert_format(format, definitions, out)) is not None:
+            if (resolved_format := cls._convert_format(format, display.definitions or {}, out)) is not None:
                 formats[format_key] = resolved_format
 
         return ResolvedDisplay(formats=formats)
@@ -217,7 +210,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_format(
-        cls, format: InputFormat, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+        cls, format: InputFormat, definitions: dict[str, InputFieldDefinition], out: OutputAdder
     ) -> ResolvedFormat | None:
         fields = cls._convert_fields(ROOT_DATA_PATH, format.fields, definitions, out)
 
@@ -240,7 +233,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         cls,
         prefix: DataPath,
         fields: list[InputField],
-        definitions: dict[str, ResolvedFieldDefinition],
+        definitions: dict[str, InputFieldDefinition],
         out: OutputAdder,
     ) -> list[ResolvedField] | None:
         resolved_fields = []
@@ -252,7 +245,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_field(
-        cls, prefix: DataPath, field: InputField, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+        cls, prefix: DataPath, field: InputField, definitions: dict[str, InputFieldDefinition], out: OutputAdder
     ) -> ResolvedField | None:
         match field:
             case InputReference():
@@ -269,7 +262,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         cls,
         prefix: DataPath,
         fields: InputNestedFields,
-        definitions: dict[str, ResolvedFieldDefinition],
+        definitions: dict[str, InputFieldDefinition],
         out: OutputAdder,
     ) -> ResolvedNestedFields | None:
         path: DataPath
