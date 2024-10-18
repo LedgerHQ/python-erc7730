@@ -1,6 +1,6 @@
 from erc7730.model.abi import Component, Function, InputOutput
 from erc7730.model.paths.path_parser import parse_path
-from erc7730.model.paths.path_resolver import compute_abi_schema_paths
+from erc7730.model.paths.path_schemas import compute_abi_schema_paths
 
 
 def test_compute_abi_paths_no_params() -> None:

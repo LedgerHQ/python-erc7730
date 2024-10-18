@@ -5,7 +5,11 @@ from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
 from erc7730.model.paths import DataPath, Field
 from erc7730.model.paths.path_ops import data_path_ends_with, data_path_starts_with
-from erc7730.model.paths.path_resolver import compute_abi_paths, compute_eip712_paths, compute_format_paths
+from erc7730.model.paths.path_resolver import (
+    compute_abi_schema_paths,
+    compute_eip712_schema_paths,
+    compute_format_schema_paths,
+)
 from erc7730.model.resolved.context import EIP712JsonSchema, ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
@@ -46,9 +50,9 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                             message=f"Schema primary type `{schema.primaryType}` must have a display format defined.",
                         )
                         continue
-                    eip712_paths = compute_eip712_paths(schema)
+                    eip712_paths = compute_eip712_schema_paths(schema)
                     primary_type_format = descriptor.display.formats[schema.primaryType]
-                    format_paths = compute_format_paths(primary_type_format).data_paths
+                    format_paths = compute_format_schema_paths(primary_type_format).data_paths
                     excluded = primary_type_format.excluded or []
 
                     for path in eip712_paths - format_paths:
@@ -105,7 +109,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             abi_paths_by_selector: dict[str, set[DataPath]] = {}
             for abi in descriptor.context.contract.abi:
                 if abi.type == "function":
-                    abi_paths_by_selector[function_to_selector(abi)] = compute_abi_paths(abi)
+                    abi_paths_by_selector[function_to_selector(abi)] = compute_abi_schema_paths(abi)
 
             for selector, fmt in descriptor.display.formats.items():
                 keccak = selector
@@ -124,7 +128,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                         message=f"Selector {cls._display(selector, keccak)} not found in ABI.",
                     )
                     continue
-                format_paths = compute_format_paths(fmt).data_paths
+                format_paths = compute_format_schema_paths(fmt).data_paths
                 abi_paths = abi_paths_by_selector[keccak]
                 excluded = fmt.excluded or []
                 function = cls._display(selector, keccak)

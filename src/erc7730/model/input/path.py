@@ -15,58 +15,51 @@ from pydantic_core.core_schema import (
 from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
 from erc7730.model.paths.path_parser import parse_path
 
-INPUT_PATH_JSON_SCHEMA = chain_schema([str_schema(), no_info_plain_validator_function(parse_path)])
-INPUT_PATH_CORE_SCHEMA = json_or_python_schema(
-    json_schema=INPUT_PATH_JSON_SCHEMA,
-    python_schema=core_schema.union_schema(
-        [
-            is_instance_schema(DataPath),
-            is_instance_schema(ContainerPath),
-            is_instance_schema(DescriptorPath),
-            INPUT_PATH_JSON_SCHEMA,
-        ]
-    ),
+PATH_STR_JSON_SCHEMA = chain_schema([str_schema(), no_info_plain_validator_function(parse_path)])
+
+CONTAINER_PATH_STR_CORE_SCHEMA = json_or_python_schema(
+    json_schema=PATH_STR_JSON_SCHEMA,
+    python_schema=core_schema.union_schema([is_instance_schema(ContainerPath), PATH_STR_JSON_SCHEMA]),
     serialization=to_string_ser_schema(),
 )
-
-InputPath = Annotated[
-    ContainerPath | DataPath | DescriptorPath,
-    GetPydanticSchema(lambda _type, _handler: INPUT_PATH_CORE_SCHEMA),
+ContainerPathStr = Annotated[
+    ContainerPath,
+    GetPydanticSchema(lambda _type, _handler: CONTAINER_PATH_STR_CORE_SCHEMA),
     PydanticField(
         title="Input Path",
-        description="A path in the input designating value(s) either in the container of the structured data to be"
-        "signed, the structured data schema (ABI path for contracts, path in the message types itself for EIP-712), or"
-        "the current file describing the structured data formatting.",
+        description="A path applying to the container of the structured data to be signed. Such paths are prefixed "
+        """with "@".""",
     ),
 ]
 
-InputPathAsJson = Annotated[
-    ContainerPath | DataPath | DescriptorPath,
+DATA_PATH_STR_CORE_SCHEMA = json_or_python_schema(
+    json_schema=PATH_STR_JSON_SCHEMA,
+    python_schema=core_schema.union_schema([is_instance_schema(DataPath), PATH_STR_JSON_SCHEMA]),
+    serialization=to_string_ser_schema(),
+)
+DataPathStr = Annotated[
+    DataPath,
+    GetPydanticSchema(lambda _type, _handler: DATA_PATH_STR_CORE_SCHEMA),
     PydanticField(
-        title="Input Path",
-        description="A path in the input designating value(s) either in the container of the structured data to be"
-        "signed, the structured data schema (ABI path for contracts, path in the message types itself for EIP-712), or"
-        "the current file describing the structured data formatting.",
-        discriminator="type",
+        title="Data Path",
+        description="A path applying to the structured data schema (ABI path for contracts, path in the message types "
+        "itself for EIP-712). A data path can reference multiple values if it contains array elements or slices. Such "
+        """paths are prefixed with "#".""",
     ),
 ]
 
-
-INPUT_REFERENCE_JSON_SCHEMA = chain_schema([str_schema(), no_info_plain_validator_function(parse_path)])
-INPUT_REFERENCE_CORE_SCHEMA = json_or_python_schema(
-    json_schema=INPUT_REFERENCE_JSON_SCHEMA,
-    python_schema=core_schema.union_schema([is_instance_schema(DescriptorPath), INPUT_REFERENCE_JSON_SCHEMA]),
+DESCRIPTOR_PATH_STR_CORE_SCHEMA = json_or_python_schema(
+    json_schema=PATH_STR_JSON_SCHEMA,
+    python_schema=core_schema.union_schema([is_instance_schema(DescriptorPath), PATH_STR_JSON_SCHEMA]),
     serialization=to_string_ser_schema(),
 )
-
-
-InputReferencePath = Annotated[
+DescriptorPathStr = Annotated[
     DescriptorPath,
-    GetPydanticSchema(lambda _type, _handler: INPUT_REFERENCE_CORE_SCHEMA),
+    GetPydanticSchema(lambda _type, _handler: DESCRIPTOR_PATH_STR_CORE_SCHEMA),
     PydanticField(
-        title="Reference Path",
-        description="A path in the input designating value(s) either in the container of the structured data to be"
-        "signed, the structured data schema (ABI path for contracts, path in the message types itself for EIP-712), or"
-        "the current file describing the structured data formatting.",
+        title="Descriptor Path",
+        description="A path applying to the current file describing the structured data formatting, after merging "
+        "with includes. A descriptor path can only reference a single value in the document. Such paths are prefixed "
+        """with "$".""",
     ),
 ]

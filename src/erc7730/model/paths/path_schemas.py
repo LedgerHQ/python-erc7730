@@ -3,8 +3,16 @@ from typing import assert_never
 
 from erc7730.model.abi import Component, Function, InputOutput
 from erc7730.model.context import EIP712Field, EIP712JsonSchema
-from erc7730.model.paths import EMPTY_DATA_PATH, Array, ContainerPath, DataPath, Field, DataPathElement, ArrayElement, \
-    ArraySlice
+from erc7730.model.paths import (
+    ROOT_DATA_PATH,
+    Array,
+    ArrayElement,
+    ArraySlice,
+    ContainerPath,
+    DataPath,
+    DataPathElement,
+    Field,
+)
 from erc7730.model.paths.path_ops import data_path_append
 from erc7730.model.resolved.display import (
     ResolvedAddressNameParameters,
@@ -52,7 +60,7 @@ def compute_eip712_schema_paths(schema: EIP712JsonSchema) -> set[DataPath]:
             if (target_type := schema.types.get(field_type)) is not None:
                 append_paths(sub_path, target_type)
 
-    append_paths(EMPTY_DATA_PATH, primary_type)
+    append_paths(ROOT_DATA_PATH, primary_type)
 
     return paths
 
@@ -83,16 +91,17 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
             else:
                 paths.add(sub_path)
 
-    append_paths(EMPTY_DATA_PATH, abi.inputs)
+    append_paths(ROOT_DATA_PATH, abi.inputs)
 
     return paths
+
 
 def compute_format_schema_paths(format: ResolvedFormat) -> FormatPaths:
     """
     Compute the sets of schema paths referred in an ERC7730 Format section.
 
     :param format: resolved $.display.format section
-    :return:
+    :return: schema paths used by field formats
     """
     data_paths: set[DataPath] = set()  # references to values in the serialized data
     container_paths: set[ContainerPath] = set()  # references to values in the container
@@ -139,11 +148,10 @@ def compute_format_schema_paths(format: ResolvedFormat) -> FormatPaths:
                 case _:
                     assert_never(field)
 
-        for f in format.fields:
-            append_paths(f)
+        for field in format.fields:
+            append_paths(field)
 
     return FormatPaths(data_paths=data_paths, container_paths=container_paths)
-
 
 
 def data_path_to_schema_path(path: DataPath) -> DataPath:

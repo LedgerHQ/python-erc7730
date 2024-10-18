@@ -10,8 +10,9 @@ from erc7730.model.display import (
     FieldFormat,
     FormatBase,
 )
+from erc7730.model.paths import DataPath
 from erc7730.model.resolved.path import ResolvedPath
-from erc7730.model.types import Id
+from erc7730.model.types import Address, Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -30,7 +31,7 @@ class ResolvedTokenAmountParameters(Model):
         '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: str | list[str] | None = Field(
+    nativeCurrencyAddress: Address | list[Address] | None = Field(
         default=None,
         title="Native Currency Address",
         description="An address or array of addresses, any of which are interpreted as an amount in native currency "
@@ -231,6 +232,23 @@ class ResolvedFormat(FormatBase):
 
     fields: list[ResolvedField] = Field(
         title="Field Formats set", description="An array containing the ordered definitions of fields formats."
+    )
+
+    required: list[DataPath] | None = Field(
+        default=None,
+        title="Required fields",
+        description="A list of fields that are required to be displayed to the user. A field that has a formatter and "
+        "is not in this list is optional. A field that does not have a formatter should be silent, ie not "
+        "shown.",
+    )
+
+    excluded: list[DataPath] | None = Field(
+        default=None,
+        title="Excluded fields",
+        description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
+        "has no formatter and is not declared in this list MAY be considered as an error by the wallet when "
+        "interpreting the descriptor. The excluded paths should interpreted as prefixes, meaning that all fields under "
+        "excluded path should be ignored",
     )
 
 

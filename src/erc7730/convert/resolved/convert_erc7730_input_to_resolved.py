@@ -1,4 +1,4 @@
-from typing import final, override
+from typing import assert_never, final, override
 
 from pydantic import RootModel
 from pydantic_string_url import HttpUrl
@@ -31,6 +31,8 @@ from erc7730.model.input.display import (
     InputTokenAmountParameters,
     InputUnitParameters,
 )
+from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath
+from erc7730.model.paths.path_ops import data_path_as_root, data_path_concat
 from erc7730.model.resolved.context import (
     ResolvedContract,
     ResolvedContractContext,
@@ -185,6 +187,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _convert_display(cls, display: InputDisplay, out: OutputAdder) -> ResolvedDisplay | None:
         definitions: dict[str, ResolvedFieldDefinition] = {}
         if display.definitions is not None:
+            definition: InputFieldDefinition
             for definition_key, definition in display.definitions.items():
                 if (resolved_definition := cls._convert_field_definition(definition, out)) is not None:
                     definitions[definition_key] = resolved_definition
@@ -213,14 +216,14 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_field_description(
-        cls, definition: InputFieldDescription, out: OutputAdder
+        cls, prefix: DataPath, definition: InputFieldDescription, out: OutputAdder
     ) -> ResolvedFieldDescription | None:
         params = cls._convert_field_parameters(definition.params, out) if definition.params is not None else None
 
         return ResolvedFieldDescription.model_validate(
             {
                 "$id": definition.id,
-                "path": definition.path,
+                "path": data_path_concat(prefix, definition.path),
                 "label": definition.label,
                 "format": FieldFormat(definition.format) if definition.format is not None else None,
                 "params": params,
@@ -231,30 +234,42 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _convert_field_parameters(
         cls, params: InputFieldParameters, out: OutputAdder
     ) -> ResolvedFieldParameters | None:
-        if isinstance(params, InputAddressNameParameters):
-            return ResolvedAddressNameParameters(types=params.types, sources=params.sources)
-        if isinstance(params, InputCallDataParameters):
-            return ResolvedCallDataParameters(selector=params.selector, calleePath=params.calleePath)
-        if isinstance(params, InputTokenAmountParameters):
-            return ResolvedTokenAmountParameters(
-                tokenPath=params.tokenPath,
-                nativeCurrencyAddress=params.nativeCurrencyAddress,
-                threshold=params.threshold,
-                message=params.message,
-            )
-        if isinstance(params, InputNftNameParameters):
-            return ResolvedNftNameParameters(collectionPath=params.collectionPath)
-        if isinstance(params, InputDateParameters):
-            return ResolvedDateParameters(encoding=params.encoding)
-        if isinstance(params, InputUnitParameters):
-            return ResolvedUnitParameters(
-                base=params.base,
-                decimals=params.decimals,
-                prefix=params.prefix,
-            )
-        if isinstance(params, InputEnumParameters):
-            return cls._convert_enum_parameters(params, out)
-        return out.error(title="Invalid field parameters", message=f"Invalid field parameters type: {type(params)}")
+        match params:
+            case None:
+                return None
+            case InputAddressNameParameters():
+                return ResolvedAddressNameParameters(types=params.types, sources=params.sources)
+            case InputCallDataParameters():
+                return ResolvedCallDataParameters(
+                    selector=params.selector,
+                    # TODO: resolution of descriptor paths not implemented
+                    calleePath=data_path_as_root(params.calleePath),  # type:ignore
+                )
+            case InputTokenAmountParameters():
+                return ResolvedTokenAmountParameters(
+                    # TODO: resolution of descriptor paths not implemented
+                    tokenPath=data_path_as_root(params.tokenPath),  # type:ignore
+                    nativeCurrencyAddress=params.nativeCurrencyAddress,
+                    threshold=params.threshold,
+                    message=params.message,
+                )
+            case InputNftNameParameters():
+                return ResolvedNftNameParameters(
+                    # TODO: resolution of descriptor paths not implemented
+                    collectionPath=data_path_as_root(params.collectionPath)  # type:ignore
+                )
+            case InputDateParameters():
+                return ResolvedDateParameters(encoding=params.encoding)
+            case InputUnitParameters():
+                return ResolvedUnitParameters(
+                    base=params.base,
+                    decimals=params.decimals,
+                    prefix=params.prefix,
+                )
+            case InputEnumParameters():
+                return cls._convert_enum_parameters(params, out)
+            case _:
+                assert_never(params)
 
     @classmethod
     def _convert_enum_parameters(cls, params: InputEnumParameters, out: OutputAdder) -> ResolvedEnumParameters | None:
@@ -262,9 +277,9 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_format(
-        cls, format: InputFormat, definitions: dict[str, ResolvedFieldDefinition], error: OutputAdder
+        cls, format: InputFormat, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
     ) -> ResolvedFormat | None:
-        fields = cls._convert_fields(format.fields, definitions, error)
+        fields = cls._convert_fields(ROOT_DATA_PATH, format.fields, definitions, out)
 
         if fields is None:
             return None
@@ -282,33 +297,56 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_fields(
-        cls, fields: list[InputField], definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+        cls,
+        prefix: DataPath,
+        fields: list[InputField],
+        definitions: dict[str, ResolvedFieldDefinition],
+        out: OutputAdder,
     ) -> list[ResolvedField] | None:
         resolved_fields = []
         for input_format in fields:
-            if (resolved_field := cls._convert_field(input_format, definitions, out)) is not None:
-                resolved_fields.append(resolved_field)
+            if (resolved_field := cls._convert_field(prefix, input_format, definitions, out)) is None:
+                return None
+            resolved_fields.append(resolved_field)
         return resolved_fields
 
     @classmethod
     def _convert_field(
-        cls, field: InputField, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+        cls, prefix: DataPath, field: InputField, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
     ) -> ResolvedField | None:
-        if isinstance(field, InputReference):
-            return convert_reference(field, definitions, out)
-        if isinstance(field, InputFieldDescription):
-            return cls._convert_field_description(field, out)
-        if isinstance(field, InputNestedFields):
-            return cls._convert_nested_fields(field, definitions, out)
-        return out.error(title="Invalid field type", message=f"Invalid field type: {type(field)}")
+        match field:
+            case InputReference():
+                return convert_reference(field, definitions, out)
+            case InputFieldDescription():
+                return cls._convert_field_description(prefix, field, out)
+            case InputNestedFields():
+                return cls._convert_nested_fields(prefix, field, definitions, out)
+            case _:
+                assert_never(field)
 
     @classmethod
     def _convert_nested_fields(
-        cls, fields: InputNestedFields, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+        cls,
+        prefix: DataPath,
+        fields: InputNestedFields,
+        definitions: dict[str, ResolvedFieldDefinition],
+        out: OutputAdder,
     ) -> ResolvedNestedFields | None:
-        resolved_fields = cls._convert_fields(fields.fields, definitions, out)
+        path: DataPath
+        match fields.path:
+            case DataPath() as p:
+                path = data_path_concat(prefix, p)
+            case ContainerPath() as p:
+                return out.error(
+                    title="Invalid path type",
+                    message=f"Container path {p} cannot be used with nested fields.",
+                )
+            case _:
+                assert_never(fields.path)
+
+        resolved_fields = cls._convert_fields(prefix, fields.fields, definitions, out)
 
         if resolved_fields is None:
             return None
 
-        return ResolvedNestedFields(path=fields.path, fields=resolved_fields)
+        return ResolvedNestedFields(path=path, fields=resolved_fields)

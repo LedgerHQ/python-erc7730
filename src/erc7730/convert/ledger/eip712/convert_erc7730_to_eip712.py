@@ -26,6 +26,8 @@ from erc7730.model.context import Deployment, EIP712Field, EIP712JsonSchema
 from erc7730.model.display import (
     FieldFormat,
 )
+from erc7730.model.paths import ContainerField, ContainerPath, DataPath
+from erc7730.model.paths.path_ops import data_path_concat
 from erc7730.model.resolved.context import ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
@@ -70,17 +72,16 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
 
             label = format.intent if isinstance(format.intent, str) else primary_type
 
+            output_fields = []
+            for input_field in format.fields:
+                if (out_field := self.convert_field(input_field, None, out)) is None:
+                    return None
+                output_fields.extend(out_field)
+
             messages.append(
                 LegacyEIP712MessageDescriptor.model_construct(
                     schema=schema,
-                    mapper=LegacyEIP712Mapper.model_construct(
-                        label=label,
-                        fields=[
-                            out_field
-                            for in_field in format.fields
-                            for out_field in self.convert_field(in_field, prefix=None)
-                        ],
-                    ),
+                    mapper=LegacyEIP712Mapper.model_construct(label=label, fields=output_fields),
                 )
             )
 
@@ -124,31 +125,49 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
         return out.error(f"schema for type {primary_type} not found")
 
     @classmethod
-    def convert_field(cls, field: ResolvedField, prefix: str | None) -> list[LegacyEIP712Field]:
-        if isinstance(field, ResolvedNestedFields):
-            field_prefix = field.path if prefix is None else f"{prefix}.{field.path}"
-            return [out_field for in_field in field.fields for out_field in cls.convert_field(in_field, field_prefix)]
-        return [cls.convert_field_description(field, prefix)]
+    def convert_field(
+        cls, field: ResolvedField, prefix: DataPath | None, out: OutputAdder
+    ) -> list[LegacyEIP712Field] | None:
+        match field:
+            case ResolvedFieldDescription():
+                if (output_field := cls.convert_field_description(field, prefix, out)) is None:
+                    return None
+                return [output_field]
+            case ResolvedNestedFields():
+                output_fields = []
+                for in_field in field.fields:
+                    if (output_field := cls.convert_field(in_field, prefix, out)) is None:
+                        return None
+                    output_fields.extend(output_field)
+                return output_fields
+            case _:
+                assert_never(field)
 
     @classmethod
-    def convert_field_description(cls, field: ResolvedFieldDescription, prefix: str | None) -> LegacyEIP712Field:
-        asset_path: str | None = None
+    def convert_field_description(
+        cls,
+        field: ResolvedFieldDescription,
+        prefix: DataPath | None,
+        out: OutputAdder,
+    ) -> LegacyEIP712Field | None:
+        field_path: DataPath
+        asset_path: DataPath | None = None
         field_format: LegacyEIP712Format | None = None
+
+        match field.path:
+            case DataPath() as field_path:
+                field_path = data_path_concat(prefix, field_path)
+            case ContainerPath() as container_path:
+                return out.error(f"Path {container_path} is not supported")
+            case _:
+                assert_never(field.path)
+
         match field.format:
-            case FieldFormat.TOKEN_AMOUNT:
-                if field.params is not None and isinstance(field.params, ResolvedTokenAmountParameters):
-                    asset_path = field.params.tokenPath if prefix is None else f"{prefix}.{field.params.tokenPath}"
-
-                    # FIXME edge case for referencing verifyingContract, this will be handled cleanly in #65
-                    if asset_path == "@.to":
-                        asset_path = None
-
-                field_format = LegacyEIP712Format.AMOUNT
-            case FieldFormat.AMOUNT:
-                field_format = LegacyEIP712Format.AMOUNT
-            case FieldFormat.DATE:
-                field_format = LegacyEIP712Format.DATETIME
+            case None:
+                field_format = None
             case FieldFormat.ADDRESS_NAME:
+                field_format = LegacyEIP712Format.RAW
+            case FieldFormat.RAW:
                 field_format = LegacyEIP712Format.RAW
             case FieldFormat.ENUM:
                 field_format = LegacyEIP712Format.RAW
@@ -160,14 +179,30 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Legac
                 field_format = LegacyEIP712Format.RAW
             case FieldFormat.CALL_DATA:
                 field_format = LegacyEIP712Format.RAW
-            case FieldFormat.RAW:
-                field_format = LegacyEIP712Format.RAW
-            case None:
-                field_format = None
+            case FieldFormat.DATE:
+                field_format = LegacyEIP712Format.DATETIME
+            case FieldFormat.AMOUNT:
+                field_format = LegacyEIP712Format.AMOUNT
+            case FieldFormat.TOKEN_AMOUNT:
+                field_format = LegacyEIP712Format.AMOUNT
+                if field.params is not None and isinstance(field.params, ResolvedTokenAmountParameters):
+                    match field.params.tokenPath:
+                        case None:
+                            pass
+                        case DataPath() as token_path:
+                            asset_path = data_path_concat(prefix, token_path)
+                        case ContainerPath() as container_path if container_path.field == ContainerField.TO:
+                            # In EIP-712 protocol, format=token with no token path => refers to verifyingContract
+                            asset_path = None
+                        case ContainerPath() as container_path:
+                            return out.error(f"Path {container_path} is not supported")
+                        case _:
+                            assert_never(field.params.tokenPath)
             case _:
                 assert_never(field.format)
+
         return LegacyEIP712Field(
-            path=field.path if prefix is None else f"{prefix}.{field.path}",
+            path=".".join(str(e) for e in field_path.elements),
             label=field.label,
             assetPath=asset_path,
             format=field_format,

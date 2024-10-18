@@ -11,7 +11,6 @@ from erc7730.model.display import (
 from erc7730.model.input.display import (
     InputReference,
 )
-from erc7730.model.input.path import InputPath
 from erc7730.model.paths import DescriptorPath, Field
 from erc7730.model.paths.path_ops import descriptor_path_strip_prefix
 from erc7730.model.resolved.display import (
@@ -56,7 +55,7 @@ def convert_reference(
 
 
 def _get_definition(
-    ref: InputPath, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
+    ref: DescriptorPath, definitions: dict[str, ResolvedFieldDefinition], out: OutputAdder
 ) -> ResolvedFieldDefinition | None:
     if (definition_id := _get_definition_id(ref, out)) is None:
         return None
@@ -70,13 +69,7 @@ def _get_definition(
     return definition
 
 
-def _get_definition_id(ref: InputPath, out: OutputAdder) -> str | None:
-    if not isinstance(ref, DescriptorPath):
-        return out.error(
-            title="Invalid definition reference path type",
-            message=f"""Reference to a definition must be a descriptor path starting with "$.", got {ref}.""",
-        )
-
+def _get_definition_id(ref: DescriptorPath, out: OutputAdder) -> str | None:
     try:
         tail = descriptor_path_strip_prefix(ref, DEFINITIONS_PATH)
     except ValueError:

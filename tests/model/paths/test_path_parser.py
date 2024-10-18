@@ -1,7 +1,7 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from erc7730.model.input.path import InputPath, InputPathAsJson
+from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
 from erc7730.model.paths import (
     Array,
     ArrayElement,
@@ -15,6 +15,9 @@ from erc7730.model.paths import (
 from erc7730.model.paths.path_parser import parse_path
 from erc7730.model.resolved.path import ResolvedPath
 from tests.assertions import assert_json_str_equals
+
+InputPath = DescriptorPathStr | DataPathStr | ContainerPathStr
+InputPathAsJson = DescriptorPath | DataPath | ContainerPath
 
 
 def _test_valid_input_path(string: str, obj: InputPath, json: str) -> None:
@@ -212,15 +215,6 @@ def test_invalid_array_slice_inverted() -> None:
     assert "Invalid path" in message
     assert "#.[1:0]" in message
     assert "Array slice start index must be lower than end index" in message
-
-
-def test_invalid_array_slice_negative() -> None:
-    with pytest.raises(ValueError) as e:
-        parse_path("#.[-1:-2]")
-    message = str(e.value)
-    assert "Invalid path" in message
-    assert "#.[-1:-2]" in message
-    assert "should be greater than or equal to 0" in message
 
 
 def test_invalid_array_slice_used_in_descriptor_path() -> None:

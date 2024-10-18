@@ -69,14 +69,12 @@ class ArraySlice(Model):
 
     start: ArrayIndex = PydanticField(
         title="Slice Start Index",
-        description="The start index of the slice. Must be positive and lower than the end index.",
-        ge=0,
+        description="The start index of the slice. Must be lower than the end index.",
     )
 
     end: ArrayIndex = PydanticField(
         title="Slice End Index",
-        description="The end index of the slice. Must be positive and greater than the start index.",
-        ge=0,
+        description="The end index of the slice. Must be greater than the start index.",
     )
 
     @model_validator(mode="after")
@@ -229,5 +227,5 @@ class DescriptorPath(Model):
         return hash(str(self))
 
 
-EMPTY_DATA_PATH = DataPath(absolute=True, elements=[])
-EMPTY_DESCRIPTOR_PATH = DescriptorPath(elements=[])
+ROOT_DATA_PATH = DataPath(absolute=True, elements=[])
+ROOT_DESCRIPTOR_PATH = DescriptorPath(elements=[])

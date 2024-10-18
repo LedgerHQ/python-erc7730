@@ -10,8 +10,8 @@ from erc7730.model.display import (
     FieldFormat,
     FormatBase,
 )
-from erc7730.model.input.path import InputPath
-from erc7730.model.types import Id
+from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
+from erc7730.model.types import Address, Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -22,7 +22,7 @@ class InputFieldBase(Model):
     A field formatter, containing formatting information of a single field in a message.
     """
 
-    path: InputPath = Field(
+    path: DataPathStr | ContainerPathStr = Field(
         title="Path",
         description="A path to the field in the structured data. The path is a JSON path expression that can be used "
         "to extract the field value from the structured data.",
@@ -37,7 +37,7 @@ class InputReference(InputFieldBase):
     It is used to share definitions between multiple messages / functions.
     """
 
-    ref: InputPath = Field(
+    ref: DescriptorPathStr = Field(
         alias="$ref",
         title="Internal Definition",
         description="An internal definition that should be used as the field formatting definition. The value is the "
@@ -63,7 +63,7 @@ class InputTokenAmountParameters(Model):
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: InputPath | None = Field(
+    tokenPath: DataPathStr | ContainerPathStr | None = Field(
         default=None,
         title="Token Path",
         description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
@@ -71,7 +71,7 @@ class InputTokenAmountParameters(Model):
         '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: str | list[str] | None = Field(
+    nativeCurrencyAddress: Address | list[Address] | None = Field(
         default=None,
         title="Native Currency Address",
         description="An address or array of addresses, any of which are interpreted as an amount in native currency "
@@ -125,7 +125,7 @@ class InputCallDataParameters(Model):
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: InputPath = Field(
+    calleePath: DataPathStr | ContainerPathStr = Field(
         title="Callee Path",
         description="The path to the address of the contract being called by this embedded calldata.",
     )
@@ -136,7 +136,7 @@ class InputNftNameParameters(Model):
     NFT Names Formatting Parameters.
     """
 
-    collectionPath: InputPath = Field(
+    collectionPath: DataPathStr | ContainerPathStr = Field(
         title="Collection Path", description="The path to the collection in the structured data."
     )
 
@@ -266,6 +266,23 @@ class InputFormat(FormatBase):
 
     fields: list[InputField] = Field(
         title="Field Formats set", description="An array containing the ordered definitions of fields formats."
+    )
+
+    required: list[DataPathStr | ContainerPathStr] | None = Field(
+        default=None,
+        title="Required fields",
+        description="A list of fields that are required to be displayed to the user. A field that has a formatter and "
+        "is not in this list is optional. A field that does not have a formatter should be silent, ie not "
+        "shown.",
+    )
+
+    excluded: list[DataPathStr | ContainerPathStr] | None = Field(
+        default=None,
+        title="Excluded fields",
+        description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "
+        "has no formatter and is not declared in this list MAY be considered as an error by the wallet when "
+        "interpreting the descriptor. The excluded paths should interpreted as prefixes, meaning that all fields under "
+        "excluded path should be ignored",
     )
 
 

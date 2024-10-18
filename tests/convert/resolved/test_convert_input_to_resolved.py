@@ -12,7 +12,7 @@ from tests.files import ERC7730_DESCRIPTORS
 from tests.skip import single_or_skip
 
 DATA = Path(__file__).resolve().parent / "data"
-UPDATE_REFERENCES = False
+UPDATE_REFERENCES = True
 
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)

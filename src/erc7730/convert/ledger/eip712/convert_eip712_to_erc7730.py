@@ -31,6 +31,7 @@ from erc7730.model.input.display import (
     InputTokenAmountParameters,
 )
 from erc7730.model.metadata import Metadata
+from erc7730.model.paths import ContainerField, ContainerPath
 
 
 @final
@@ -116,7 +117,7 @@ class EIP712toERC7730Converter(ERC7730Converter[LegacyEIP712DAppDescriptor, Inpu
                     path=field.path,
                     label=field.label,
                     format=FieldFormat.TOKEN_AMOUNT,
-                    params=InputTokenAmountParameters(tokenPath="@.to"),
+                    params=InputTokenAmountParameters(tokenPath=ContainerPath(field=ContainerField.TO)),
                 )
             case LegacyEIP712Format.DATETIME:
                 return InputFieldDescription(
