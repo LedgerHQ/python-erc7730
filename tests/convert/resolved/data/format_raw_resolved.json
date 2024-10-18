@@ -43,9 +43,18 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param1",
                         "label": "Param 1",
-                        "format": "raw"
+                        "format": "raw",
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        }
                     }
                 ]
             }

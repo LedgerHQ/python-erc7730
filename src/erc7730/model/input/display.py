@@ -71,7 +71,7 @@ class InputTokenAmountParameters(Model):
         '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: Address | list[Address] | None = Field(
+    nativeCurrencyAddress: Address | list[Address] | DescriptorPathStr | None = Field(
         default=None,
         title="Native Currency Address",
         description="An address or array of addresses, any of which are interpreted as an amount in native currency "

@@ -31,8 +31,8 @@ from erc7730.model.input.display import (
     InputTokenAmountParameters,
     InputUnitParameters,
 )
-from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath
-from erc7730.model.paths.path_ops import data_path_as_root, data_path_concat
+from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath, DescriptorPath
+from erc7730.model.paths.path_ops import data_path_concat, to_absolute
 from erc7730.model.resolved.context import (
     ResolvedContract,
     ResolvedContractContext,
@@ -240,23 +240,31 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             case InputAddressNameParameters():
                 return ResolvedAddressNameParameters(types=params.types, sources=params.sources)
             case InputCallDataParameters():
+                # TODO: resolution of descriptor paths not implemented
+                if isinstance(params.calleePath, DescriptorPath):
+                    raise NotImplementedError("Resolution of descriptor paths not implemented")
                 return ResolvedCallDataParameters(
                     selector=params.selector,
-                    # TODO: resolution of descriptor paths not implemented
-                    calleePath=data_path_as_root(params.calleePath),  # type:ignore
+                    calleePath=to_absolute(params.calleePath),  # type:ignore
                 )
             case InputTokenAmountParameters():
+                # TODO: resolution of descriptor paths not implemented
+                if isinstance(params.tokenPath, DescriptorPath) or isinstance(
+                    params.nativeCurrencyAddress, DescriptorPath
+                ):
+                    raise NotImplementedError("Resolution of descriptor paths not implemented")
                 return ResolvedTokenAmountParameters(
-                    # TODO: resolution of descriptor paths not implemented
-                    tokenPath=data_path_as_root(params.tokenPath),  # type:ignore
+                    tokenPath=to_absolute(params.tokenPath),
                     nativeCurrencyAddress=params.nativeCurrencyAddress,
                     threshold=params.threshold,
                     message=params.message,
                 )
             case InputNftNameParameters():
+                # TODO: resolution of descriptor paths not implemented
+                if isinstance(params.collectionPath, DescriptorPath):
+                    raise NotImplementedError("Resolution of descriptor paths not implemented")
                 return ResolvedNftNameParameters(
-                    # TODO: resolution of descriptor paths not implemented
-                    collectionPath=data_path_as_root(params.collectionPath)  # type:ignore
+                    collectionPath=to_absolute(params.collectionPath)  # type:ignore
                 )
             case InputDateParameters():
                 return ResolvedDateParameters(encoding=params.encoding)

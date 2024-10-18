@@ -47,20 +47,56 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param2",
                         "label": "With minimal set of parameters specified",
                         "format": "calldata",
                         "params": {
-                            "calleePath": "#.param1"
+                            "calleePath": {
+                                "type": "data",
+                                "absolute": true,
+                                "elements": [
+                                    {
+                                        "type": "field",
+                                        "identifier": "param1"
+                                    }
+                                ]
+                            }
+                        },
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param2"
+                                }
+                            ]
                         }
                     },
                     {
-                        "path": "param2",
                         "label": "With all parameters specified",
                         "format": "calldata",
                         "params": {
                             "selector": "0x00000000",
-                            "calleePath": "#.param1"
+                            "calleePath": {
+                                "type": "data",
+                                "absolute": true,
+                                "elements": [
+                                    {
+                                        "type": "field",
+                                        "identifier": "param1"
+                                    }
+                                ]
+                            }
+                        },
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param2"
+                                }
+                            ]
                         }
                     }
                 ]

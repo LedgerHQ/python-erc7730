@@ -1,5 +1,8 @@
+from typing import assert_never
+
 from erc7730.model.paths import (
     ROOT_DATA_PATH,
+    ContainerPath,
     DataPath,
     DataPathElement,
     DescriptorPath,
@@ -119,11 +122,17 @@ def data_path_append(parent: DataPath, child: DataPathElement) -> DataPath:
     return parent.model_copy(update={"elements": [*parent.elements, child]})
 
 
-def data_path_as_root(path: DataPath) -> DataPath:
+def to_absolute(path: DataPath | ContainerPath) -> DataPath | ContainerPath:
     """
-    Convert a data path to an absolute path.
+    Convert a path to an absolute path.
 
     :param path: data path
     :return: absolute path
     """
-    return data_path_concat(ROOT_DATA_PATH, path)
+    match path:
+        case DataPath():
+            return data_path_concat(ROOT_DATA_PATH, path)
+        case ContainerPath():
+            return path
+        case _:
+            assert_never(path)
