@@ -84,8 +84,8 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
             paths.add(sub_path)
 
             param_type = param.type
-            while (param_type := param_type.rstrip("[]")) != param_type:
-                sub_path = data_path_append(path, Array())
+            if param_type.rstrip("[]") != param_type:
+                sub_path = data_path_append(sub_path, Array())
                 paths.add(sub_path)
 
             if param.components:
