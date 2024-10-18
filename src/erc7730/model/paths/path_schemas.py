@@ -58,8 +58,10 @@ def compute_eip712_schema_paths(schema: EIP712JsonSchema) -> set[DataPath]:
             if (field_type := field.type.rstrip("[]")) != field.type:
                 sub_path = data_path_append(sub_path, Array())
                 paths.add(sub_path)
-            else:
-                field_type = field.type
+
+            if field_type in {"bytes"}:
+                sub_path = data_path_append(sub_path, Array())
+                paths.add(sub_path)
 
             if (target_type := schema.types.get(field_type)) is not None:
                 append_paths(sub_path, target_type)
@@ -89,8 +91,11 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
 
             sub_path = data_path_append(path, Field(identifier=param.name))
 
-            param_type = param.type
-            if param_type.rstrip("[]") != param_type:
+            if (param_type := param.type.rstrip("[]")) != param.type:
+                sub_path = data_path_append(sub_path, Array())
+                paths.add(sub_path)
+
+            if param_type in {"bytes"}:
                 sub_path = data_path_append(sub_path, Array())
                 paths.add(sub_path)
 
