@@ -132,10 +132,21 @@ def data_or_container_path_concat(parent: DataPath | None, child: DataPath | Con
 
 def data_path_append(parent: DataPath, child: DataPathElement) -> DataPath:
     """
-    Concatenate two data paths.
+    Append an element to a data path.
 
     :param parent: parent path
-    :param child: child path
+    :param child: element to append
+    :return: concatenated path
+    """
+    return parent.model_copy(update={"elements": [*parent.elements, child]})
+
+
+def descriptor_path_append(parent: DescriptorPath, child: DescriptorPathElement) -> DescriptorPath:
+    """
+    Append an element to a descriptor path.
+
+    :param parent: parent path
+    :param child: element to append
     :return: concatenated path
     """
     return parent.model_copy(update={"elements": [*parent.elements, child]})

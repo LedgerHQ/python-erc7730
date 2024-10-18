@@ -63,7 +63,7 @@ class InputTokenAmountParameters(Model):
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: DataPathStr | ContainerPathStr | None = Field(
+    tokenPath: DataPathStr | ContainerPathStr | DescriptorPathStr | None = Field(
         default=None,
         title="Token Path",
         description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "

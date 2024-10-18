@@ -6,6 +6,7 @@ from pydantic import TypeAdapter, ValidationError
 from erc7730.common.options import first_not_none
 from erc7730.common.output import OutputAdder
 from erc7730.common.pydantic import model_to_json_str
+from erc7730.convert.resolved.constants import ConstantProvider
 from erc7730.convert.resolved.parameters import convert_field_parameters
 from erc7730.model.display import (
     FieldFormat,
@@ -27,7 +28,11 @@ DEFINITIONS_PATH = DescriptorPath(elements=[Field(identifier="display"), Field(i
 
 
 def convert_reference(
-    prefix: DataPath, reference: InputReference, definitions: dict[str, InputFieldDefinition], out: OutputAdder
+    prefix: DataPath,
+    reference: InputReference,
+    definitions: dict[str, InputFieldDefinition],
+    constants: ConstantProvider,
+    out: OutputAdder,
 ) -> ResolvedField | None:
     if (definition := _get_definition(reference.ref, definitions, out)) is None:
         return None
@@ -50,7 +55,7 @@ def convert_reference(
     if params:
         try:
             input_params: InputFieldParameters = TypeAdapter(InputFieldParameters).validate_json(json.dumps(params))
-            if (resolved_params := convert_field_parameters(prefix, input_params, out)) is None:
+            if (resolved_params := convert_field_parameters(prefix, input_params, constants, out)) is None:
                 return None
         except ValidationError as e:
             return out.error(
