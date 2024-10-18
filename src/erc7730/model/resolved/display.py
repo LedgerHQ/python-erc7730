@@ -155,7 +155,19 @@ ResolvedFieldParameters = Annotated[
 ]
 
 
-class ResolvedFieldDefinition(Model):
+class ResolvedFieldBase(Model):
+    """
+    A field formatter, containing formatting information of a single field in a message.
+    """
+
+    path: ResolvedPath = Field(
+        title="Path",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
+        "to extract the field value from the structured data.",
+    )
+
+
+class ResolvedFieldDescription(ResolvedFieldBase):
     """
     A field formatter, containing formatting information of a single field in a message.
     """
@@ -183,24 +195,6 @@ class ResolvedFieldDefinition(Model):
         title="Format Parameters",
         description="Format specific parameters that are used to format the field value in a human readable way.",
     )
-
-
-class ResolvedFieldBase(Model):
-    """
-    A field formatter, containing formatting information of a single field in a message.
-    """
-
-    path: ResolvedPath = Field(
-        title="Path",
-        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
-        "to extract the field value from the structured data.",
-    )
-
-
-class ResolvedFieldDescription(ResolvedFieldBase, ResolvedFieldDefinition):
-    """
-    A field formatter, containing formatting information of a single field in a message.
-    """
 
 
 class ResolvedNestedFields(ResolvedFieldBase):

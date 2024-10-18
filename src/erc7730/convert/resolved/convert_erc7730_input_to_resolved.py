@@ -36,7 +36,6 @@ from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
     ResolvedDisplay,
     ResolvedField,
-    ResolvedFieldDefinition,
     ResolvedFieldDescription,
     ResolvedFormat,
     ResolvedNestedFields,
@@ -176,21 +175,6 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 formats[format_key] = resolved_format
 
         return ResolvedDisplay(formats=formats)
-
-    @classmethod
-    def _convert_field_definition(
-        cls, definition: InputFieldDefinition, out: OutputAdder
-    ) -> ResolvedFieldDefinition | None:
-        params = convert_field_parameters(definition.params, out) if definition.params is not None else None
-
-        return ResolvedFieldDefinition.model_validate(
-            {
-                "$id": definition.id,
-                "label": definition.label,
-                "format": FieldFormat(definition.format) if definition.format is not None else None,
-                "params": params,
-            }
-        )
 
     @classmethod
     def _convert_field_description(

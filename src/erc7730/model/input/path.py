@@ -15,11 +15,12 @@ from pydantic_core.core_schema import (
 from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
 from erc7730.model.paths.path_parser import parse_path
 
-PATH_STR_JSON_SCHEMA = chain_schema([str_schema(), no_info_plain_validator_function(parse_path)])
-
+CONTAINER_PATH_STR_JSON_SCHEMA = chain_schema(
+    [str_schema(), no_info_plain_validator_function(parse_path), is_instance_schema(ContainerPath)]
+)
 CONTAINER_PATH_STR_CORE_SCHEMA = json_or_python_schema(
-    json_schema=PATH_STR_JSON_SCHEMA,
-    python_schema=core_schema.union_schema([is_instance_schema(ContainerPath), PATH_STR_JSON_SCHEMA]),
+    json_schema=CONTAINER_PATH_STR_JSON_SCHEMA,
+    python_schema=core_schema.union_schema([is_instance_schema(ContainerPath), CONTAINER_PATH_STR_JSON_SCHEMA]),
     serialization=to_string_ser_schema(),
 )
 ContainerPathStr = Annotated[
@@ -32,9 +33,12 @@ ContainerPathStr = Annotated[
     ),
 ]
 
+DATA_PATH_STR_JSON_SCHEMA = chain_schema(
+    [str_schema(), no_info_plain_validator_function(parse_path), is_instance_schema(DataPath)]
+)
 DATA_PATH_STR_CORE_SCHEMA = json_or_python_schema(
-    json_schema=PATH_STR_JSON_SCHEMA,
-    python_schema=core_schema.union_schema([is_instance_schema(DataPath), PATH_STR_JSON_SCHEMA]),
+    json_schema=DATA_PATH_STR_JSON_SCHEMA,
+    python_schema=core_schema.union_schema([is_instance_schema(DataPath), DATA_PATH_STR_JSON_SCHEMA]),
     serialization=to_string_ser_schema(),
 )
 DataPathStr = Annotated[
@@ -48,9 +52,12 @@ DataPathStr = Annotated[
     ),
 ]
 
+DESCRIPTOR_PATH_STR_JSON_SCHEMA = chain_schema(
+    [str_schema(), no_info_plain_validator_function(parse_path), is_instance_schema(DescriptorPath)]
+)
 DESCRIPTOR_PATH_STR_CORE_SCHEMA = json_or_python_schema(
-    json_schema=PATH_STR_JSON_SCHEMA,
-    python_schema=core_schema.union_schema([is_instance_schema(DescriptorPath), PATH_STR_JSON_SCHEMA]),
+    json_schema=DESCRIPTOR_PATH_STR_JSON_SCHEMA,
+    python_schema=core_schema.union_schema([is_instance_schema(DescriptorPath), DESCRIPTOR_PATH_STR_JSON_SCHEMA]),
     serialization=to_string_ser_schema(),
 )
 DescriptorPathStr = Annotated[

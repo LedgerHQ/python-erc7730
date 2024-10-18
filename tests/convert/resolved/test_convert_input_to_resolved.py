@@ -156,13 +156,13 @@ def test_registry_files(input_file: Path) -> None:
             id="definition_invalid_container_path",
             label="display definition / reference - using a container path",
             description="use of a reference to a display definition with a container path",
-            error='Reference to a definition must be a descriptor path starting with "$."',
+            error="Input should be an instance of DescriptorPath",
         ),
         TestCase(
             id="definition_invalid_data_path",
             label="display definition / reference - using a data path",
             description="use of a reference to a display definition with a data path",
-            error='Reference to a definition must be a descriptor path starting with "$."',
+            error="Input should be an instance of DescriptorPath",
         ),
         TestCase(
             id="definition_invalid_path_does_not_exist",
@@ -203,13 +203,15 @@ def test_by_reference(testcase: TestCase) -> None:
     """
     Test converting ERC-7730 registry files from input to resolved form, and compare against reference files.
     """
-    input_descriptor = InputERC7730Descriptor.load(DATA / f"{testcase.id}_input.json")
+    input_descriptor_path = DATA / f"{testcase.id}_input.json"
+    resolved_descriptor_path = DATA / f"{testcase.id}_resolved.json"
     if (expected_error := testcase.error) is not None:
         with pytest.raises(Exception) as exc_info:
+            input_descriptor = InputERC7730Descriptor.load(input_descriptor_path)
             convert_and_raise_errors(input_descriptor, ERC7730InputToResolved())
         assert expected_error in str(exc_info.value)
     else:
-        resolved_descriptor_path = DATA / f"{testcase.id}_resolved.json"
+        input_descriptor = InputERC7730Descriptor.load(input_descriptor_path)
         try:
             actual_descriptor: ResolvedERC7730Descriptor = single_or_skip(
                 convert_and_raise_errors(input_descriptor, ERC7730InputToResolved())
