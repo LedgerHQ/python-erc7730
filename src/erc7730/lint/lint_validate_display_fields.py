@@ -15,6 +15,7 @@ from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
 AUTHORIZED_MISSING_DISPLAY_FIELDS = {
     Field(identifier="nonce"),
+    Field(identifier="sigDeadline"),
 }
 
 
@@ -64,7 +65,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                         if allowed:
                             continue
 
-                        if not any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
+                        if any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
                             out.debug(
                                 title="Optional Display field missing",
                                 message=f"Display field for path `{path}` is missing for message {schema.primaryType}. "
@@ -142,7 +143,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     if allowed:
                         continue
 
-                    if not any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
+                    if any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
                         out.debug(
                             title="Optional Display field missing",
                             message=f"Display field for path `{path}` is missing for selector {function}. If "
