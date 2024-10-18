@@ -140,7 +140,7 @@ class ResolvedEnumParameters(Model):
     Enum Formatting Parameters.
     """
 
-    ref: DescriptorPath = Field(alias="$ref")  # TODO must be inlined here
+    ref: str | DescriptorPath = Field(alias="$ref")  # TODO enum definition must be inlined here
 
 
 ResolvedFieldParameters = Annotated[

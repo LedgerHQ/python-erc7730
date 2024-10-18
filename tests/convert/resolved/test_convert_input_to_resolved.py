@@ -20,10 +20,17 @@ def test_registry_files(input_file: Path) -> None:
     """
     Test converting ERC-7730 registry files from input to resolved form.
     """
-    try:
-        convert_and_raise_errors(InputERC7730Descriptor.load(input_file), ERC7730InputToResolved())
-    except NotImplementedError as e:  # TODO temporary
-        pytest.skip(str(e))
+
+    # TODO: uses descriptor paths
+    if input_file.name in {
+        "calldata-OssifiableProxy.json",
+        "calldata-wstETH.json",
+        "calldata-usdt.json",
+        "calldata-AugustusSwapper.json",
+    }:
+        pytest.skip("Descriptor paths are not resolved")
+
+    convert_and_raise_errors(InputERC7730Descriptor.load(input_file), ERC7730InputToResolved())
 
 
 @pytest.mark.parametrize(
