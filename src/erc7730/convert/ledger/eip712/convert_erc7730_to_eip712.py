@@ -55,9 +55,9 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             label = format.intent if isinstance(format.intent, str) else primary_type
 
             messages.append(
-                InputEIP712Message.model_construct(
+                InputEIP712Message(
                     schema=schema,
-                    mapper=InputEIP712Mapper.model_construct(
+                    mapper=InputEIP712Mapper(
                         label=label,
                         fields=[
                             out_field
@@ -87,14 +87,12 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
         if (network := ledger_network_id(deployment.chainId)) is None:
             return out.error(f"network id {deployment.chainId} not supported")
 
-        return InputEIP712DAppDescriptor.model_construct(
+        return InputEIP712DAppDescriptor(
             blockchainName=network,
             chainId=deployment.chainId,
             name=dapp_name,
             contracts=[
-                InputEIP712Contract.model_construct(
-                    address=deployment.address.lower(), contractName=contract_name, messages=messages
-                )
+                InputEIP712Contract(address=deployment.address.lower(), contractName=contract_name, messages=messages)
             ],
         )
 
