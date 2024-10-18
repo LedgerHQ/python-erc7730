@@ -13,14 +13,15 @@ from erc7730.model.context import Deployment, EIP712JsonSchema
 from erc7730.model.display import (
     FieldFormat,
 )
-from erc7730.model.paths import DataPath, ContainerPath, ContainerField
+from erc7730.model.paths import ContainerField, ContainerPath, DataPath
 from erc7730.model.paths.path_ops import data_path_concat
 from erc7730.model.resolved.context import ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDescription,
-    ResolvedNestedFields, ResolvedTokenAmountParameters,
+    ResolvedNestedFields,
+    ResolvedTokenAmountParameters,
 )
 
 
@@ -61,7 +62,9 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
                     return None
                 output_fields.extend(out_field)
 
-            messages.append(InputEIP712Message(schema=schema, mapper=InputEIP712Mapper(label=label, fields=output_fields)))
+            messages.append(
+                InputEIP712Message(schema=schema, mapper=InputEIP712Mapper(label=label, fields=output_fields))
+            )
 
         descriptors: dict[str, InputEIP712DAppDescriptor] = {}
         for deployment in context.eip712.deployments:
@@ -86,7 +89,9 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             blockchainName=network,
             chainId=deployment.chainId,
             name=dapp_name,
-            contracts=[InputEIP712Contract(address=deployment.address.lower(), contractName=contract_name, messages=messages)],
+            contracts=[
+                InputEIP712Contract(address=deployment.address.lower(), contractName=contract_name, messages=messages)
+            ],
         )
 
     @classmethod

@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from typing import assert_never
 
+from eip712.model.schema import EIP712SchemaField
+
 from erc7730.model.abi import Component, Function, InputOutput
-from erc7730.model.context import EIP712Field, EIP712JsonSchema
+from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.paths import (
     ROOT_DATA_PATH,
     Array,
@@ -49,7 +51,7 @@ def compute_eip712_schema_paths(schema: EIP712JsonSchema) -> set[DataPath]:
 
     paths: set[DataPath] = set()
 
-    def append_paths(path: DataPath, current_type: list[EIP712Field]) -> None:
+    def append_paths(path: DataPath, current_type: list[EIP712SchemaField]) -> None:
         for field in current_type:
             sub_path = data_path_append(path, Field(identifier=field.name))
             paths.add(sub_path)
