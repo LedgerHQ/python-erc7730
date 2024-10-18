@@ -11,11 +11,13 @@ from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
 from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
+from erc7730.generate.generate import generate_contract
 from erc7730.lint.lint import lint_all_and_print_errors
 from erc7730.model import ERC7730ModelType
 from erc7730.model.base import Model
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
+from erc7730.model.types import ContractAddress
 
 app = Typer(
     name="erc7730",
@@ -94,6 +96,23 @@ def resolve(
     if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
         raise Exit(1)
     print(resolved_descriptor.to_json_string())
+
+
+@app.command(
+    name="generate",
+    short_help="Bootstrap a descriptor for given ABI/schema.",
+    help="""
+    Fetches ABI or schema files and generates a minimal descriptor.
+    """,
+)
+def generate(
+    chain_id: Annotated[int, Option(help="The EIP-155 chain id")],
+    address: Annotated[ContractAddress, Option(help="The contract address")],
+) -> None:
+    # TODO: add support for providing ABI file
+    # TODO: add support for providing EIP-712 schema file
+    descriptor = generate_contract(chain_id, address)
+    print(descriptor.to_json_string())
 
 
 @convert_app.command(
