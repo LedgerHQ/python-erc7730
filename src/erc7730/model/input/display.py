@@ -44,7 +44,7 @@ class InputReference(InputFieldBase):
         "key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
     )
 
-    label: str | DescriptorPathStr | None = Field(
+    label: str | None = Field(
         default=None,
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value. "
@@ -212,7 +212,7 @@ class InputFieldDefinition(Model):
         "reference in device specific sections.",
     )
 
-    label: str | DescriptorPathStr = Field(
+    label: str = Field(
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value.",
     )
