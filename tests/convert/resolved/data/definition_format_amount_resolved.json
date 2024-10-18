@@ -43,8 +43,6 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "label": "Param 1",
-                        "format": "amount",
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -54,7 +52,9 @@
                                     "identifier": "param1"
                                 }
                             ]
-                        }
+                        },
+                        "label": "Param 1",
+                        "format": "amount"
                     }
                 ]
             }

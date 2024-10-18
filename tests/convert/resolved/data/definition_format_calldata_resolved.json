@@ -47,6 +47,16 @@
             "TestPrimaryType": {
                 "fields": [
                     {
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param2"
+                                }
+                            ]
+                        },
                         "label": "Param 2",
                         "format": "calldata",
                         "params": {
@@ -61,16 +71,6 @@
                                     }
                                 ]
                             }
-                        },
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param2"
-                                }
-                            ]
                         }
                     }
                 ]

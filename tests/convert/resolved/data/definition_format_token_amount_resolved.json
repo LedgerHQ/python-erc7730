@@ -47,6 +47,16 @@
             "TestPrimaryType": {
                 "fields": [
                     {
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "Param 1",
                         "format": "tokenAmount",
                         "params": {
@@ -60,16 +70,6 @@
                                     }
                                 ]
                             }
-                        },
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
                         }
                     }
                 ]

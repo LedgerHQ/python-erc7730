@@ -47,8 +47,6 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "label": "With minimal set of parameters specified",
-                        "format": "tokenAmount",
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -58,9 +56,21 @@
                                     "identifier": "param1"
                                 }
                             ]
-                        }
+                        },
+                        "label": "With minimal set of parameters specified",
+                        "format": "tokenAmount"
                     },
                     {
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "With all parameters specified, string nativeCurrencyAddress",
                         "format": "tokenAmount",
                         "params": {
@@ -77,7 +87,9 @@
                             "nativeCurrencyAddress": "0x0000000000000000000000000000000000000001",
                             "threshold": "0xFFFFFFFF",
                             "message": "Max"
-                        },
+                        }
+                    },
+                    {
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -87,9 +99,7 @@
                                     "identifier": "param1"
                                 }
                             ]
-                        }
-                    },
-                    {
+                        },
                         "label": "With all parameters specified, array nativeCurrencyAddress",
                         "format": "tokenAmount",
                         "params": {
@@ -109,16 +119,6 @@
                             ],
                             "threshold": "0xFFFFFFFF",
                             "message": "Max"
-                        },
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
                         }
                     }
                 ]

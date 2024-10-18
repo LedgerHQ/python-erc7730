@@ -47,6 +47,16 @@
             "TestPrimaryType": {
                 "fields": [
                     {
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param2"
+                                }
+                            ]
+                        },
                         "label": "With minimal set of parameters specified",
                         "format": "calldata",
                         "params": {
@@ -60,7 +70,9 @@
                                     }
                                 ]
                             }
-                        },
+                        }
+                    },
+                    {
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -70,9 +82,7 @@
                                     "identifier": "param2"
                                 }
                             ]
-                        }
-                    },
-                    {
+                        },
                         "label": "With all parameters specified",
                         "format": "calldata",
                         "params": {
@@ -87,16 +97,6 @@
                                     }
                                 ]
                             }
-                        },
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param2"
-                                }
-                            ]
                         }
                     }
                 ]

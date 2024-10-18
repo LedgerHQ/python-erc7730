@@ -43,6 +43,16 @@
             "TestPrimaryType": {
                 "fields": [
                     {
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "Param 1",
                         "format": "nftName",
                         "params": {
@@ -56,16 +66,6 @@
                                     }
                                 ]
                             }
-                        },
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
                         }
                     }
                 ]

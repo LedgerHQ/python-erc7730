@@ -34,8 +34,6 @@
             "function1(bytes4)": {
                 "fields": [
                     {
-                        "label": "Param 1",
-                        "format": "raw",
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -45,7 +43,9 @@
                                     "identifier": "param1"
                                 }
                             ]
-                        }
+                        },
+                        "label": "Param 1",
+                        "format": "raw"
                     }
                 ]
             }

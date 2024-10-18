@@ -50,11 +50,6 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "label": "Param 1",
-                        "format": "enum",
-                        "params": {
-                            "$ref": "$.metadata.enums.testEnum"
-                        },
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -64,6 +59,27 @@
                                     "identifier": "param1"
                                 }
                             ]
+                        },
+                        "label": "Param 1",
+                        "format": "enum",
+                        "params": {
+                            "$ref": {
+                                "type": "descriptor",
+                                "elements": [
+                                    {
+                                        "type": "field",
+                                        "identifier": "metadata"
+                                    },
+                                    {
+                                        "type": "field",
+                                        "identifier": "enums"
+                                    },
+                                    {
+                                        "type": "field",
+                                        "identifier": "testEnum"
+                                    }
+                                ]
+                            }
                         }
                     }
                 ]

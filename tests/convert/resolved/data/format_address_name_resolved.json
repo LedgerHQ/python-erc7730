@@ -43,8 +43,6 @@
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "label": "Minimal parameters set",
-                        "format": "addressName",
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -54,9 +52,21 @@
                                     "identifier": "param1"
                                 }
                             ]
-                        }
+                        },
+                        "label": "Minimal parameters set",
+                        "format": "addressName"
                     },
                     {
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
                         "label": "types specified",
                         "format": "addressName",
                         "params": {
@@ -67,7 +77,9 @@
                                 "contract",
                                 "collection"
                             ]
-                        },
+                        }
+                    },
+                    {
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -77,9 +89,7 @@
                                     "identifier": "param1"
                                 }
                             ]
-                        }
-                    },
-                    {
+                        },
                         "label": "sources specified",
                         "format": "addressName",
                         "params": {
@@ -87,7 +97,9 @@
                                 "local",
                                 "ens"
                             ]
-                        },
+                        }
+                    },
+                    {
                         "path": {
                             "type": "data",
                             "absolute": true,
@@ -97,9 +109,7 @@
                                     "identifier": "param1"
                                 }
                             ]
-                        }
-                    },
-                    {
+                        },
                         "label": "All parameters specified",
                         "format": "addressName",
                         "params": {
@@ -113,16 +123,6 @@
                             "sources": [
                                 "local",
                                 "ens"
-                            ]
-                        },
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
                             ]
                         }
                     }
