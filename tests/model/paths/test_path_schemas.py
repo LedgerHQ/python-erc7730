@@ -28,7 +28,7 @@ def test_compute_abi_paths_with_nested_params() -> None:
             )
         ],
     )
-    expected = {parse_path("#.bar"), parse_path("#.bar.baz"), parse_path("#.bar.qux")}
+    expected = {parse_path("#.bar.baz"), parse_path("#.bar.qux")}
     assert compute_abi_schema_paths(abi) == expected
 
 
@@ -48,10 +48,8 @@ def test_compute_abi_paths_with_multiple_nested_params() -> None:
         ],
     )
     expected = {
-        parse_path("#.bar"),
         parse_path("#.bar.baz"),
         parse_path("#.bar.qux"),
-        parse_path("#.bar.nested"),
         parse_path("#.bar.nested.[]"),
         parse_path("#.bar.nested.[].deep"),
     }
