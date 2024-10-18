@@ -6,6 +6,7 @@ from pydantic_string_url import HttpUrl
 from erc7730.common import client
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
+from erc7730.convert.resolved.parameters import convert_field_parameters
 from erc7730.convert.resolved.references import convert_reference
 from erc7730.model.abi import ABI
 from erc7730.model.context import EIP712JsonSchema
@@ -15,24 +16,16 @@ from erc7730.model.display import (
 from erc7730.model.input.context import InputContract, InputContractContext, InputEIP712, InputEIP712Context
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import (
-    InputAddressNameParameters,
-    InputCallDataParameters,
-    InputDateParameters,
     InputDisplay,
-    InputEnumParameters,
     InputField,
     InputFieldDefinition,
     InputFieldDescription,
-    InputFieldParameters,
     InputFormat,
     InputNestedFields,
-    InputNftNameParameters,
     InputReference,
-    InputTokenAmountParameters,
-    InputUnitParameters,
 )
-from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath, DescriptorPath
-from erc7730.model.paths.path_ops import data_or_container_path_concat, data_path_concat, to_absolute
+from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath
+from erc7730.model.paths.path_ops import data_or_container_path_concat, data_path_concat
 from erc7730.model.resolved.context import (
     ResolvedContract,
     ResolvedContractContext,
@@ -41,20 +34,12 @@ from erc7730.model.resolved.context import (
 )
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
-    ResolvedAddressNameParameters,
-    ResolvedCallDataParameters,
-    ResolvedDateParameters,
     ResolvedDisplay,
-    ResolvedEnumParameters,
     ResolvedField,
     ResolvedFieldDefinition,
     ResolvedFieldDescription,
-    ResolvedFieldParameters,
     ResolvedFormat,
     ResolvedNestedFields,
-    ResolvedNftNameParameters,
-    ResolvedTokenAmountParameters,
-    ResolvedUnitParameters,
 )
 
 
@@ -203,7 +188,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _convert_field_definition(
         cls, definition: InputFieldDefinition, out: OutputAdder
     ) -> ResolvedFieldDefinition | None:
-        params = cls._convert_field_parameters(definition.params, out) if definition.params is not None else None
+        params = convert_field_parameters(definition.params, out) if definition.params is not None else None
 
         return ResolvedFieldDefinition.model_validate(
             {
@@ -218,7 +203,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _convert_field_description(
         cls, prefix: DataPath, definition: InputFieldDescription, out: OutputAdder
     ) -> ResolvedFieldDescription | None:
-        params = cls._convert_field_parameters(definition.params, out) if definition.params is not None else None
+        params = convert_field_parameters(definition.params, out) if definition.params is not None else None
 
         return ResolvedFieldDescription.model_validate(
             {
@@ -229,57 +214,6 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 "params": params,
             }
         )
-
-    @classmethod
-    def _convert_field_parameters(
-        cls, params: InputFieldParameters, out: OutputAdder
-    ) -> ResolvedFieldParameters | None:
-        match params:
-            case None:
-                return None
-            case InputAddressNameParameters():
-                return ResolvedAddressNameParameters(types=params.types, sources=params.sources)
-            case InputCallDataParameters():
-                # TODO: resolution of descriptor paths not implemented
-                if isinstance(params.calleePath, DescriptorPath):
-                    raise NotImplementedError("Resolution of descriptor paths not implemented")
-                return ResolvedCallDataParameters(
-                    selector=params.selector,
-                    calleePath=to_absolute(params.calleePath),
-                )
-            case InputTokenAmountParameters():
-                # TODO: resolution of descriptor paths not implemented
-                if isinstance(params.tokenPath, DescriptorPath) or isinstance(
-                    params.nativeCurrencyAddress, DescriptorPath
-                ):
-                    raise NotImplementedError("Resolution of descriptor paths not implemented")
-                return ResolvedTokenAmountParameters(
-                    tokenPath=None if params.tokenPath is None else to_absolute(params.tokenPath),
-                    nativeCurrencyAddress=params.nativeCurrencyAddress,
-                    threshold=params.threshold,
-                    message=params.message,
-                )
-            case InputNftNameParameters():
-                # TODO: resolution of descriptor paths not implemented
-                if isinstance(params.collectionPath, DescriptorPath):
-                    raise NotImplementedError("Resolution of descriptor paths not implemented")
-                return ResolvedNftNameParameters(collectionPath=to_absolute(params.collectionPath))
-            case InputDateParameters():
-                return ResolvedDateParameters(encoding=params.encoding)
-            case InputUnitParameters():
-                return ResolvedUnitParameters(
-                    base=params.base,
-                    decimals=params.decimals,
-                    prefix=params.prefix,
-                )
-            case InputEnumParameters():
-                return cls._convert_enum_parameters(params, out)
-            case _:
-                assert_never(params)
-
-    @classmethod
-    def _convert_enum_parameters(cls, params: InputEnumParameters, out: OutputAdder) -> ResolvedEnumParameters | None:
-        return ResolvedEnumParameters.model_validate({"$ref": params.ref})  # TODO must inline here
 
     @classmethod
     def _convert_format(
