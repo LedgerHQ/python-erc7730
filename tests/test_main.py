@@ -42,6 +42,13 @@ def test_lint_registry_files(input_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
+def test_resolve_registry_files(input_file: Path) -> None:
+    result = runner.invoke(app, ["resolve", str(input_file)])
+    out = "".join(result.stdout.splitlines())
+    assert json.loads(out) is not None
+
+
 @pytest.mark.parametrize("input_file", LEGACY_EIP712_DESCRIPTORS, ids=path_id)
 def test_convert_legacy_registry_eip712_files(input_file: Path, tmp_path: Path) -> None:
     result = runner.invoke(app, ["convert", "eip712-to-erc7730", str(input_file), str(tmp_path / input_file.name)])
