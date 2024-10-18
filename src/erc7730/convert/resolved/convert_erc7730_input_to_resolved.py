@@ -6,6 +6,7 @@ from pydantic_string_url import HttpUrl
 from erc7730.common import client
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
+from erc7730.convert.resolved.constants import ConstantProvider, MetadataConstantsProvider
 from erc7730.convert.resolved.parameters import convert_field_parameters
 from erc7730.convert.resolved.references import convert_reference
 from erc7730.model.abi import ABI
@@ -58,8 +59,9 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @override
     def convert(self, descriptor: InputERC7730Descriptor, out: OutputAdder) -> ResolvedERC7730Descriptor | None:
+        constants = MetadataConstantsProvider(descriptor.metadata)
         context = self._convert_context(descriptor.context, out)
-        display = self._convert_display(descriptor.display, out)
+        display = self._convert_display(descriptor.display, constants, out)
 
         if context is None or display is None:
             return None
@@ -168,19 +170,25 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _convert_display(cls, display: InputDisplay, out: OutputAdder) -> ResolvedDisplay | None:
+    def _convert_display(
+        cls, display: InputDisplay, constants: ConstantProvider, out: OutputAdder
+    ) -> ResolvedDisplay | None:
         formats = {}
         for format_key, format in display.formats.items():
-            if (resolved_format := cls._convert_format(format, display.definitions or {}, out)) is not None:
+            if (resolved_format := cls._convert_format(format, display.definitions or {}, constants, out)) is not None:
                 formats[format_key] = resolved_format
 
         return ResolvedDisplay(formats=formats)
 
     @classmethod
     def _convert_field_description(
-        cls, prefix: DataPath, definition: InputFieldDescription, out: OutputAdder
+        cls, prefix: DataPath, definition: InputFieldDescription, constants: ConstantProvider, out: OutputAdder
     ) -> ResolvedFieldDescription | None:
-        params = convert_field_parameters(prefix, definition.params, out) if definition.params is not None else None
+        params = (
+            convert_field_parameters(prefix, definition.params, constants, out)
+            if definition.params is not None
+            else None
+        )
 
         return ResolvedFieldDescription.model_validate(
             {
@@ -194,9 +202,13 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _convert_format(
-        cls, format: InputFormat, definitions: dict[str, InputFieldDefinition], out: OutputAdder
+        cls,
+        format: InputFormat,
+        definitions: dict[str, InputFieldDefinition],
+        constants: ConstantProvider,
+        out: OutputAdder,
     ) -> ResolvedFormat | None:
-        fields = cls._convert_fields(ROOT_DATA_PATH, format.fields, definitions, out)
+        fields = cls._convert_fields(ROOT_DATA_PATH, format.fields, definitions, constants, out)
 
         if fields is None:
             return None
@@ -218,26 +230,32 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         prefix: DataPath,
         fields: list[InputField],
         definitions: dict[str, InputFieldDefinition],
+        constants: ConstantProvider,
         out: OutputAdder,
     ) -> list[ResolvedField] | None:
         resolved_fields = []
         for input_format in fields:
-            if (resolved_field := cls._convert_field(prefix, input_format, definitions, out)) is None:
+            if (resolved_field := cls._convert_field(prefix, input_format, definitions, constants, out)) is None:
                 return None
             resolved_fields.append(resolved_field)
         return resolved_fields
 
     @classmethod
     def _convert_field(
-        cls, prefix: DataPath, field: InputField, definitions: dict[str, InputFieldDefinition], out: OutputAdder
+        cls,
+        prefix: DataPath,
+        field: InputField,
+        definitions: dict[str, InputFieldDefinition],
+        constants: ConstantProvider,
+        out: OutputAdder,
     ) -> ResolvedField | None:
         match field:
             case InputReference():
-                return convert_reference(prefix, field, definitions, out)
+                return convert_reference(prefix, field, definitions, constants, out)
             case InputFieldDescription():
-                return cls._convert_field_description(prefix, field, out)
+                return cls._convert_field_description(prefix, field, constants, out)
             case InputNestedFields():
-                return cls._convert_nested_fields(prefix, field, definitions, out)
+                return cls._convert_nested_fields(prefix, field, definitions, constants, out)
             case _:
                 assert_never(field)
 
@@ -247,6 +265,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         prefix: DataPath,
         fields: InputNestedFields,
         definitions: dict[str, InputFieldDefinition],
+        constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedNestedFields | None:
         path: DataPath
@@ -261,7 +280,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             case _:
                 assert_never(fields.path)
 
-        resolved_fields = cls._convert_fields(path, fields.fields, definitions, out)
+        resolved_fields = cls._convert_fields(path, fields.fields, definitions, constants, out)
 
         if resolved_fields is None:
             return None

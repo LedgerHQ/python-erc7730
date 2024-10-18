@@ -6,6 +6,7 @@ JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/mas
 """
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import Field
 from pydantic_string_url import HttpUrl
@@ -88,7 +89,7 @@ class Metadata(Model):
         "the corresponding metadata can be fetched from the contract itself.",
     )
 
-    constants: dict[str, str] | None = Field(
+    constants: dict[str, Any] | None = Field(
         default=None,
         title="Constant values",
         description="A set of values that can be used in format parameters. Can be referenced with a path expression"
