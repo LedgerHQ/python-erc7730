@@ -17,7 +17,7 @@ from erc7730.model import ERC7730ModelType
 from erc7730.model.base import Model
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
-from erc7730.model.types import ContractAddress
+from erc7730.model.types import Address
 
 app = Typer(
     name="erc7730",
@@ -107,7 +107,7 @@ def resolve(
 )
 def generate(
     chain_id: Annotated[int, Option(help="The EIP-155 chain id")],
-    address: Annotated[ContractAddress, Option(help="The contract address")],
+    address: Annotated[Address, Option(help="The contract address")],
 ) -> None:
     # TODO: add support for providing ABI file
     # TODO: add support for providing EIP-712 schema file

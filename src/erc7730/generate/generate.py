@@ -6,11 +6,12 @@ from erc7730.model.display import FieldFormat
 from erc7730.model.input.context import InputContract, InputContractContext
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import InputDisplay, InputField, InputFieldDescription, InputFormat
-from erc7730.model.metadata import Metadata
-from erc7730.model.types import ContractAddress
+from erc7730.model.input.metadata import InputMetadata
+from erc7730.model.paths import DataPath, Field
+from erc7730.model.types import Address
 
 
-def generate_contract(chain_id: int, contract_address: ContractAddress) -> InputERC7730Descriptor:
+def generate_contract(chain_id: int, contract_address: Address) -> InputERC7730Descriptor:
     """
     Generate an ERC-7730 descriptor for the given contract address.
 
@@ -28,7 +29,7 @@ def generate_contract(chain_id: int, contract_address: ContractAddress) -> Input
                 deployments=[Deployment(chainId=chain_id, address=contract_address)],
             )
         ),
-        metadata=Metadata(),
+        metadata=InputMetadata(),
         display=InputDisplay(
             formats={
                 compute_signature(abi): InputFormat(fields=_generate_abi_fields(abi))
@@ -48,7 +49,7 @@ def _generate_abi_fields(function: Function) -> list[InputField]:
 def _generate_abi_field(input: InputOutput) -> InputField:
     # TODO must recursive into ABI types
     return InputFieldDescription(
-        path=input.name,
+        path=DataPath(absolute=True, elements=[Field(identifier=input.name)]),
         label=input.name,
         format=FieldFormat.RAW,  # TODO adapt format based on type
     )
