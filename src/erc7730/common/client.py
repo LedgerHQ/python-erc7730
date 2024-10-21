@@ -1,141 +1,173 @@
+import json
 import os
-from dataclasses import dataclass
-from io import UnsupportedOperation
-from typing import Any
+from abc import ABC
+from functools import cache
+from typing import Any, TypeVar, final, override
 
-import requests
-from pydantic import RootModel
+from hishel import CacheTransport, FileStorage
+from httpx import URL, BaseTransport, Client, HTTPTransport, Request, Response
+from httpx._content import IteratorByteStream
+from httpx_file import FileTransport
+from limiter import Limiter
+from pydantic import ConfigDict, TypeAdapter
 from pydantic_string_url import FileUrl, HttpUrl
+from xdg_base_dirs import xdg_cache_home
 
-from erc7730.common.pydantic import _BaseModel
 from erc7730.model.abi import ABI
+from erc7730.model.base import Model
+from erc7730.model.types import Address
+
+ETHERSCAN = "api.etherscan.io"
+
+_T = TypeVar("_T")
 
 
-@dataclass
-class ScanSite:
-    host: str
-    api_key: str
-    url: str
+class EtherscanChain(Model):
+    """Etherscan supported chain info."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    chainname: str
+    chainid: int
+    blockexplorer: HttpUrl
 
 
-SCAN_SITES = {
-    1: ScanSite(host="api.etherscan.io", api_key="ETHERSCAN_API_KEY", url="https://etherscan.io"),
-    56: ScanSite(host="api.bscscan.com", api_key="BSCSCAN_API_KEY", url="https://bscscan.com"),
-    137: ScanSite(host="api.polygonscan.com", api_key="POLYGONSCAN_API_KEY", url="https://polygonscan.com"),
-    1101: ScanSite(
-        host="api-zkevm.polygonscan.com",
-        api_key="POLYGONSKEVMSCAN_API_KEY",
-        url="https://zkevm.polygonscan.com",
-    ),
-    42161: ScanSite(host="api.arbiscan.io", api_key="ARBISCAN_API_KEY", url="https://arbiscan.io"),
-    8453: ScanSite(host="api.basescan.io", api_key="BASESCAN_API_KEY", url="https://basescan.io"),
-    10: ScanSite(
-        host="api-optimistic.etherscan.io",
-        api_key="OPTIMISMSCAN_API_KEY",
-        url="https://optimistic.etherscan.io",
-    ),
-    25: ScanSite(host="api.cronoscan.com", api_key="CRONOSCAN_API_KEY", url="https://cronoscan.com"),
-    250: ScanSite(host="api.ftmscan.com", api_key="FANTOMSCAN_API_KEY", url="https://ftmscan.com"),
-    284: ScanSite(host="api-moonbeam.moonscan.io", api_key="MOONSCAN_API_KEY", url="https://moonbeam.moonscan.io"),
-    199: ScanSite(host="api.bttcscan.com", api_key="BTTCSCAN_API_KEY", url="https://bttcscan.com"),
-    59144: ScanSite(host="api.lineascan.build", api_key="LINEASCAN_API_KEY", url="https://lineascan.build"),
-    534352: ScanSite(host="api.scrollscan.com", api_key="SCROLLSCAN_API_KEY", url="https://scrollscan.com"),
-    421614: ScanSite(
-        host="api-sepolia.arbiscan.io", api_key="ARBISCAN_SEPOLIA_API_KEY", url="https://sepolia.arbiscan.io"
-    ),
-    84532: ScanSite(
-        host="api-sepolia.basescan.org",
-        api_key="BASESCAN_SEPOLIA_API_KEY",
-        url="https://sepolia.basescan.org",
-    ),
-    11155111: ScanSite(
-        host="api-sepolia.etherscan.io",
-        api_key="ETHERSCAN_SEPOLIA_API_KEY",
-        url="https://sepolia.etherscan.io",
-    ),
-    11155420: ScanSite(
-        host="api-sepolia-optimistic.etherscan.io",
-        api_key="OPTIMISMSCAN_SEPOLIA_API_KEY",
-        url="https://sepolia.optimistic.etherscan.io",
-    ),
-    534351: ScanSite(
-        host="api-sepolia.scrollscan.com",
-        api_key="SCROLLSCAN_SEPOLIA_API_KEY",
-        url="https://sepolia.scrollscan.com",
-    ),
-}
-
-
-def get_contract_abis(chain_id: int, contract_address: str) -> list[ABI] | None:
+@cache
+def get_supported_chains() -> list[EtherscanChain]:
     """
-    Get contract ABIs from an etherscan-like site.
+    Get supported chains from Etherscan.
+
+    :return: Etherscan supported chains, with name/chain id/block explorer URL
+    """
+    return get(url=HttpUrl(f"https://{ETHERSCAN}/v2/chainlist"), model=list[EtherscanChain])
+
+
+def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
+    """
+    Get contract ABIs from Etherscan.
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs
-    :raises ValueError: if chain id not supported, API key not setup, or unexpected response
+    :raises NotImplementedError: if chain id not supported, API key not setup, or unexpected response
     """
-    if (site := SCAN_SITES.get(chain_id)) is None:
-        raise UnsupportedOperation(
-            f"Chain ID {chain_id} is not supported, please report this to authors of " f"python-erc7730 library"
-        )
     return get(
-        url=HttpUrl(f"https://{site.host}/api?module=contract&action=getabi&address={contract_address}"),
-        model=RootModel[list[ABI]],
-    ).root
+        url=HttpUrl(f"https://{ETHERSCAN}/v2/api"),
+        chainid=chain_id,
+        module="contract",
+        action="getabi",
+        address=contract_address,
+        model=list[ABI],
+    )
 
 
-def get_contract_url(chain_id: int, contract_address: str) -> str:
-    if (site := SCAN_SITES.get(chain_id)) is None:
-        raise UnsupportedOperation(
-            f"Chain ID {chain_id} is not supported, please report this to authors of " f"python-erc7730 library"
-        )
-    return f"{site.url}/address/{contract_address}#code"
+def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpUrl:
+    """
+    Get contract explorer site URL (for opening in a browser).
+
+    :param chain_id: EIP-155 chain ID
+    :param contract_address: EVM contract address
+    :return: URL to the contract explorer site
+    :raises NotImplementedError: if chain id not supported
+    """
+    for chain in get_supported_chains():
+        if chain.chainid == chain_id:
+            return HttpUrl(f"{chain.blockexplorer}/address/{contract_address}#code")
+    raise NotImplementedError(
+        f"Chain ID {chain_id} is not supported, please report this to authors of python-erc7730 library"
+    )
 
 
-def get(url: FileUrl | HttpUrl, model: type[_BaseModel]) -> _BaseModel:
+def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
     """
     Fetch data from a file or an HTTP URL and deserialize it.
 
     This method implements some automated adaptations to handle user provided URLs:
-     - adaptation to "raw.githubusercontent.com" for GitHub URLs
-     - injection of API key parameters for etherscan-like sites
-     - unwrapping of "result" field for etherscan-like sites
+     - GitHub: adaptation to "raw.githubusercontent.com"
+     - Etherscan: rate limiting, API key parameter injection, "result" field unwrapping
 
     :param url: URL to get data from
     :param model: Pydantic model to deserialize the data
     :return: deserialized response
-    :raises ValueError: if URL type is not supported, API key not setup, or unexpected response
+    :raises Exception: if URL type is not supported, API key not setup, or unexpected response
     """
-    # TODO add disk cache support
-    if isinstance(url, HttpUrl):
-        response = requests.get(_adapt_http_url(url), timeout=10)
-        response.raise_for_status()
-        data = _adapt_http_response(url, response.json())
-        if isinstance(data, str):
-            return model.model_validate_json(data)
-        return model.model_validate(data)
-    if isinstance(url, FileUrl):
-        # TODO add support for file:// URLs
-        raise NotImplementedError("file:// URL support is not implemented")
-    raise ValueError(f"Unsupported URL type: {type(url)}")
+    with _client() as client:
+        return TypeAdapter(model).validate_json(client.get(url, params=params).raise_for_status().content)
 
 
-def _adapt_http_url(url: HttpUrl) -> HttpUrl:
-    if url.startswith("https://github.com"):
-        return HttpUrl(url.replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/"))
+def _client() -> Client:
+    """
+    Create a new HTTP client with GitHub and Etherscan specific transports.
+    :return:
+    """
+    cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=7 * 24 * 3600, check_ttl_every=24 * 3600)
+    http_transport = HTTPTransport()
+    http_transport = GithubTransport(http_transport)
+    http_transport = EtherscanTransport(http_transport)
+    http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
+    file_transport = FileTransport()
+    # TODO file storage: authorize relative paths only
+    transports = {"https://": http_transport, "file://": file_transport}
+    return Client(mounts=transports, timeout=10)
 
-    for scan_site in SCAN_SITES.values():
-        if url.startswith(f"https://{scan_site.host}"):
-            if (api_key := os.environ.get(scan_site.api_key)) is None:
-                raise ValueError(f"{scan_site.api_key} environment variable is required")
-            return HttpUrl(f"{url}&apikey={api_key}")
 
-    return url
+class DelegateTransport(ABC, BaseTransport):
+    """Base class for wrapping httpx transport."""
+
+    def __init__(self, delegate: BaseTransport) -> None:
+        self._delegate = delegate
+
+    def handle_request(self, request: Request) -> Response:
+        return self._delegate.handle_request(request)
+
+    def close(self) -> None:
+        self._delegate.close()
 
 
-def _adapt_http_response(url: HttpUrl, response: Any) -> Any:
-    for scan_site in SCAN_SITES.values():
-        if url.startswith(f"https://{scan_site.host}") and (result := response.get("result")) is not None:
-            return result
-    return response
+@final
+class GithubTransport(DelegateTransport):
+    """GitHub specific transport for handling raw content requests."""
+
+    GITHUB, GITHUB_RAW = "github.com", "raw.githubusercontent.com"
+
+    def __init__(self, delegate: BaseTransport) -> None:
+        super().__init__(delegate)
+
+    @override
+    def handle_request(self, request: Request) -> Response:
+        if request.url.host != self.GITHUB:
+            return super().handle_request(request)
+
+        # adapt URL
+        request.url = URL(str(request.url).replace(self.GITHUB, self.GITHUB_RAW).replace("/blob/", "/"))
+        request.headers.update({"Host": self.GITHUB_RAW})
+        return super().handle_request(request)
+
+
+@final
+class EtherscanTransport(DelegateTransport):
+    """Etherscan specific transport for handling rate limiting, API key parameter injection, response unwrapping."""
+
+    ETHERSCAN_API_KEY = "ETHERSCAN_API_KEY"
+
+    @Limiter(rate=5, capacity=5, consume=1)
+    @override
+    def handle_request(self, request: Request) -> Response:
+        if request.url.host != ETHERSCAN:
+            return super().handle_request(request)
+
+        # add API key
+        if (api_key := os.environ.get(self.ETHERSCAN_API_KEY)) is None:
+            raise ValueError(f"{self.ETHERSCAN_API_KEY} environment variable is required")
+        request.url = request.url.copy_add_param("apikey", api_key)
+
+        # read response
+        response = super().handle_request(request)
+        response.read()
+        response.close()
+
+        # unwrap result, sometimes containing JSON directly, sometimes JSON in a string
+        if (result := response.json().get("result")) is not None:
+            data = result if isinstance(result, str) else json.dumps(result)
+            return Response(status_code=response.status_code, stream=IteratorByteStream([data.encode()]))
+
+        raise Exception(f"Unexpected response from Etherscan: {response.content}")
