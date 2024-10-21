@@ -2,7 +2,7 @@ from eip712.model.schema import EIP712SchemaField
 
 from erc7730.model.abi import Component, Function, InputOutput
 from erc7730.model.context import EIP712JsonSchema
-from erc7730.model.paths.path_parser import parse_path
+from erc7730.model.paths.path_parser import to_path
 from erc7730.model.paths.path_schemas import compute_abi_schema_paths, compute_eip712_schema_paths
 
 
@@ -16,7 +16,7 @@ def test_compute_abi_paths_with_params() -> None:
     abi = Function(
         name="transfer", inputs=[InputOutput(name="to", type="address"), InputOutput(name="amount", type="uint256")]
     )
-    expected = {parse_path("#.to"), parse_path("#.amount")}
+    expected = {to_path("#.to"), to_path("#.amount")}
     assert compute_abi_schema_paths(abi) == expected
 
 
@@ -24,7 +24,7 @@ def test_compute_abi_paths_with_slicable_params() -> None:
     abi = Function(
         name="transfer", inputs=[InputOutput(name="to", type="bytes"), InputOutput(name="amount", type="uint256")]
     )
-    expected = {parse_path("#.to"), parse_path("#.to.[]"), parse_path("#.amount")}
+    expected = {to_path("#.to"), to_path("#.to.[]"), to_path("#.amount")}
     assert compute_abi_schema_paths(abi) == expected
 
 
@@ -39,7 +39,7 @@ def test_compute_abi_paths_with_nested_params() -> None:
             )
         ],
     )
-    expected = {parse_path("#.bar.baz"), parse_path("#.bar.qux")}
+    expected = {to_path("#.bar.baz"), to_path("#.bar.qux")}
     assert compute_abi_schema_paths(abi) == expected
 
 
@@ -59,11 +59,11 @@ def test_compute_abi_paths_with_multiple_nested_params() -> None:
         ],
     )
     expected = {
-        parse_path("#.bar.baz"),
-        parse_path("#.bar.baz.[]"),
-        parse_path("#.bar.qux"),
-        parse_path("#.bar.nested.[]"),
-        parse_path("#.bar.nested.[].deep"),
+        to_path("#.bar.baz"),
+        to_path("#.bar.baz.[]"),
+        to_path("#.bar.qux"),
+        to_path("#.bar.nested.[]"),
+        to_path("#.bar.nested.[].deep"),
     }
     assert compute_abi_schema_paths(abi) == expected
 
@@ -74,8 +74,8 @@ def test_compute_eip712_paths_with_slicable_params() -> None:
         types={"Foo": [EIP712SchemaField(name="bar", type="bytes")]},
     )
     expected = {
-        parse_path("#.bar"),
-        parse_path("#.bar.[]"),
+        to_path("#.bar"),
+        to_path("#.bar.[]"),
     }
     assert compute_eip712_schema_paths(schema) == expected
 
@@ -98,10 +98,10 @@ def test_compute_eip712_paths_with_multiple_nested_params() -> None:
         },
     )
     expected = {
-        parse_path("#.bar.baz"),
-        parse_path("#.bar.baz.[]"),
-        parse_path("#.bar.qux"),
-        parse_path("#.bar.nested.[]"),
-        parse_path("#.bar.nested.[].deep"),
+        to_path("#.bar.baz"),
+        to_path("#.bar.baz.[]"),
+        to_path("#.bar.qux"),
+        to_path("#.bar.nested.[]"),
+        to_path("#.bar.nested.[].deep"),
     }
     assert compute_eip712_schema_paths(schema) == expected

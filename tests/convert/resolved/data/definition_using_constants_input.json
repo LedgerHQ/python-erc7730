@@ -1,4 +1,5 @@
 {
+    "$schema": "../../../registries/clear-signing-erc7730-registry/specs/erc7730-v1.schema.json",
     "context": {
         "eip712": {
             "deployments": [
@@ -27,12 +28,12 @@
                         ],
                         "TestPrimaryType": [
                             {
-                                "name": "param1",
+                                "name": "token1",
                                 "type": "address"
                             },
                             {
-                                "name": "param2",
-                                "type": "bytes"
+                                "name": "token2",
+                                "type": "address"
                             }
                         ]
                     }
@@ -41,38 +42,34 @@
         }
     },
     "metadata": {
-        "enums": {}
+        "constants": {
+            "path": "#.param1",
+            "token_path": "#.token1",
+            "label": "Param 1",
+            "native_currency": "0x0000000000000000000000000000000000000001",
+            "max_threshold": "0xFFFFFFFF",
+            "max_message": "Max"
+        }
     },
     "display": {
+        "definitions": {
+            "test_definition": {
+                "label": "$.metadata.constants.label",
+                "format": "tokenAmount",
+                "params": {
+                    "tokenPath": "$.metadata.constants.token_path",
+                    "nativeCurrencyAddress": "$.metadata.constants.native_currency",
+                    "threshold": "$.metadata.constants.max_threshold",
+                    "message": "$.metadata.constants.max_message"
+                }
+            }
+        },
         "formats": {
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param2"
-                                }
-                            ]
-                        },
-                        "label": "Param 2",
-                        "format": "calldata",
-                        "params": {
-                            "selector": "0x00000000",
-                            "calleePath": {
-                                "type": "data",
-                                "absolute": true,
-                                "elements": [
-                                    {
-                                        "type": "field",
-                                        "identifier": "param1"
-                                    }
-                                ]
-                            }
-                        }
+                        "path": "$.metadata.constants.path",
+                        "$ref": "$.display.definitions.test_definition"
                     }
                 ]
             }

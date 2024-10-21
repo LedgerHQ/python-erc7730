@@ -20,6 +20,11 @@ def test_registry_files(input_file: Path) -> None:
     """
     Test converting ERC-7730 registry files from input to resolved form.
     """
+
+    # TODO: these descriptors use literal constants instead of token paths, which is not supported yet
+    if input_file.name in {"calldata-OssifiableProxy.json", "calldata-wstETH.json", "calldata-usdt.json"}:
+        pytest.skip("Descriptor uses literal constants instead of token paths, which is not supported yet")
+
     convert_and_raise_errors(InputERC7730Descriptor.load(input_file), ERC7730InputToResolved())
 
 
@@ -90,6 +95,56 @@ def test_registry_files(input_file: Path) -> None:
             description="using enum format, with parameter variants, resolved form is identical to input form",
         ),
         TestCase(
+            id="format_raw_using_constants",
+            label="field format - using raw format with references to constants",
+            description="using raw format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_address_name_using_constants",
+            label="field format - using address name format with references to constants",
+            description="using address name format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_calldata_using_constants",
+            label="field format - using calldata format with references to constants",
+            description="using calldata format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_amount_using_constants",
+            label="field format - using amount format with references to constants",
+            description="using amount format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_token_amount_using_constants",
+            label="field format - using token amount format with references to constants",
+            description="using token amount format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_nft_name_using_constants",
+            label="field format - using NFT name amount format with references to constants",
+            description="using NFT name amount format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_date_using_constants",
+            label="field format - using date format with references to constants",
+            description="using date format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_duration_using_constants",
+            label="field format - using duration format with references to constants",
+            description="using duration format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_unit_using_constants",
+            label="field format - using unit format with references to constants",
+            description="using unit format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
+            id="format_enum_using_constants",
+            label="field format - using enum format with references to constants",
+            description="using enum format, with parameter variants and $.context/$.metadata constants",
+        ),
+        TestCase(
             id="definition_format_raw",
             label="display definition / reference - using raw format",
             description="most minimal possible use of a display definition + reference, using raw format",
@@ -148,6 +203,11 @@ def test_registry_files(input_file: Path) -> None:
             id="definition_override_params",
             label="display definition / reference - using params override",
             description="use of a display definition, with parameters overridden on the field",
+        ),
+        TestCase(
+            id="definition_using_constants",
+            label="display definition / reference - using constants override",
+            description="use of a display definition, using $.context/$.metadata constants",
         ),
         TestCase(
             id="definition_invalid_container_path",

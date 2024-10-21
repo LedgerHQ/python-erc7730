@@ -39,10 +39,11 @@
     },
     "metadata": {
         "enums": {
-            "testEnum": {
+            "local": {
                 "1": "stable",
                 "2": "variable"
-            }
+            },
+            "remote": "https://postman-echo.com/response-headers?1=foo&2=bar"
         }
     },
     "display": {
@@ -51,10 +52,18 @@
                 "fields": [
                     {
                         "path": "param1",
-                        "label": "Param 1",
+                        "label": "Using a local enum",
                         "format": "enum",
                         "params": {
-                            "$ref": "$.metadata.enums.testEnum"
+                            "$ref": "$.metadata.enums.local"
+                        }
+                    },
+                    {
+                        "path": "param1",
+                        "label": "Using a remote enum",
+                        "format": "enum",
+                        "params": {
+                            "$ref": "$.metadata.enums.remote"
                         }
                     }
                 ]

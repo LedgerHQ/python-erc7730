@@ -1,4 +1,5 @@
 {
+    "$schema": "../../../registries/clear-signing-erc7730-registry/specs/erc7730-v1.schema.json",
     "context": {
         "eip712": {
             "deployments": [
@@ -37,38 +38,26 @@
         }
     },
     "metadata": {
-        "enums": {}
+        "constants": {
+            "path": "#.param1",
+            "label1": "Minimal parameters set",
+            "label2": "types specified",
+            "label3": "sources specified",
+            "label4": "All parameters specified"
+        }
     },
     "display": {
         "formats": {
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "Minimal parameters set",
+                        "path": "$.metadata.constants.path",
+                        "label": "$.metadata.constants.label1",
                         "format": "addressName"
                     },
                     {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "types specified",
+                        "path": "$.metadata.constants.path",
+                        "label": "$.metadata.constants.label2",
                         "format": "addressName",
                         "params": {
                             "types": [
@@ -81,17 +70,8 @@
                         }
                     },
                     {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "sources specified",
+                        "path": "$.metadata.constants.path",
+                        "label": "$.metadata.constants.label3",
                         "format": "addressName",
                         "params": {
                             "sources": [
@@ -101,17 +81,8 @@
                         }
                     },
                     {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "All parameters specified",
+                        "path": "$.metadata.constants.path",
+                        "label": "$.metadata.constants.label4",
                         "format": "addressName",
                         "params": {
                             "types": [
