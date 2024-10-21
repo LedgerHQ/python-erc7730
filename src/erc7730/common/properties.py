@@ -20,7 +20,7 @@ def get_property(target: Any, name: str) -> Any:
 
     :param target: object of dict like
     :param name: attribute name
-    :return: true if the target has the property
+    :return: value for property on target object
     """
     if isinstance(target, dict):
         return target[name]
