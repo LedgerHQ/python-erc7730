@@ -30,6 +30,10 @@
                             {
                                 "name": "param1",
                                 "type": "string"
+                            },
+                            {
+                                "name": "param2",
+                                "type": "address"
                             }
                         ]
                     }
@@ -47,7 +51,7 @@
                         "label": "Param 1",
                         "format": "nftName",
                         "params": {
-                            "collectionPath": "0x0000000000000000000000000000000000000001"
+                            "collectionPath": "param2"
                         }
                     }
                 ]

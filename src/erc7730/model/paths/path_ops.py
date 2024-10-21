@@ -74,6 +74,27 @@ def data_path_starts_with(path: DataPath, prefix: DataPath) -> bool:
         return False
 
 
+def path_starts_with(
+    path: DataPath | ContainerPath | DescriptorPath, prefix: DataPath | ContainerPath | DescriptorPath
+) -> bool:
+    """
+    Check if path starts with a given prefix.
+
+    :param path: path to inspect
+    :param prefix: prefix to check
+    :return: True if path starts with prefix
+    """
+    match (path, prefix):
+        case (ContainerPath(), ContainerPath()):
+            return path == prefix
+        case (DataPath(), DataPath()):
+            return data_path_starts_with(path, prefix)
+        case (DescriptorPath(), DescriptorPath()):
+            return descriptor_path_starts_with(path, prefix)
+        case _:
+            return False
+
+
 def descriptor_path_ends_with(path: DescriptorPath, suffix: DescriptorPathElement) -> bool:
     """
     Check if descriptor path ends with a given element.
@@ -132,10 +153,21 @@ def data_or_container_path_concat(parent: DataPath | None, child: DataPath | Con
 
 def data_path_append(parent: DataPath, child: DataPathElement) -> DataPath:
     """
-    Concatenate two data paths.
+    Append an element to a data path.
 
     :param parent: parent path
-    :param child: child path
+    :param child: element to append
+    :return: concatenated path
+    """
+    return parent.model_copy(update={"elements": [*parent.elements, child]})
+
+
+def descriptor_path_append(parent: DescriptorPath, child: DescriptorPathElement) -> DescriptorPath:
+    """
+    Append an element to a descriptor path.
+
+    :param parent: parent path
+    :param child: element to append
     :return: concatenated path
     """
     return parent.model_copy(update={"elements": [*parent.elements, child]})

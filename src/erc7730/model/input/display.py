@@ -22,7 +22,7 @@ class InputFieldBase(Model):
     A field formatter, containing formatting information of a single field in a message.
     """
 
-    path: DataPathStr | ContainerPathStr = Field(
+    path: DescriptorPathStr | DataPathStr | ContainerPathStr = Field(
         title="Path",
         description="A path to the field in the structured data. The path is a JSON path expression that can be used "
         "to extract the field value from the structured data.",
@@ -44,7 +44,7 @@ class InputReference(InputFieldBase):
         "key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
     )
 
-    label: str | None = Field(
+    label: DescriptorPathStr | str | None = Field(
         default=None,
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value. "
@@ -63,7 +63,7 @@ class InputTokenAmountParameters(Model):
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: DataPathStr | ContainerPathStr | None = Field(
+    tokenPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
         default=None,
         title="Token Path",
         description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
@@ -71,21 +71,21 @@ class InputTokenAmountParameters(Model):
         '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: Address | list[Address] | DescriptorPathStr | None = Field(
+    nativeCurrencyAddress: DescriptorPathStr | Address | list[Address] | None = Field(
         default=None,
         title="Native Currency Address",
         description="An address or array of addresses, any of which are interpreted as an amount in native currency "
         "rather than a token.",
     )
 
-    threshold: str | DescriptorPathStr | None = Field(
+    threshold: DescriptorPathStr | str | None = Field(
         default=None,
         title="Unlimited Threshold",
         description="The threshold above which the amount should be displayed using the message parameter rather than "
         "the real amount.",
     )
 
-    message: str | DescriptorPathStr | None = Field(
+    message: DescriptorPathStr | str | None = Field(
         default=None,
         title="Unlimited Message",
         description="The message to display when the amount is above the threshold.",
@@ -119,13 +119,13 @@ class InputCallDataParameters(Model):
     Embedded Calldata Formatting Parameters.
     """
 
-    selector: str | DescriptorPathStr | None = Field(
+    selector: DescriptorPathStr | str | None = Field(
         default=None,
         title="Called Selector",
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: DataPathStr | ContainerPathStr | DescriptorPathStr = Field(
+    calleePath: DescriptorPathStr | DataPathStr | ContainerPathStr = Field(
         title="Callee Path",
         description="The path to the address of the contract being called by this embedded calldata.",
     )
@@ -136,7 +136,7 @@ class InputNftNameParameters(Model):
     NFT Names Formatting Parameters.
     """
 
-    collectionPath: DataPathStr | ContainerPathStr | DescriptorPathStr = Field(
+    collectionPath: DescriptorPathStr | DataPathStr | ContainerPathStr = Field(
         title="Collection Path", description="The path to the collection in the structured data."
     )
 
@@ -154,18 +154,14 @@ class InputUnitParameters(Model):
     Unit Formatting Parameters.
     """
 
-    base: str | DescriptorPathStr = Field(
+    base: DescriptorPathStr | str = Field(
         title="Unit base symbol",
         description="The base symbol of the unit, displayed after the converted value. It can be an SI unit symbol or "
         "acceptable dimensionless symbols like % or bps.",
     )
 
     decimals: int | DescriptorPathStr | None = Field(
-        default=None,
-        title="Decimals",
-        description="The number of decimals of the value, used to convert to a float.",
-        ge=0,
-        le=255,
+        default=None, title="Decimals", description="The number of decimals of the value, used to convert to a float."
     )
 
     prefix: bool | DescriptorPathStr | None = Field(
@@ -212,12 +208,13 @@ class InputFieldDefinition(Model):
         "reference in device specific sections.",
     )
 
-    label: str = Field(
+    label: DescriptorPathStr | str = Field(
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value.",
     )
 
-    format: FieldFormat | DescriptorPathStr | None = Field(
+    format: FieldFormat | None = Field(
+        default=None,
         title="Field Format",
         description="The format of the field, that will be used to format the field value in a human readable way.",
     )
@@ -256,19 +253,18 @@ InputField = Annotated[
 ]
 
 
-InputNestedFields.model_rebuild()
-
-
 class InputFormat(FormatBase):
     """
     A structured data format specification, containing formatting information of fields in a single type of message.
     """
 
     fields: list[InputField] = Field(
-        title="Field Formats set", description="An array containing the ordered definitions of fields formats."
+        title="Field Formats set",
+        description="An array containing the ordered definitions of fields formats.",
+        min_length=1,
     )
 
-    required: list[DataPathStr | ContainerPathStr] | DescriptorPathStr | None = Field(
+    required: list[DataPathStr | ContainerPathStr] | None = Field(
         default=None,
         title="Required fields",
         description="A list of fields that are required to be displayed to the user. A field that has a formatter and "
@@ -276,7 +272,7 @@ class InputFormat(FormatBase):
         "shown.",
     )
 
-    excluded: list[DataPathStr] | DescriptorPathStr | None = Field(
+    excluded: list[DataPathStr] | None = Field(
         default=None,
         title="Excluded fields",
         description="Intentionally excluded fields, as an array of *paths* referring to specific fields. A field that "

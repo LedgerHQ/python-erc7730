@@ -13,10 +13,10 @@ from pydantic_core.core_schema import (
 )
 
 from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
-from erc7730.model.paths.path_parser import parse_path
+from erc7730.model.paths.path_parser import to_path
 
 CONTAINER_PATH_STR_JSON_SCHEMA = chain_schema(
-    [str_schema(), no_info_plain_validator_function(parse_path), is_instance_schema(ContainerPath)]
+    [str_schema(), no_info_plain_validator_function(to_path), is_instance_schema(ContainerPath)]
 )
 CONTAINER_PATH_STR_CORE_SCHEMA = json_or_python_schema(
     json_schema=CONTAINER_PATH_STR_JSON_SCHEMA,
@@ -34,7 +34,7 @@ ContainerPathStr = Annotated[
 ]
 
 DATA_PATH_STR_JSON_SCHEMA = chain_schema(
-    [str_schema(), no_info_plain_validator_function(parse_path), is_instance_schema(DataPath)]
+    [str_schema(), no_info_plain_validator_function(to_path), is_instance_schema(DataPath)]
 )
 DATA_PATH_STR_CORE_SCHEMA = json_or_python_schema(
     json_schema=DATA_PATH_STR_JSON_SCHEMA,
@@ -53,7 +53,7 @@ DataPathStr = Annotated[
 ]
 
 DESCRIPTOR_PATH_STR_JSON_SCHEMA = chain_schema(
-    [str_schema(), no_info_plain_validator_function(parse_path), is_instance_schema(DescriptorPath)]
+    [str_schema(), no_info_plain_validator_function(to_path), is_instance_schema(DescriptorPath)]
 )
 DESCRIPTOR_PATH_STR_CORE_SCHEMA = json_or_python_schema(
     json_schema=DESCRIPTOR_PATH_STR_JSON_SCHEMA,

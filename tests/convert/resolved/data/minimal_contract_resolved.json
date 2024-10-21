@@ -1,5 +1,4 @@
 {
-    "$schema": "../../../registries/clear-signing-erc7730-registry/specs/erc7730-v1.schema.json",
     "context": {
         "contract": {
             "deployments": [
@@ -28,7 +27,9 @@
             ]
         }
     },
-    "metadata": {},
+    "metadata": {
+        "enums": {}
+    },
     "display": {
         "formats": {
             "function1(bytes4)": {

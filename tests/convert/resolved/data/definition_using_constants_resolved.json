@@ -27,12 +27,12 @@
                         ],
                         "TestPrimaryType": [
                             {
-                                "name": "param1",
+                                "name": "token1",
                                 "type": "address"
                             },
                             {
-                                "name": "param2",
-                                "type": "bytes"
+                                "name": "token2",
+                                "type": "address"
                             }
                         ]
                     }
@@ -54,24 +54,26 @@
                             "elements": [
                                 {
                                     "type": "field",
-                                    "identifier": "param2"
+                                    "identifier": "param1"
                                 }
                             ]
                         },
-                        "label": "Param 2",
-                        "format": "calldata",
+                        "label": "Param 1",
+                        "format": "tokenAmount",
                         "params": {
-                            "selector": "0x00000000",
-                            "calleePath": {
+                            "tokenPath": {
                                 "type": "data",
                                 "absolute": true,
                                 "elements": [
                                     {
                                         "type": "field",
-                                        "identifier": "param1"
+                                        "identifier": "token1"
                                     }
                                 ]
-                            }
+                            },
+                            "nativeCurrencyAddress": "0x0000000000000000000000000000000000000001",
+                            "threshold": "0xFFFFFFFF",
+                            "message": "Max"
                         }
                     }
                 ]

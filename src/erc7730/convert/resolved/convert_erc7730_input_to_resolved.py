@@ -6,8 +6,9 @@ from pydantic_string_url import HttpUrl
 from erc7730.common import client
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.convert.resolved.parameters import convert_field_parameters
-from erc7730.convert.resolved.references import convert_reference
+from erc7730.convert.resolved.constants import ConstantProvider, DefaultConstantProvider
+from erc7730.convert.resolved.parameters import resolve_field_parameters
+from erc7730.convert.resolved.references import resolve_reference
 from erc7730.model.abi import ABI
 from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.display import (
@@ -24,6 +25,8 @@ from erc7730.model.input.display import (
     InputNestedFields,
     InputReference,
 )
+from erc7730.model.input.metadata import InputMetadata
+from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath
 from erc7730.model.paths.path_ops import data_or_container_path_concat, data_path_concat
 from erc7730.model.resolved.context import (
@@ -40,6 +43,8 @@ from erc7730.model.resolved.display import (
     ResolvedFormat,
     ResolvedNestedFields,
 )
+from erc7730.model.resolved.metadata import ResolvedMetadata
+from erc7730.model.types import Id
 
 
 @final
@@ -51,55 +56,73 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
      - URLs have been fetched
      - Contract addresses have been normalized to lowercase (TODO not implemented)
      - References have been inlined
-     - Constants have been inlined (TODO not implemented)
+     - Constants have been inlined
      - Field definitions have been inlined
      - Selectors have been converted to 4 bytes form (TODO not implemented)
     """
 
     @override
     def convert(self, descriptor: InputERC7730Descriptor, out: OutputAdder) -> ResolvedERC7730Descriptor | None:
-        context = self._convert_context(descriptor.context, out)
-        display = self._convert_display(descriptor.display, out)
+        constants = DefaultConstantProvider(descriptor)
 
-        if context is None or display is None:
+        if (context := self._resolve_context(descriptor.context, out)) is None:
+            return None
+        if (metadata := self._resolve_metadata(descriptor.metadata, out)) is None:
+            return None
+        if (display := self._resolve_display(descriptor.display, metadata.enums or {}, constants, out)) is None:
             return None
 
-        return ResolvedERC7730Descriptor.model_validate(
-            {"$schema": descriptor.schema_, "context": context, "metadata": descriptor.metadata, "display": display}
-        )
+        return ResolvedERC7730Descriptor(context=context, metadata=metadata, display=display)
 
     @classmethod
-    def _convert_context(
+    def _resolve_context(
         cls, context: InputContractContext | InputEIP712Context, out: OutputAdder
     ) -> ResolvedContractContext | ResolvedEIP712Context | None:
-        if isinstance(context, InputContractContext):
-            return cls._convert_context_contract(context, out)
+        match context:
+            case InputContractContext():
+                return cls._resolve_context_contract(context, out)
+            case InputEIP712Context():
+                return cls._resolve_context_eip712(context, out)
+            case _:
+                assert_never(context)
 
-        if isinstance(context, InputEIP712Context):
-            return cls._convert_context_eip712(context, out)
+    @classmethod
+    def _resolve_metadata(cls, metadata: InputMetadata, out: OutputAdder) -> ResolvedMetadata | None:
+        resolved_enums = {}
+        if metadata.enums is not None:
+            for enum_id, enum in metadata.enums.items():
+                if (resolved_enum := cls._resolve_enum(enum, out)) is not None:
+                    resolved_enums[enum_id] = resolved_enum
 
-        return out.error(
-            title="Invalid context type",
-            message=f"Descriptor has an invalid context type: {type(context)}. Context type should be either contract"
-            f"or eip712.",
+        return ResolvedMetadata(
+            owner=metadata.owner,
+            info=metadata.info,
+            token=metadata.token,
+            enums=resolved_enums,
         )
 
     @classmethod
-    def _convert_context_contract(
+    def _resolve_enum(cls, enum: HttpUrl | EnumDefinition, out: OutputAdder) -> dict[str, str] | None:
+        match enum:
+            case HttpUrl():
+                return client.get(enum, RootModel[EnumDefinition]).root
+            case dict():
+                return enum
+            case _:
+                assert_never(enum)
+
+    @classmethod
+    def _resolve_context_contract(
         cls, context: InputContractContext, out: OutputAdder
     ) -> ResolvedContractContext | None:
-        contract = cls._convert_contract(context.contract, out)
-
-        if contract is None:
+        if (contract := cls._resolve_contract(context.contract, out)) is None:
             return None
 
         return ResolvedContractContext(contract=contract)
 
     @classmethod
-    def _convert_contract(cls, contract: InputContract, out: OutputAdder) -> ResolvedContract | None:
-        abi = cls._convert_abis(contract.abi, out)
-
-        if abi is None:
+    def _resolve_contract(cls, contract: InputContract, out: OutputAdder) -> ResolvedContract | None:
+        if (abi := cls._resolve_abis(contract.abi, out)) is None:
             return None
 
         return ResolvedContract(
@@ -107,31 +130,25 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _convert_abis(cls, abis: list[ABI] | HttpUrl, out: OutputAdder) -> list[ABI] | None:
-        if isinstance(abis, HttpUrl):
-            return client.get(abis, RootModel[list[ABI]]).root
-
-        if isinstance(abis, list):
-            return abis
-
-        return out.error(
-            title="Invalid ABIs type",
-            message=f"Descriptor contains invalid value for ABIs: {type(abis)}, it should either be an URL or a JSON"
-            f"representation of the ABIs.",
-        )
+    def _resolve_abis(cls, abis: list[ABI] | HttpUrl, out: OutputAdder) -> list[ABI] | None:
+        match abis:
+            case HttpUrl():
+                return client.get(abis, RootModel[list[ABI]]).root
+            case list():
+                return abis
+            case _:
+                assert_never(abis)
 
     @classmethod
-    def _convert_context_eip712(cls, context: InputEIP712Context, out: OutputAdder) -> ResolvedEIP712Context | None:
-        eip712 = cls._convert_eip712(context.eip712, out)
-
-        if eip712 is None:
+    def _resolve_context_eip712(cls, context: InputEIP712Context, out: OutputAdder) -> ResolvedEIP712Context | None:
+        if (eip712 := cls._resolve_eip712(context.eip712, out)) is None:
             return None
 
         return ResolvedEIP712Context(eip712=eip712)
 
     @classmethod
-    def _convert_eip712(cls, eip712: InputEIP712, out: OutputAdder) -> ResolvedEIP712 | None:
-        schemas = cls._convert_schemas(eip712.schemas, out)
+    def _resolve_eip712(cls, eip712: InputEIP712, out: OutputAdder) -> ResolvedEIP712 | None:
+        schemas = cls._resolve_schemas(eip712.schemas, out)
 
         if schemas is None:
             return None
@@ -144,61 +161,72 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _convert_schemas(
+    def _resolve_schemas(
         cls, schemas: list[EIP712JsonSchema | HttpUrl], out: OutputAdder
     ) -> list[EIP712JsonSchema] | None:
         resolved_schemas = []
         for schema in schemas:
-            if (resolved_schema := cls._convert_schema(schema, out)) is not None:
+            if (resolved_schema := cls._resolve_schema(schema, out)) is not None:
                 resolved_schemas.append(resolved_schema)
         return resolved_schemas
 
     @classmethod
-    def _convert_schema(cls, schema: EIP712JsonSchema | HttpUrl, out: OutputAdder) -> EIP712JsonSchema | None:
-        if isinstance(schema, HttpUrl):
-            return client.get(schema, EIP712JsonSchema)
-
-        if isinstance(schema, EIP712JsonSchema):
-            return schema
-
-        return out.error(
-            title="Invalid EIP-712 schema type",
-            message=f"Descriptor contains invalid value for EIP-712 schema: {type(schema)}, it should either be an URL "
-            f"or a JSON representation of the schema.",
-        )
+    def _resolve_schema(cls, schema: EIP712JsonSchema | HttpUrl, out: OutputAdder) -> EIP712JsonSchema | None:
+        match schema:
+            case HttpUrl():
+                return client.get(schema, EIP712JsonSchema)
+            case EIP712JsonSchema():
+                return schema
+            case _:
+                assert_never(schema)
 
     @classmethod
-    def _convert_display(cls, display: InputDisplay, out: OutputAdder) -> ResolvedDisplay | None:
+    def _resolve_display(
+        cls, display: InputDisplay, enums: dict[Id, EnumDefinition], constants: ConstantProvider, out: OutputAdder
+    ) -> ResolvedDisplay | None:
         formats = {}
         for format_key, format in display.formats.items():
-            if (resolved_format := cls._convert_format(format, display.definitions or {}, out)) is not None:
+            if (
+                resolved_format := cls._resolve_format(format, display.definitions or {}, enums, constants, out)
+            ) is not None:
                 formats[format_key] = resolved_format
 
         return ResolvedDisplay(formats=formats)
 
     @classmethod
-    def _convert_field_description(
-        cls, prefix: DataPath, definition: InputFieldDescription, out: OutputAdder
+    def _resolve_field_description(
+        cls,
+        prefix: DataPath,
+        definition: InputFieldDescription,
+        enums: dict[Id, EnumDefinition],
+        constants: ConstantProvider,
+        out: OutputAdder,
     ) -> ResolvedFieldDescription | None:
-        params = convert_field_parameters(prefix, definition.params, out) if definition.params is not None else None
+        params = resolve_field_parameters(prefix, definition.params, enums, constants, out)
+
+        if (path := constants.resolve_path(definition.path, out)) is None:
+            return None
 
         return ResolvedFieldDescription.model_validate(
             {
                 "$id": definition.id,
-                "path": data_or_container_path_concat(prefix, definition.path),
-                "label": definition.label,
+                "path": data_or_container_path_concat(prefix, path),
+                "label": constants.resolve(definition.label, out),
                 "format": FieldFormat(definition.format) if definition.format is not None else None,
                 "params": params,
             }
         )
 
     @classmethod
-    def _convert_format(
-        cls, format: InputFormat, definitions: dict[str, InputFieldDefinition], out: OutputAdder
+    def _resolve_format(
+        cls,
+        format: InputFormat,
+        definitions: dict[Id, InputFieldDefinition],
+        enums: dict[Id, EnumDefinition],
+        constants: ConstantProvider,
+        out: OutputAdder,
     ) -> ResolvedFormat | None:
-        fields = cls._convert_fields(ROOT_DATA_PATH, format.fields, definitions, out)
-
-        if fields is None:
+        if (fields := cls._resolve_fields(ROOT_DATA_PATH, format.fields, definitions, enums, constants, out)) is None:
             return None
 
         return ResolvedFormat.model_validate(
@@ -213,57 +241,67 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _convert_fields(
+    def _resolve_fields(
         cls,
         prefix: DataPath,
         fields: list[InputField],
-        definitions: dict[str, InputFieldDefinition],
+        definitions: dict[Id, InputFieldDefinition],
+        enums: dict[Id, EnumDefinition],
+        constants: ConstantProvider,
         out: OutputAdder,
     ) -> list[ResolvedField] | None:
         resolved_fields = []
         for input_format in fields:
-            if (resolved_field := cls._convert_field(prefix, input_format, definitions, out)) is None:
+            if (resolved_field := cls._resolve_field(prefix, input_format, definitions, enums, constants, out)) is None:
                 return None
             resolved_fields.append(resolved_field)
         return resolved_fields
 
     @classmethod
-    def _convert_field(
-        cls, prefix: DataPath, field: InputField, definitions: dict[str, InputFieldDefinition], out: OutputAdder
+    def _resolve_field(
+        cls,
+        prefix: DataPath,
+        field: InputField,
+        definitions: dict[Id, InputFieldDefinition],
+        enums: dict[Id, EnumDefinition],
+        constants: ConstantProvider,
+        out: OutputAdder,
     ) -> ResolvedField | None:
         match field:
             case InputReference():
-                return convert_reference(prefix, field, definitions, out)
+                return resolve_reference(prefix, field, definitions, enums, constants, out)
             case InputFieldDescription():
-                return cls._convert_field_description(prefix, field, out)
+                return cls._resolve_field_description(prefix, field, enums, constants, out)
             case InputNestedFields():
-                return cls._convert_nested_fields(prefix, field, definitions, out)
+                return cls._resolve_nested_fields(prefix, field, definitions, enums, constants, out)
             case _:
                 assert_never(field)
 
     @classmethod
-    def _convert_nested_fields(
+    def _resolve_nested_fields(
         cls,
         prefix: DataPath,
         fields: InputNestedFields,
-        definitions: dict[str, InputFieldDefinition],
+        definitions: dict[Id, InputFieldDefinition],
+        enums: dict[Id, EnumDefinition],
+        constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedNestedFields | None:
         path: DataPath
-        match fields.path:
-            case DataPath() as p:
-                path = data_path_concat(prefix, p)
-            case ContainerPath() as p:
+        match constants.resolve_path(fields.path, out):
+            case None:
+                return None
+            case DataPath() as data_path:
+                path = data_path_concat(prefix, data_path)
+            case ContainerPath() as container_path:
                 return out.error(
                     title="Invalid path type",
-                    message=f"Container path {p} cannot be used with nested fields.",
+                    message=f"Container path {container_path} cannot be used with nested fields.",
                 )
             case _:
                 assert_never(fields.path)
 
-        resolved_fields = cls._convert_fields(path, fields.fields, definitions, out)
-
-        if resolved_fields is None:
+        if (resolved_fields := cls._resolve_fields(path, fields.fields, definitions, enums, constants, out)) is None:
             return None
 
         return ResolvedNestedFields(path=path, fields=resolved_fields)

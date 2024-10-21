@@ -12,25 +12,22 @@ from erc7730.model.paths import (
     DescriptorPath,
     Field,
 )
-from erc7730.model.paths.path_parser import parse_path
+from erc7730.model.paths.path_parser import to_path
 from erc7730.model.resolved.path import ResolvedPath
 from tests.assertions import assert_json_str_equals
 
-InputPath = DescriptorPathStr | DataPathStr | ContainerPathStr
-InputPathAsJson = DescriptorPath | DataPath | ContainerPath
 
-
-def _test_valid_input_path(string: str, obj: InputPath, json: str) -> None:
+def _test_valid_input_path(string: str, obj: DescriptorPathStr | DataPathStr | ContainerPathStr, json: str) -> None:
     assert_json_str_equals(json, obj.to_json_string())
-    assert parse_path(string) == obj
-    assert TypeAdapter(InputPath).validate_json(f'"{string}"') == obj
-    assert TypeAdapter(InputPathAsJson).validate_json(json) == obj
+    assert to_path(string) == obj
+    assert TypeAdapter(DescriptorPathStr | DataPathStr | ContainerPathStr).validate_json(f'"{string}"') == obj
+    assert TypeAdapter(DescriptorPath | DataPath | ContainerPath).validate_json(json) == obj
     assert str(obj) == string
 
 
 def _test_valid_resolved_path(string: str, obj: ResolvedPath, json: str) -> None:
     assert_json_str_equals(json, obj.to_json_string())
-    assert parse_path(string) == obj
+    assert to_path(string) == obj
     assert TypeAdapter(ResolvedPath).validate_json(json) == obj
     assert str(obj) == string
 
@@ -165,7 +162,7 @@ def test_valid_resolved_data_path() -> None:
 
 def test_invalid_container_value_unknown() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("@.foo")
+        to_path("@.foo")
     message = str(e.value)
     assert "Invalid path" in message
     assert "@.foo" in message
@@ -174,7 +171,7 @@ def test_invalid_container_value_unknown() -> None:
 
 def test_invalid_container_path_empty_component() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("@..foo")
+        to_path("@..foo")
     message = str(e.value)
     assert "Invalid path" in message
     assert "@..foo" in message
@@ -183,7 +180,7 @@ def test_invalid_container_path_empty_component() -> None:
 
 def test_invalid_field_identifier_not_ascii() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("#.👿")
+        to_path("#.👿")
     message = str(e.value)
     assert "Invalid path" in message
     assert "#.👿" in message
@@ -192,7 +189,7 @@ def test_invalid_field_identifier_not_ascii() -> None:
 
 def test_invalid_array_element_index_not_a_number() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("#.[foo]")
+        to_path("#.[foo]")
     message = str(e.value)
     assert "Invalid path" in message
     assert "#.[foo]" in message
@@ -201,7 +198,7 @@ def test_invalid_array_element_index_not_a_number() -> None:
 
 def test_invalid_array_element_index_out_of_bounds() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("#.[65536]")
+        to_path("#.[65536]")
     message = str(e.value)
     assert "Invalid path" in message
     assert "#.[65536]" in message
@@ -210,7 +207,7 @@ def test_invalid_array_element_index_out_of_bounds() -> None:
 
 def test_invalid_array_slice_inverted() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("#.[1:0]")
+        to_path("#.[1:0]")
     message = str(e.value)
     assert "Invalid path" in message
     assert "#.[1:0]" in message
@@ -219,7 +216,7 @@ def test_invalid_array_slice_inverted() -> None:
 
 def test_invalid_array_slice_used_in_descriptor_path() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("$.[1:0]")
+        to_path("$.[1:0]")
     message = str(e.value)
     assert "Invalid path" in message
     assert "$.[1:0]" in message
@@ -228,7 +225,7 @@ def test_invalid_array_slice_used_in_descriptor_path() -> None:
 
 def test_invalid_array_used_in_descriptor_path() -> None:
     with pytest.raises(ValueError) as e:
-        parse_path("$.[]")
+        to_path("$.[]")
     message = str(e.value)
     assert "Invalid path" in message
     assert "$.[]" in message
@@ -237,6 +234,6 @@ def test_invalid_array_used_in_descriptor_path() -> None:
 
 def test_invalid_relative_resolved_data_path() -> None:
     with pytest.raises(ValidationError) as e:
-        TypeAdapter(ResolvedPath).validate_python(parse_path("params.[].[-2].[1:5].amountIn"))
+        TypeAdapter(ResolvedPath).validate_python(to_path("params.[].[-2].[1:5].amountIn"))
     message = str(e.value)
     assert "A resolved data path must be absolute" in message

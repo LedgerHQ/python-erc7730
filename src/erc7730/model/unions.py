@@ -34,7 +34,7 @@ def field_parameters_discriminator(v: Any) -> str | None:
         return "nft_name"
     if has_property(v, "base"):
         return "unit"
-    if has_property(v, "$ref") or has_property(v, "ref"):  # $ref is aliased
+    if has_property(v, "$ref") or has_property(v, "ref") or has_property(v, "enumId"):
         return "enum"
     if has_property(v, "calleePath") or has_property(v, "selector"):
         return "call_data"

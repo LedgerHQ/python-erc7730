@@ -13,9 +13,9 @@ This model represents descriptors after resolution phase:
 from pydantic import Field
 
 from erc7730.model.base import Model
-from erc7730.model.metadata import Metadata
 from erc7730.model.resolved.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.display import ResolvedDisplay
+from erc7730.model.resolved.metadata import ResolvedMetadata
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
@@ -53,7 +53,7 @@ class ResolvedERC7730Descriptor(Model):
         "constraints or EIP712 message specific constraints.",
     )
 
-    metadata: Metadata = Field(
+    metadata: ResolvedMetadata = Field(
         title="Metadata Section",
         description="The metadata section contains information about constant values relevant in the scope of the"
         "current contract / message (as matched by the `context` section)",

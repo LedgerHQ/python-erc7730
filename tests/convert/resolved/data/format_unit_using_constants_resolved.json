@@ -28,11 +28,7 @@
                         "TestPrimaryType": [
                             {
                                 "name": "param1",
-                                "type": "address"
-                            },
-                            {
-                                "name": "param2",
-                                "type": "bytes"
+                                "type": "uint256"
                             }
                         ]
                     }
@@ -54,24 +50,33 @@
                             "elements": [
                                 {
                                     "type": "field",
-                                    "identifier": "param2"
+                                    "identifier": "param1"
                                 }
                             ]
                         },
-                        "label": "Param 2",
-                        "format": "calldata",
+                        "label": "With minimal set of parameters set",
+                        "format": "unit",
                         "params": {
-                            "selector": "0x00000000",
-                            "calleePath": {
-                                "type": "data",
-                                "absolute": true,
-                                "elements": [
-                                    {
-                                        "type": "field",
-                                        "identifier": "param1"
-                                    }
-                                ]
-                            }
+                            "base": "km/h"
+                        }
+                    },
+                    {
+                        "path": {
+                            "type": "data",
+                            "absolute": true,
+                            "elements": [
+                                {
+                                    "type": "field",
+                                    "identifier": "param1"
+                                }
+                            ]
+                        },
+                        "label": "With all parameters set",
+                        "format": "unit",
+                        "params": {
+                            "base": "km/h",
+                            "decimals": 2,
+                            "prefix": true
                         }
                     }
                 ]

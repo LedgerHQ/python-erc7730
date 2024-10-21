@@ -1,6 +1,8 @@
 from typing import assert_never
 
 from erc7730.common.output import OutputAdder
+from erc7730.convert.resolved.constants import ConstantProvider
+from erc7730.convert.resolved.enums import get_enum, get_enum_id
 from erc7730.model.input.display import (
     InputAddressNameParameters,
     InputCallDataParameters,
@@ -11,7 +13,8 @@ from erc7730.model.input.display import (
     InputTokenAmountParameters,
     InputUnitParameters,
 )
-from erc7730.model.paths import DataPath, DescriptorPath
+from erc7730.model.metadata import EnumDefinition
+from erc7730.model.paths import DataPath
 from erc7730.model.paths.path_ops import data_or_container_path_concat
 from erc7730.model.resolved.display import (
     ResolvedAddressNameParameters,
@@ -23,106 +26,102 @@ from erc7730.model.resolved.display import (
     ResolvedTokenAmountParameters,
     ResolvedUnitParameters,
 )
+from erc7730.model.types import Id
 
 
-def convert_field_parameters(
-    prefix: DataPath, params: InputFieldParameters, out: OutputAdder
+def resolve_field_parameters(
+    prefix: DataPath,
+    params: InputFieldParameters | None,
+    enums: dict[Id, EnumDefinition],
+    constants: ConstantProvider,
+    out: OutputAdder,
 ) -> ResolvedFieldParameters | None:
     match params:
         case None:
             return None
         case InputAddressNameParameters():
-            return convert_address_name_parameters(prefix, params, out)
+            return resolve_address_name_parameters(prefix, params, constants, out)
         case InputCallDataParameters():
-            return convert_calldata_parameters(prefix, params, out)
+            return resolve_calldata_parameters(prefix, params, constants, out)
         case InputTokenAmountParameters():
-            return convert_token_amount_parameters(prefix, params, out)
+            return resolve_token_amount_parameters(prefix, params, constants, out)
         case InputNftNameParameters():
-            return convert_nft_parameters(prefix, params, out)
+            return resolve_nft_parameters(prefix, params, constants, out)
         case InputDateParameters():
-            return convert_date_parameters(prefix, params, out)
+            return resolve_date_parameters(prefix, params, constants, out)
         case InputUnitParameters():
-            return convert_unit_parameters(prefix, params, out)
+            return resolve_unit_parameters(prefix, params, constants, out)
         case InputEnumParameters():
-            return convert_enum_parameters(prefix, params, out)
+            return resolve_enum_parameters(prefix, params, enums, constants, out)
         case _:
             assert_never(params)
 
 
-def convert_address_name_parameters(
-    prefix: DataPath, params: InputAddressNameParameters, out: OutputAdder
+def resolve_address_name_parameters(
+    prefix: DataPath, params: InputAddressNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedAddressNameParameters | None:
-    # TODO: resolution of descriptor paths not implemented
-    if isinstance(params.types, DescriptorPath) or isinstance(params.sources, DescriptorPath):
-        raise NotImplementedError("Resolution of descriptor paths not implemented")
-    return ResolvedAddressNameParameters(types=params.types, sources=params.sources)
+    return ResolvedAddressNameParameters(
+        types=constants.resolve_or_none(params.types, out), sources=constants.resolve_or_none(params.sources, out)
+    )
 
 
-def convert_calldata_parameters(
-    prefix: DataPath, params: InputCallDataParameters, out: OutputAdder
+def resolve_calldata_parameters(
+    prefix: DataPath, params: InputCallDataParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedCallDataParameters | None:
-    # TODO: resolution of descriptor paths not implemented
-    if isinstance(params.selector, DescriptorPath) or isinstance(params.calleePath, DescriptorPath):
-        raise NotImplementedError("Resolution of descriptor paths not implemented")
+    if (callee_path := constants.resolve_path(params.calleePath, out)) is None:
+        return None
     return ResolvedCallDataParameters(
-        selector=params.selector,
-        calleePath=data_or_container_path_concat(prefix, params.calleePath),
+        selector=constants.resolve_or_none(params.selector, out),
+        calleePath=data_or_container_path_concat(prefix, callee_path),
     )
 
 
-def convert_token_amount_parameters(
-    prefix: DataPath, params: InputTokenAmountParameters, out: OutputAdder
+def resolve_token_amount_parameters(
+    prefix: DataPath, params: InputTokenAmountParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedTokenAmountParameters | None:
-    # TODO: resolution of descriptor paths not implemented
-    if (
-        isinstance(params.tokenPath, DescriptorPath)
-        or isinstance(params.nativeCurrencyAddress, DescriptorPath)
-        or isinstance(params.threshold, DescriptorPath)
-        or isinstance(params.message, DescriptorPath)
-    ):
-        raise NotImplementedError("Resolution of descriptor paths not implemented")
+    token_path = constants.resolve_path_or_none(params.tokenPath, out)
     return ResolvedTokenAmountParameters(
-        tokenPath=None if params.tokenPath is None else data_or_container_path_concat(prefix, params.tokenPath),
-        nativeCurrencyAddress=params.nativeCurrencyAddress,
-        threshold=params.threshold,
-        message=params.message,
+        tokenPath=None if token_path is None else data_or_container_path_concat(prefix, token_path),
+        nativeCurrencyAddress=constants.resolve_or_none(params.nativeCurrencyAddress, out),  # type:ignore
+        threshold=constants.resolve_or_none(params.threshold, out),
+        message=constants.resolve_or_none(params.message, out),
     )
 
 
-def convert_nft_parameters(
-    prefix: DataPath, params: InputNftNameParameters, out: OutputAdder
+def resolve_nft_parameters(
+    prefix: DataPath, params: InputNftNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedNftNameParameters | None:
-    # TODO: resolution of descriptor paths not implemented
-    if isinstance(params.collectionPath, DescriptorPath):
-        raise NotImplementedError("Resolution of descriptor paths not implemented")
-    return ResolvedNftNameParameters(collectionPath=data_or_container_path_concat(prefix, params.collectionPath))
+    if (collection_path := constants.resolve_path(params.collectionPath, out)) is None:
+        return None
+    return ResolvedNftNameParameters(collectionPath=data_or_container_path_concat(prefix, collection_path))
 
 
-def convert_date_parameters(
-    prefix: DataPath, params: InputDateParameters, out: OutputAdder
+def resolve_date_parameters(
+    prefix: DataPath, params: InputDateParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedDateParameters | None:
-    # TODO: resolution of descriptor paths not implemented
-    if isinstance(params.encoding, DescriptorPath):
-        raise NotImplementedError("Resolution of descriptor paths not implemented")
-    return ResolvedDateParameters(encoding=params.encoding)
+    return ResolvedDateParameters(encoding=constants.resolve(params.encoding, out))
 
 
-def convert_unit_parameters(
-    prefix: DataPath, params: InputUnitParameters, out: OutputAdder
+def resolve_unit_parameters(
+    prefix: DataPath, params: InputUnitParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedUnitParameters | None:
-    # TODO: resolution of descriptor paths not implemented
-    if (isinstance(params.base, DescriptorPath) or isinstance(params.decimals, DescriptorPath)) or isinstance(
-        params.prefix, DescriptorPath
-    ):
-        raise NotImplementedError("Resolution of descriptor paths not implemented")
     return ResolvedUnitParameters(
-        base=params.base,
-        decimals=params.decimals,
-        prefix=params.prefix,
+        base=constants.resolve(params.base, out),
+        decimals=constants.resolve_or_none(params.decimals, out),
+        prefix=constants.resolve_or_none(params.prefix, out),
     )
 
 
-def convert_enum_parameters(
-    prefix: DataPath, params: InputEnumParameters, out: OutputAdder
+def resolve_enum_parameters(
+    prefix: DataPath,
+    params: InputEnumParameters,
+    enums: dict[Id, EnumDefinition],
+    constants: ConstantProvider,
+    out: OutputAdder,
 ) -> ResolvedEnumParameters | None:
-    return ResolvedEnumParameters.model_validate({"$ref": params.ref})  # TODO must inline here
+    if (enum_id := get_enum_id(params.ref, out)) is None:
+        return None
+    if get_enum(params.ref, enums, out) is None:
+        return None
+
+    return ResolvedEnumParameters(enumId=enum_id)

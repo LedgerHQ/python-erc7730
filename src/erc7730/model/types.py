@@ -24,8 +24,10 @@ Address = Annotated[
     Field(
         title="Contract Address",
         description="An Ethereum contract address.",
-        min_length=0,  # FIXME constraints
-        max_length=64,  # FIXME constraints
-        pattern=r"^[a-zA-Z0-9_\-]+$",  # FIXME constraints
+        min_length=42,
+        max_length=42,
+        pattern=r"^0x[a-zA-Z0-9_\-]+$",
     ),
 ]
+
+ScalarType = str | int | bool | float

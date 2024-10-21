@@ -25,7 +25,7 @@ from erc7730.model.input.display import (
     InputReference,
     InputTokenAmountParameters,
 )
-from erc7730.model.metadata import Metadata
+from erc7730.model.input.metadata import InputMetadata
 from erc7730.model.paths import ContainerField, ContainerPath
 
 
@@ -73,7 +73,7 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
                         deployments=[Deployment(chainId=descriptor.chainId, address=contract.address)],
                     )
                 ),
-                metadata=Metadata(
+                metadata=InputMetadata(
                     owner=contract.contractName,
                     info=None,
                     token=None,

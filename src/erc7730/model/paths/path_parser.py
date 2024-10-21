@@ -85,7 +85,7 @@ class PathTransformer(Transformer_InPlaceRecursive):
 PATH_TRANSFORMER = PathTransformer()
 
 
-def parse_path(path: str) -> ContainerPath | DataPath | DescriptorPath:
+def to_path(path: str) -> ContainerPath | DataPath | DescriptorPath:
     """
     Parse a path string into a domain model object.
 
