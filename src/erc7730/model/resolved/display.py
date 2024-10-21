@@ -10,7 +10,7 @@ from erc7730.model.display import (
     FieldFormat,
     FormatBase,
 )
-from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
+from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.resolved.path import ResolvedPath
 from erc7730.model.types import Address, Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
@@ -140,7 +140,10 @@ class ResolvedEnumParameters(Model):
     Enum Formatting Parameters.
     """
 
-    ref: str | DescriptorPath = Field(alias="$ref")  # TODO enum definition must be inlined here
+    enumId: Id = Field(
+        title="Enum Identifier",
+        description="The identifier of the enum in the $.context.metadata section.",
+    )
 
 
 ResolvedFieldParameters = Annotated[
@@ -215,8 +218,6 @@ ResolvedField = Annotated[
     | Annotated[ResolvedNestedFields, Tag("nested_fields")],
     Discriminator(field_discriminator),
 ]
-
-ResolvedNestedFields.model_rebuild()
 
 
 class ResolvedFormat(FormatBase):

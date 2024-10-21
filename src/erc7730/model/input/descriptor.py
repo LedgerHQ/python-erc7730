@@ -15,7 +15,7 @@ from pydantic import Field
 from erc7730.model.base import Model
 from erc7730.model.input.context import InputContractContext, InputEIP712Context
 from erc7730.model.input.display import InputDisplay
-from erc7730.model.metadata import Metadata
+from erc7730.model.input.metadata import InputMetadata
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
@@ -46,7 +46,7 @@ class InputERC7730Descriptor(Model):
         "constraints or EIP712 message specific constraints.",
     )
 
-    metadata: Metadata = Field(
+    metadata: InputMetadata = Field(
         title="Metadata Section",
         description="The metadata section contains information about constant values relevant in the scope of the"
         "current contract / message (as matched by the `context` section)",

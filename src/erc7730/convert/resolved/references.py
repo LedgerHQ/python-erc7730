@@ -7,7 +7,7 @@ from erc7730.common.options import first_not_none
 from erc7730.common.output import OutputAdder
 from erc7730.common.pydantic import model_to_json_str
 from erc7730.convert.resolved.constants import ConstantProvider
-from erc7730.convert.resolved.parameters import convert_field_parameters
+from erc7730.convert.resolved.parameters import resolve_field_parameters
 from erc7730.model.display import (
     FieldFormat,
 )
@@ -17,20 +17,22 @@ from erc7730.model.input.display import (
     InputReference,
 )
 from erc7730.model.paths import DataPath, DescriptorPath, Field
-from erc7730.model.paths.path_ops import descriptor_path_strip_prefix, to_absolute
+from erc7730.model.paths.path_ops import data_or_container_path_concat, descriptor_path_strip_prefix
 from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDescription,
     ResolvedFieldParameters,
 )
+from erc7730.model.types import Id
 
 DEFINITIONS_PATH = DescriptorPath(elements=[Field(identifier="display"), Field(identifier="definitions")])
 
 
-def convert_reference(
+def resolve_reference(
     prefix: DataPath,
     reference: InputReference,
-    definitions: dict[str, InputFieldDefinition],
+    definitions: dict[Id, InputFieldDefinition],
+    enums: dict[Id, dict[str, str]],
     constants: ConstantProvider,
     out: OutputAdder,
 ) -> ResolvedField | None:
@@ -55,7 +57,7 @@ def convert_reference(
     if params:
         try:
             input_params: InputFieldParameters = TypeAdapter(InputFieldParameters).validate_json(json.dumps(params))
-            if (resolved_params := convert_field_parameters(prefix, input_params, constants, out)) is None:
+            if (resolved_params := resolve_field_parameters(prefix, input_params, enums, constants, out)) is None:
                 return None
         except ValidationError as e:
             return out.error(
@@ -63,16 +65,19 @@ def convert_reference(
                 message=f"Error parsing display field parameters: {e}",
             )
 
+    if (path := constants.resolve_path(reference.path, out)) is None:
+        return None
+
     return ResolvedFieldDescription(
-        path=to_absolute(reference.path),
-        label=label,
+        path=data_or_container_path_concat(prefix, path),
+        label=str(constants.resolve(label, out)),
         format=FieldFormat(definition.format),
         params=resolved_params,
     )
 
 
 def _get_definition(
-    ref: DescriptorPath, definitions: dict[str, InputFieldDefinition], out: OutputAdder
+    ref: DescriptorPath, definitions: dict[Id, InputFieldDefinition], out: OutputAdder
 ) -> InputFieldDefinition | None:
     if (definition_id := _get_definition_id(ref, out)) is None:
         return None
@@ -86,7 +91,7 @@ def _get_definition(
     return definition
 
 
-def _get_definition_id(ref: DescriptorPath, out: OutputAdder) -> str | None:
+def _get_definition_id(ref: DescriptorPath, out: OutputAdder) -> Id | None:
     try:
         tail = descriptor_path_strip_prefix(ref, DEFINITIONS_PATH)
     except ValueError:
