@@ -9,6 +9,7 @@ from pydantic import Field
 from pydantic_string_url import HttpUrl
 
 from erc7730.model.metadata import Metadata
+from erc7730.model.resolved.metadata import EnumDefinition
 from erc7730.model.types import Id, ScalarType
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -37,9 +38,10 @@ class InputMetadata(Metadata):
         ],
     )
 
-    enums: dict[Id, HttpUrl | dict[str, str]] | None = Field(
+    enums: dict[Id, HttpUrl | EnumDefinition] | None = Field(
         default=None,
         title="Enums",
         description="A set of enums that are used to format fields replacing values with human readable strings.",
         examples=[{"interestRateMode": {"1": "stable", "2": "variable"}, "vaultIDs": "https://example.com/vaultIDs"}],
+        max_length=32,  # TODO refine
     )

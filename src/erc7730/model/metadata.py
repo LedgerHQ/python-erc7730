@@ -6,6 +6,7 @@ JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/mas
 """
 
 from datetime import UTC, datetime
+from typing import Annotated
 
 from pydantic import Field
 from pydantic_string_url import HttpUrl
@@ -106,3 +107,15 @@ class Metadata(Model):
         description="A description of an ERC20 token exported by this format, that should be trusted. Not mandatory if "
         "the corresponding metadata can be fetched from the contract itself.",
     )
+
+
+EnumDefinition = Annotated[
+    dict[str, str],
+    Field(
+        title="Enum Definition",
+        description="A mapping of enum values to human readable strings.",
+        examples=[{"1": "stable", "2": "variable"}],
+        min_length=1,
+        max_length=32,
+    ),
+]

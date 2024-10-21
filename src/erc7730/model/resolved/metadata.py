@@ -7,7 +7,7 @@ JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/mas
 
 from pydantic import Field
 
-from erc7730.model.metadata import Metadata
+from erc7730.model.metadata import EnumDefinition, Metadata
 from erc7730.model.types import Id
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -21,11 +21,10 @@ class ResolvedMetadata(Metadata):
     message (as matched by the `context` section)
     """
 
-    enums: dict[Id, dict[str, str]] | None = Field(
+    enums: dict[Id, EnumDefinition] | None = Field(
         default=None,
         title="Enums",
         description="A set of enums that are used to format fields replacing values with human readable strings.",
         examples=[{"interestRateMode": {"1": "stable", "2": "variable"}}],
-        min_length=1,
-        max_length=32,  # FIXME
+        max_length=32,  # TODO refine
     )

@@ -13,6 +13,7 @@ from erc7730.model.input.display import (
     InputTokenAmountParameters,
     InputUnitParameters,
 )
+from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import DataPath
 from erc7730.model.paths.path_ops import data_or_container_path_concat
 from erc7730.model.resolved.display import (
@@ -31,7 +32,7 @@ from erc7730.model.types import Id
 def resolve_field_parameters(
     prefix: DataPath,
     params: InputFieldParameters | None,
-    enums: dict[Id, dict[str, str]],
+    enums: dict[Id, EnumDefinition],
     constants: ConstantProvider,
     out: OutputAdder,
 ) -> ResolvedFieldParameters | None:
@@ -114,7 +115,7 @@ def resolve_unit_parameters(
 def resolve_enum_parameters(
     prefix: DataPath,
     params: InputEnumParameters,
-    enums: dict[Id, dict[str, str]],
+    enums: dict[Id, EnumDefinition],
     constants: ConstantProvider,
     out: OutputAdder,
 ) -> ResolvedEnumParameters | None:

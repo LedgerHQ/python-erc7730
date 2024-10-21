@@ -26,6 +26,7 @@ from erc7730.model.input.display import (
     InputReference,
 )
 from erc7730.model.input.metadata import InputMetadata
+from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath
 from erc7730.model.paths.path_ops import data_or_container_path_concat, data_path_concat
 from erc7730.model.resolved.context import (
@@ -101,10 +102,10 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _resolve_enum(cls, enum: HttpUrl | dict[str, str], out: OutputAdder) -> dict[str, str] | None:
+    def _resolve_enum(cls, enum: HttpUrl | EnumDefinition, out: OutputAdder) -> dict[str, str] | None:
         match enum:
             case HttpUrl():
-                return client.get(enum, RootModel[dict[str, str]]).root
+                return client.get(enum, RootModel[EnumDefinition]).root
             case dict():
                 return enum
             case _:
@@ -181,7 +182,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _resolve_display(
-        cls, display: InputDisplay, enums: dict[Id, dict[str, str]], constants: ConstantProvider, out: OutputAdder
+        cls, display: InputDisplay, enums: dict[Id, EnumDefinition], constants: ConstantProvider, out: OutputAdder
     ) -> ResolvedDisplay | None:
         formats = {}
         for format_key, format in display.formats.items():
@@ -197,7 +198,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         cls,
         prefix: DataPath,
         definition: InputFieldDescription,
-        enums: dict[Id, dict[str, str]],
+        enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedFieldDescription | None:
@@ -221,7 +222,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         cls,
         format: InputFormat,
         definitions: dict[Id, InputFieldDefinition],
-        enums: dict[Id, dict[str, str]],
+        enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedFormat | None:
@@ -245,7 +246,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         prefix: DataPath,
         fields: list[InputField],
         definitions: dict[Id, InputFieldDefinition],
-        enums: dict[Id, dict[str, str]],
+        enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> list[ResolvedField] | None:
@@ -262,7 +263,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         prefix: DataPath,
         field: InputField,
         definitions: dict[Id, InputFieldDefinition],
-        enums: dict[Id, dict[str, str]],
+        enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedField | None:
@@ -282,7 +283,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         prefix: DataPath,
         fields: InputNestedFields,
         definitions: dict[Id, InputFieldDefinition],
-        enums: dict[Id, dict[str, str]],
+        enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedNestedFields | None:

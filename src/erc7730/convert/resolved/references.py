@@ -16,6 +16,7 @@ from erc7730.model.input.display import (
     InputFieldParameters,
     InputReference,
 )
+from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import DataPath, DescriptorPath, Field
 from erc7730.model.paths.path_ops import data_or_container_path_concat, descriptor_path_strip_prefix
 from erc7730.model.resolved.display import (
@@ -32,7 +33,7 @@ def resolve_reference(
     prefix: DataPath,
     reference: InputReference,
     definitions: dict[Id, InputFieldDefinition],
-    enums: dict[Id, dict[str, str]],
+    enums: dict[Id, EnumDefinition],
     constants: ConstantProvider,
     out: OutputAdder,
 ) -> ResolvedField | None:

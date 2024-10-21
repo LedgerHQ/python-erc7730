@@ -1,4 +1,5 @@
 from erc7730.common.output import OutputAdder
+from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import DescriptorPath, Field
 from erc7730.model.paths.path_ops import descriptor_path_strip_prefix
 from erc7730.model.types import Id
@@ -6,7 +7,7 @@ from erc7730.model.types import Id
 ENUMS_PATH = DescriptorPath(elements=[Field(identifier="metadata"), Field(identifier="enums")])
 
 
-def get_enum(ref: DescriptorPath, enums: dict[Id, dict[str, str]], out: OutputAdder) -> dict[str, str] | None:
+def get_enum(ref: DescriptorPath, enums: dict[Id, EnumDefinition], out: OutputAdder) -> dict[str, str] | None:
     if (enum_id := get_enum_id(ref, out)) is None:
         return None
 
