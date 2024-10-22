@@ -1,6 +1,5 @@
 from typing import assert_never, final, override
 
-from pydantic import RootModel
 from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
@@ -104,8 +103,14 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     @classmethod
     def _resolve_enum(cls, enum: HttpUrl | EnumDefinition, out: OutputAdder) -> dict[str, str] | None:
         match enum:
-            case HttpUrl():
-                return client.get(enum, RootModel[EnumDefinition]).root
+            case HttpUrl() as url:
+                try:
+                    return client.get(url=url, model=EnumDefinition)
+                except Exception as e:
+                    return out.error(
+                        title="Failed to fetch enum definition from URL",
+                        message=f'Failed to fetch enum definition from URL "{url}": {e}',
+                    )
             case dict():
                 return enum
             case _:
@@ -132,8 +137,14 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     @classmethod
     def _resolve_abis(cls, abis: list[ABI] | HttpUrl, out: OutputAdder) -> list[ABI] | None:
         match abis:
-            case HttpUrl():
-                return client.get(abis, RootModel[list[ABI]]).root
+            case HttpUrl() as url:
+                try:
+                    return client.get(url=url, model=list[ABI])
+                except Exception as e:
+                    return out.error(
+                        title="Failed to fetch ABI from URL",
+                        message=f'Failed to fetch ABI from URL "{url}": {e}',
+                    )
             case list():
                 return abis
             case _:
@@ -173,8 +184,14 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     @classmethod
     def _resolve_schema(cls, schema: EIP712JsonSchema | HttpUrl, out: OutputAdder) -> EIP712JsonSchema | None:
         match schema:
-            case HttpUrl():
-                return client.get(schema, EIP712JsonSchema)
+            case HttpUrl() as url:
+                try:
+                    return client.get(url=url, model=EIP712JsonSchema)
+                except Exception as e:
+                    return out.error(
+                        title="Failed to fetch EIP-712 schema from URL",
+                        message=f'Failed to fetch EIP-712 schema from URL "{url}": {e}',
+                    )
             case EIP712JsonSchema():
                 return schema
             case _:

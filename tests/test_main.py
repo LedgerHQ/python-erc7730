@@ -32,10 +32,10 @@ def test_schema(model_type: ERC7730ModelType) -> None:
 def test_lint_registry_files(input_file: Path) -> None:
     result = runner.invoke(app, ["lint", str(input_file)])
     out = "".join(result.stdout.splitlines())
-    assert str(input_file) in out
+    assert str(input_file.name) in out
     assert any(
         (
-            "no issues found ✅" in out,
+            "no errors found ✅" in out,
             "some warnings found ⚠️" in out,
             "some errors found ❌" in out,
         )
