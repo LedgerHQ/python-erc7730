@@ -1,10 +1,14 @@
-from abc import ABC, abstractmethod
+import threading
 from builtins import print as builtin_print
+from contextlib import AbstractContextManager
 from enum import IntEnum, auto
+from types import TracebackType
 from typing import assert_never, final, override
 
 from pydantic import BaseModel, FilePath
 from rich import print
+
+MUX = threading.Lock()
 
 
 class Output(BaseModel):
@@ -25,129 +29,93 @@ class Output(BaseModel):
     level: Level = Level.ERROR
 
 
-class OutputAdder(ABC):
+class OutputAdder:
     """An output debug/info/warning/error sink."""
 
-    has_infos = False
-    has_warnings = False
-    has_errors = False
+    def __init__(self) -> None:
+        self.has_infos = False
+        self.has_warnings = False
+        self.has_errors = False
 
-    @abstractmethod
+    def add(self, output: Output) -> None:
+        match output.level:
+            case Output.Level.DEBUG:
+                pass
+            case Output.Level.INFO:
+                self.has_infos = True
+            case Output.Level.WARNING:
+                self.has_warnings = True
+            case Output.Level.ERROR:
+                self.has_errors = True
+            case _:
+                assert_never(output.level)
+
+    @final
     def debug(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
-        raise NotImplementedError()
+        self.add(Output(file=file, line=line, title=title, message=message, level=Output.Level.DEBUG))
 
-    @abstractmethod
+    @final
     def info(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
-        raise NotImplementedError()
+        self.add(Output(file=file, line=line, title=title, message=message, level=Output.Level.INFO))
 
-    @abstractmethod
+    @final
     def warning(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
-        raise NotImplementedError()
+        self.add(Output(file=file, line=line, title=title, message=message, level=Output.Level.WARNING))
 
-    @abstractmethod
+    @final
     def error(
         self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
     ) -> None:
-        raise NotImplementedError()
+        self.add(Output(file=file, line=line, title=title, message=message, level=Output.Level.ERROR))
 
 
 @final
-class ListOutputAdder(OutputAdder, BaseModel):
+class ListOutputAdder(OutputAdder):
     """An output adder that stores outputs in a list."""
 
-    outputs: list[Output] = []
+    def __init__(self) -> None:
+        super().__init__()
+        self.outputs: list[Output] = []
 
-    @override
-    def debug(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.DEBUG))
-
-    @override
-    def info(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_infos = True
-        self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.INFO))
-
-    @override
-    def warning(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_warnings = True
-        self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.WARNING))
-
-    @override
-    def error(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_errors = True
-        self.outputs.append(Output(file=file, line=line, title=title, message=message, level=Output.Level.ERROR))
+    def add(self, output: Output) -> None:
+        super().add(output)
+        self.outputs.append(output)
 
 
 class ConsoleOutputAdder(OutputAdder):
     """An output adder that prints to the console."""
 
     @override
-    def debug(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self._log(Output.Level.DEBUG, message, file, line, title)
-
-    @override
-    def info(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_infos = True
-        self._log(Output.Level.INFO, message, file, line, title)
-
-    @override
-    def warning(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_warnings = True
-        self._log(Output.Level.WARNING, message, file, line, title)
-
-    @override
-    def error(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_errors = True
-        self._log(Output.Level.ERROR, message, file, line, title)
-
-    @classmethod
-    def _log(
-        cls,
-        level: Output.Level,
-        message: str,
-        file: FilePath | None = None,
-        line: int | None = None,
-        title: str | None = None,
-    ) -> None:
-        match level:
+    def add(self, output: Output) -> None:
+        super().add(output)
+        match output.level:
             case Output.Level.DEBUG:
-                style = "bold"
+                style = "italic"
+                prefix = "⚪️ "
             case Output.Level.INFO:
                 style = "blue"
+                prefix = "🔵 "
             case Output.Level.WARNING:
                 style = "yellow"
+                prefix = "🟠 warning: "
             case Output.Level.ERROR:
                 style = "red"
+                prefix = "🔴 error: "
             case _:
-                assert_never(level)
+                assert_never(output.level)
 
-        log = f"[{style}]{level.name}: "
-        if line is not None:
-            log += f"line {line}: "
-        if title is not None:
-            log += f"{title}: "
-        log += f"[/{style}]{message}"
+        log = f"[{style}]{prefix}"
+        if output.line is not None:
+            log += f"line {output.line}: "
+        if output.title is not None:
+            log += f"{output.title}: "
+        log += f"[/{style}]{output.message}"
 
         print(log)
 
@@ -156,38 +124,23 @@ class RaisingOutputAdder(ConsoleOutputAdder):
     """An output adder that raises warnings/errors, otherwise prints to the console."""
 
     @override
-    def warning(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_warnings = True
-        self._raise(Output.Level.WARNING, message, file, line, title)
-
-    @override
-    def error(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_errors = True
-        self._raise(Output.Level.ERROR, message, file, line, title)
-
-    @classmethod
-    def _raise(
-        cls,
-        level: Output.Level,
-        message: str,
-        file: FilePath | None = None,
-        line: int | None = None,
-        title: str | None = None,
-    ) -> None:
-        log = f"{level.name}: "
-        if file is not None:
-            log += f"file={file.name}"
-        if line is not None:
-            log += f"line {line}: "
-        if title is not None:
-            log += f"{title}: "
-        log += f"{message}"
-
-        raise Exception(log)
+    def add(self, output: Output) -> None:
+        super().add(output)
+        match output.level:
+            case Output.Level.DEBUG | Output.Level.INFO:
+                super().add(output)
+            case Output.Level.WARNING | Output.Level.ERROR:
+                log = f"{output.level.name}: "
+                if output.file is not None:
+                    log += f"file={output.file.name}"
+                if output.line is not None:
+                    log += f"line {output.line}: "
+                if output.title is not None:
+                    log += f"{output.title}: "
+                log += f"{output.message}"
+                raise Exception(log)
+            case _:
+                assert_never(output.level)
 
 
 @final
@@ -195,44 +148,12 @@ class GithubAnnotationsAdder(OutputAdder):
     """An output adder that formats errors to be parsed as Github annotations."""
 
     @override
-    def debug(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        pass
+    def add(self, output: Output) -> None:
+        super().add(output)
 
-    @override
-    def info(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_infos = True
-        self._log(Output.Level.INFO, message, file, line, title)
-
-    @override
-    def warning(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_warnings = True
-        self._log(Output.Level.WARNING, message, file, line, title)
-
-    @override
-    def error(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.has_errors = True
-        self._log(Output.Level.ERROR, message, file, line, title)
-
-    @classmethod
-    def _log(
-        cls,
-        level: Output.Level,
-        message: str,
-        file: FilePath | None = None,
-        line: int | None = None,
-        title: str | None = None,
-    ) -> None:
-        match level:
+        match output.level:
             case Output.Level.DEBUG:
-                raise RuntimeError("GithubAnnotationsAdder does not support debug messages")
+                return
             case Output.Level.INFO:
                 lvl = "notice"
             case Output.Level.WARNING:
@@ -240,17 +161,17 @@ class GithubAnnotationsAdder(OutputAdder):
             case Output.Level.ERROR:
                 lvl = "error"
             case _:
-                assert_never(level)
+                assert_never(output.level)
 
         log = f"::{lvl} "
-        if file is not None:
-            log += f"file={file}"
-        if line is not None:
-            log += f",line={line}"
-        if title is not None:
-            log += f",title={title}"
-        message_formatted = message.replace("\n", "%0A")
-        log += f"::{message_formatted}"
+        if output.file is not None:
+            log += f"file={output.file}"
+        if output.line is not None:
+            log += f",line={output.line}"
+        if output.title is not None:
+            log += f",title={output.title}"
+        message = output.message.replace("\n", "%0A")
+        log += f"::{message}"
 
         builtin_print(log)
 
@@ -259,25 +180,40 @@ class FileOutputAdder(OutputAdder):
     """An output adder wrapper that adds a specific file to all outputs."""
 
     def __init__(self, delegate: OutputAdder, file: FilePath) -> None:
+        super().__init__()
         self.delegate: OutputAdder = delegate
         self.file: FilePath = file
 
-    def debug(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.delegate.debug(message=message, file=self.file, line=line, title=title)
+    @override
+    def add(self, output: Output) -> None:
+        super().add(output)
+        self.delegate.add(output.model_copy(update={"file": self.file}))
 
-    def info(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.delegate.info(message=message, file=self.file, line=line, title=title)
 
-    def warning(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.delegate.warning(message=message, file=self.file, line=line, title=title)
+@final
+class BufferAdder(AbstractContextManager[OutputAdder]):
+    """A context manager that buffers outputs and outputs them all at once."""
 
-    def error(
-        self, message: str, file: FilePath | None = None, line: int | None = None, title: str | None = None
-    ) -> None:
-        self.delegate.error(message=message, file=self.file, line=line, title=title)
+    def __init__(self, delegate: OutputAdder, prolog: str | None = None, epilog: str | None = None) -> None:
+        self._buffer = ListOutputAdder()
+        self._delegate = delegate
+        self._prolog = prolog
+        self._epilog = epilog
+
+    @override
+    def __enter__(self) -> OutputAdder:
+        return self._buffer
+
+    @override
+    def __exit__(self, etype: type[BaseException] | None, e: BaseException | None, tb: TracebackType | None) -> None:
+        MUX.acquire()
+        try:
+            if self._prolog is not None:
+                print(self._prolog)
+            for output in self._buffer.outputs:
+                self._delegate.add(output)
+            if self._epilog is not None:
+                print(self._epilog)
+        finally:
+            MUX.release()
+        return None
