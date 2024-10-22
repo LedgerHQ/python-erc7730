@@ -46,15 +46,15 @@ erc7730 = "erc7730.main:app"
 
 [tool.pdm.scripts]
 lint.help = "Run all linters/formatters (automatically run by pre-commit)"
-lint.shell = "pre-commit run --all-files"
+lint.cmd = "pre-commit run --all-files"
 test.help = "Run unit/integration tests suite"
-test.shell = "pytest tests"
+test.cmd = "pytest tests"
 docs.help = "Build documentation (output is at docs/build/index.html)"
-docs.shell = "sphinx-build docs docs/build"
+docs.cmd = "sphinx-build docs docs/build"
 all.help = "Run lint+test"
-all.shell = { composite = ["lint", "test"] }
+all.composite = ["lint", "test"]
 exe.help = "Package the application into a standalone executable"
-exe.shell = "pdm pack --compress --exe --interpreter '/usr/bin/env python3' --output erc7730"
+exe.cmd = "pdm pack --compress --exe --interpreter '/usr/bin/env python3' --output erc7730"
 
 [tool.pdm]
 plugins = ["sync-pre-commit-lock", "pdm-packer"]
