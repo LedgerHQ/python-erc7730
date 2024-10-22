@@ -279,7 +279,7 @@ files = [
 
 [[package]]
 name = "eip712-clearsign"
-version = "3.0.1"
+version = "3.0.3"
 requires_python = "<3.13,>=3.12"
 summary = "ERC-7730 descriptors validation and utilities."
 groups = ["default"]
@@ -287,8 +287,8 @@ dependencies = [
     "pydantic>=2.8.2",
 ]
 files = [
-    {file = "eip712-clearsign-3.0.1.tar.gz", hash = "sha256:674195529a62333b3d59c5152a3cff641ed92db28392807d61df39533946589e"},
-    {file = "eip712_clearsign-3.0.1-py3-none-any.whl", hash = "sha256:7a91d4853ae31e9cf01555e991dcaa1c8ccf4a4a0e569e5dae4727ef0f419e36"},
+    {file = "eip712-clearsign-3.0.3.tar.gz", hash = "sha256:84f2b2e1e7a9706e6a76e35546357c828ba1348d58747c24e327c0338d7708dc"},
+    {file = "eip712_clearsign-3.0.3-py3-none-any.whl", hash = "sha256:37af75ae15ae69a60ba67f704ff2e9672b9709a28f26c67c70dd4f316a277b21"},
 ]
 
 [[package]]
@@ -334,7 +334,7 @@ files = [
 
 [[package]]
 name = "eth-utils"
-version = "5.0.0"
+version = "5.1.0"
 requires_python = "<4,>=3.8"
 summary = "eth-utils: Common utility functions for python code that interacts with Ethereum"
 groups = ["default"]
@@ -342,12 +342,11 @@ dependencies = [
     "cytoolz>=0.10.1; implementation_name == \"cpython\"",
     "eth-hash>=0.3.1",
     "eth-typing>=5.0.0",
-    "hexbytes>=1.0.0",
     "toolz>0.8.2; implementation_name == \"pypy\"",
 ]
 files = [
-    {file = "eth_utils-5.0.0-py3-none-any.whl", hash = "sha256:99c44eca11db74dbb881a1d70b24cd80436fc62fe527d2f5c3e3cf7932aba7b2"},
-    {file = "eth_utils-5.0.0.tar.gz", hash = "sha256:a5eb9555f43f4579eb83cb84f9dda9f3d6663bbd4a5a6b693f8d35045f305a1f"},
+    {file = "eth_utils-5.1.0-py3-none-any.whl", hash = "sha256:a99f1f01b51206620904c5af47fac65abc143aebd0a76bdec860381c5a3230f8"},
+    {file = "eth_utils-5.1.0.tar.gz", hash = "sha256:84c6314b9cf1fcd526107464bbf487e3f87097a2e753360d5ed319f7d42e3f20"},
 ]
 
 [[package]]
@@ -384,17 +383,6 @@ dependencies = [
 files = [
     {file = "future_fstrings-1.2.0-py2.py3-none-any.whl", hash = "sha256:90e49598b553d8746c4dc7d9442e0359d038c3039d802c91c0a55505da318c63"},
     {file = "future_fstrings-1.2.0.tar.gz", hash = "sha256:6cf41cbe97c398ab5a81168ce0dbb8ad95862d3caf23c21e4430627b90844089"},
-]
-
-[[package]]
-name = "hexbytes"
-version = "1.2.1"
-requires_python = "<4,>=3.8"
-summary = "hexbytes: Python `bytes` subclass that decodes hex, with a readable console output"
-groups = ["default"]
-files = [
-    {file = "hexbytes-1.2.1-py3-none-any.whl", hash = "sha256:e64890b203a31f4a23ef11470ecfcca565beaee9198df623047df322b757471a"},
-    {file = "hexbytes-1.2.1.tar.gz", hash = "sha256:515f00dddf31053db4d0d7636dd16061c1d896c3109b8e751005db4ca46bcca7"},
 ]
 
 [[package]]
