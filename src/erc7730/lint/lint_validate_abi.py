@@ -41,31 +41,34 @@ class ValidateABILinter(ERC7730Linter):
             try:
                 if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
                     continue
-            except ValidationError:
+            except ValidationError as e:
                 out.warning(
-                    title=f"Could not fetch ABI for chain_id={deployment.chainId}",
-                    message=f"Could not fetch ABI for chain_id={deployment.chainId}, ABI will not be validated",
+                    title="Could not fetch ABI",
+                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, descriptor ABIs will "
+                    f"not be validated: {e}",
                 )
                 continue
 
             reference_abis = get_functions(abis)
             descriptor_abis = get_functions(context.contract.abi)
-            url = client.get_contract_url(deployment.chainId, deployment.address)
+            url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
 
             if reference_abis.proxy:
                 return out.info(
                     title="Proxy contract",
-                    message=f"Contract ABI {url} is likely to be a proxy, validation skipped",
+                    message=f"Contract {url} is likely to be a proxy, validation of descriptor ABIs skipped",
                 )
 
             for selector, abi in descriptor_abis.functions.items():
                 if selector not in reference_abis.functions:
-                    out.error(
-                        title="Missing function",
-                        message=f"Function `{selector}/{compute_signature(abi)}` is not defined on {url}",
+                    out.warning(
+                        title="Extra function",
+                        message=f"Function {compute_signature(abi)} (selector: {selector}) defined in descriptor ABIs "
+                        f"does not exist in reference ABI (see {url})",
                     )
                 elif descriptor_abis.functions[selector] != reference_abis.functions[selector]:
                     out.warning(
                         title="Function mismatch",
-                        message=f"Function `{selector}/{compute_signature(abi)}` does not match {url}",
+                        message=f"Function {compute_signature(abi)} (selector: {selector}) defined in descriptor ABIs "
+                        f"does not match reference ABI (see {url})",
                     )
