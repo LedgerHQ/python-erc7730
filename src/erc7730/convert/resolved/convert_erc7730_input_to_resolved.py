@@ -219,6 +219,26 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedFieldDescription | None:
+        match definition.format:
+            case None | FieldFormat.RAW | FieldFormat.AMOUNT | FieldFormat.TOKEN_AMOUNT | FieldFormat.DURATION:
+                pass
+            case (
+                FieldFormat.ADDRESS_NAME
+                | FieldFormat.CALL_DATA
+                | FieldFormat.NFT_NAME
+                | FieldFormat.DATE
+                | FieldFormat.UNIT
+                | FieldFormat.ENUM
+            ):
+                if definition.params is None:
+                    return out.error(
+                        title="Missing parameters",
+                        message=f"""Field format "{definition.format.value}" requires parameters to be defined, """
+                        f"""they are missing for field "{definition.path}".""",
+                    )
+            case _:
+                assert_never(definition.format)
+
         params = resolve_field_parameters(prefix, definition.params, enums, constants, out)
 
         if (path := constants.resolve_path(definition.path, out)) is None:
