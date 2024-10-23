@@ -67,7 +67,7 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
 
     files = list(get_descriptor_files())
 
-    if len(files) <= 1 or not (root_path := os.path.commonprefix(files)):
+    if len(files) <= 1 or not (root_path := os.path.commonpath(files)):
         root_path = None
 
     def label(f: Path) -> Path | None:
