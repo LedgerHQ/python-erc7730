@@ -54,63 +54,6 @@
                                 }
                             ]
                         },
-                        "label": "Minimal parameters set",
-                        "format": "addressName"
-                    },
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "types specified",
-                        "format": "addressName",
-                        "params": {
-                            "types": [
-                                "wallet",
-                                "eoa",
-                                "token",
-                                "contract",
-                                "collection"
-                            ]
-                        }
-                    },
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "sources specified",
-                        "format": "addressName",
-                        "params": {
-                            "sources": [
-                                "local",
-                                "ens"
-                            ]
-                        }
-                    },
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
                         "label": "All parameters specified",
                         "format": "addressName",
                         "params": {

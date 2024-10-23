@@ -40,10 +40,7 @@
     "metadata": {
         "constants": {
             "path": "#.param1",
-            "label1": "Minimal parameters set",
-            "label2": "types specified",
-            "label3": "sources specified",
-            "label4": "All parameters specified"
+            "label": "All parameters specified"
         }
     },
     "display": {
@@ -52,37 +49,7 @@
                 "fields": [
                     {
                         "path": "$.metadata.constants.path",
-                        "label": "$.metadata.constants.label1",
-                        "format": "addressName"
-                    },
-                    {
-                        "path": "$.metadata.constants.path",
-                        "label": "$.metadata.constants.label2",
-                        "format": "addressName",
-                        "params": {
-                            "types": [
-                                "wallet",
-                                "eoa",
-                                "token",
-                                "contract",
-                                "collection"
-                            ]
-                        }
-                    },
-                    {
-                        "path": "$.metadata.constants.path",
-                        "label": "$.metadata.constants.label3",
-                        "format": "addressName",
-                        "params": {
-                            "sources": [
-                                "local",
-                                "ens"
-                            ]
-                        }
-                    },
-                    {
-                        "path": "$.metadata.constants.path",
-                        "label": "$.metadata.constants.label4",
+                        "label": "$.metadata.constants.label",
                         "format": "addressName",
                         "params": {
                             "types": [

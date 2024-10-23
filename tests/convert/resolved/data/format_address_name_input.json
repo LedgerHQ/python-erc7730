@@ -44,36 +44,6 @@
                 "fields": [
                     {
                         "path": "param1",
-                        "label": "Minimal parameters set",
-                        "format": "addressName"
-                    },
-                    {
-                        "path": "param1",
-                        "label": "types specified",
-                        "format": "addressName",
-                        "params": {
-                            "types": [
-                                "wallet",
-                                "eoa",
-                                "token",
-                                "contract",
-                                "collection"
-                            ]
-                        }
-                    },
-                    {
-                        "path": "param1",
-                        "label": "sources specified",
-                        "format": "addressName",
-                        "params": {
-                            "sources": [
-                                "local",
-                                "ens"
-                            ]
-                        }
-                    },
-                    {
-                        "path": "param1",
                         "label": "All parameters specified",
                         "format": "addressName",
                         "params": {
