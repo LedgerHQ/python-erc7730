@@ -156,7 +156,9 @@ class EtherscanTransport(DelegateTransport):
             return super().handle_request(request)
 
         # add API key
-        if (api_key := os.environ.get(self.ETHERSCAN_API_KEY)) is None:
+        if (api_key := os.environ.get(self.ETHERSCAN_API_KEY)) is None and (
+            api_key := os.environ.get(f"SCAN_{self.ETHERSCAN_API_KEY}")
+        ) is None:
             raise ValueError(f"{self.ETHERSCAN_API_KEY} environment variable is required")
         request.url = request.url.copy_add_param("apikey", api_key)
 
