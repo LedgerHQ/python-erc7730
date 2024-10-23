@@ -1,4 +1,4 @@
-from typing import assert_never
+from typing import assert_never, cast
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert.resolved.constants import ConstantProvider
@@ -26,7 +26,7 @@ from erc7730.model.resolved.display import (
     ResolvedTokenAmountParameters,
     ResolvedUnitParameters,
 )
-from erc7730.model.types import Id
+from erc7730.model.types import Address, HexStr, Id
 
 
 def resolve_field_parameters(
@@ -80,10 +80,28 @@ def resolve_token_amount_parameters(
     prefix: DataPath, params: InputTokenAmountParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedTokenAmountParameters | None:
     token_path = constants.resolve_path_or_none(params.tokenPath, out)
+
+    input_addresses = cast(Address | list[Address] | None, constants.resolve_or_none(params.nativeCurrencyAddress, out))
+    resolved_addresses: list[Address] | None
+    if input_addresses is not None:
+        resolved_addresses = [input_addresses] if isinstance(input_addresses, str) else input_addresses
+    else:
+        resolved_addresses = None
+
+    input_threshold = cast(HexStr | int | None, constants.resolve_or_none(params.threshold, out))
+    resolved_threshold: HexStr | None
+    if input_threshold is not None:
+        if isinstance(input_threshold, int):
+            resolved_threshold = "0x" + input_threshold.to_bytes(byteorder="big", signed=False).hex()
+        else:
+            resolved_threshold = input_threshold
+    else:
+        resolved_threshold = None
+
     return ResolvedTokenAmountParameters(
         tokenPath=None if token_path is None else data_or_container_path_concat(prefix, token_path),
-        nativeCurrencyAddress=constants.resolve_or_none(params.nativeCurrencyAddress, out),  # type:ignore
-        threshold=constants.resolve_or_none(params.threshold, out),
+        nativeCurrencyAddress=resolved_addresses,
+        threshold=resolved_threshold,
         message=constants.resolve_or_none(params.message, out),
     )
 

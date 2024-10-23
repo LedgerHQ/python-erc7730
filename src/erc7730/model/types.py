@@ -7,7 +7,7 @@ JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/mas
 
 from typing import Annotated
 
-from pydantic import Field
+from pydantic import BeforeValidator, Field
 
 Id = Annotated[
     str,
@@ -28,6 +28,16 @@ Address = Annotated[
         max_length=42,
         pattern=r"^0x[a-zA-Z0-9_\-]+$",
     ),
+]
+
+HexStr = Annotated[
+    str,
+    Field(
+        title="Hexadecimal string",
+        description="A byte array encoded as an hexadecimal string.",
+        pattern=r"^0x[a-f0-9]+$",
+    ),
+    BeforeValidator(lambda v: v.lower()),
 ]
 
 ScalarType = str | int | bool | float

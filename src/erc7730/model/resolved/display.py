@@ -12,7 +12,7 @@ from erc7730.model.display import (
 )
 from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.resolved.path import ResolvedPath
-from erc7730.model.types import Address, Id
+from erc7730.model.types import Address, HexStr, Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -31,18 +31,18 @@ class ResolvedTokenAmountParameters(Model):
         '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: Address | list[Address] | None = Field(
+    nativeCurrencyAddress: list[Address] | None = Field(
         default=None,
         title="Native Currency Address",
         description="An address or array of addresses, any of which are interpreted as an amount in native currency "
         "rather than a token.",
     )
 
-    threshold: str | None = Field(
+    threshold: HexStr | None = Field(
         default=None,
         title="Unlimited Threshold",
         description="The threshold above which the amount should be displayed using the message parameter rather than "
-        "the real amount.",
+        "the real amount (encoded as a byte array).",
     )
 
     message: str | None = Field(

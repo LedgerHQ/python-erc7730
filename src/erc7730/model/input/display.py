@@ -11,7 +11,7 @@ from erc7730.model.display import (
     FormatBase,
 )
 from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
-from erc7730.model.types import Address, Id
+from erc7730.model.types import Address, HexStr, Id
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -78,11 +78,11 @@ class InputTokenAmountParameters(Model):
         "rather than a token.",
     )
 
-    threshold: DescriptorPathStr | str | None = Field(
+    threshold: DescriptorPathStr | HexStr | int | None = Field(
         default=None,
         title="Unlimited Threshold",
         description="The threshold above which the amount should be displayed using the message parameter rather than "
-        "the real amount.",
+        "the real amount (encoded as an int or byte array).",
     )
 
     message: DescriptorPathStr | str | None = Field(

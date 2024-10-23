@@ -85,8 +85,10 @@
                                     }
                                 ]
                             },
-                            "nativeCurrencyAddress": "0x0000000000000000000000000000000000000001",
-                            "threshold": "0xFFFFFFFF",
+                            "nativeCurrencyAddress": [
+                                "0x0000000000000000000000000000000000000001"
+                            ],
+                            "threshold": "0xffffffff",
                             "message": "Max"
                         }
                     },
@@ -118,7 +120,7 @@
                                 "0x0000000000000000000000000000000000000001",
                                 "0x0000000000000000000000000000000000000002"
                             ],
-                            "threshold": "0xFFFFFFFF",
+                            "threshold": "0xffffffff",
                             "message": "Max"
                         }
                     }
