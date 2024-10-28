@@ -1,8 +1,10 @@
 from typing import assert_never, final, override
 
+from eip712.model.schema import EIP712Type
 from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
+from erc7730.common.abi import reduce_signature, signature_to_selector
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.convert.resolved.constants import ConstantProvider, DefaultConstantProvider
@@ -43,7 +45,7 @@ from erc7730.model.resolved.display import (
     ResolvedNestedFields,
 )
 from erc7730.model.resolved.metadata import ResolvedMetadata
-from erc7730.model.types import Id
+from erc7730.model.types import Id, Selector
 
 
 @final
@@ -57,7 +59,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
      - References have been inlined
      - Constants have been inlined
      - Field definitions have been inlined
-     - Selectors have been converted to 4 bytes form (TODO not implemented)
+     - Selectors have been converted to 4 bytes form
     """
 
     @override
@@ -68,7 +70,9 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             return None
         if (metadata := self._resolve_metadata(descriptor.metadata, out)) is None:
             return None
-        if (display := self._resolve_display(descriptor.display, metadata.enums or {}, constants, out)) is None:
+        if (
+            display := self._resolve_display(descriptor.display, context, metadata.enums or {}, constants, out)
+        ) is None:
             return None
 
         return ResolvedERC7730Descriptor(context=context, metadata=metadata, display=display)
@@ -199,14 +203,27 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _resolve_display(
-        cls, display: InputDisplay, enums: dict[Id, EnumDefinition], constants: ConstantProvider, out: OutputAdder
+        cls,
+        display: InputDisplay,
+        context: ResolvedContractContext | ResolvedEIP712Context,
+        enums: dict[Id, EnumDefinition],
+        constants: ConstantProvider,
+        out: OutputAdder,
     ) -> ResolvedDisplay | None:
         formats = {}
-        for format_key, format in display.formats.items():
+        for format_id, format in display.formats.items():
+            if (resolved_format_id := cls._resolve_format_id(format_id, context, out)) is None:
+                return None
             if (
                 resolved_format := cls._resolve_format(format, display.definitions or {}, enums, constants, out)
-            ) is not None:
-                formats[format_key] = resolved_format
+            ) is None:
+                return None
+            if resolved_format_id in formats:
+                return out.error(
+                    title="Duplicate format",
+                    message=f"Descriptor contains 2 formats sections for {resolved_format_id}",
+                )
+            formats[resolved_format_id] = resolved_format
 
         return ResolvedDisplay(formats=formats)
 
@@ -253,6 +270,30 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 "params": params,
             }
         )
+
+    @classmethod
+    def _resolve_format_id(
+        cls,
+        format_id: str,
+        context: ResolvedContractContext | ResolvedEIP712Context,
+        out: OutputAdder,
+    ) -> EIP712Type | Selector | None:
+        match context:
+            case ResolvedContractContext():
+                if format_id.startswith("0x"):
+                    return Selector(format_id)
+
+                if (reduced_signature := reduce_signature(format_id)) is not None:
+                    return Selector(signature_to_selector(reduced_signature))
+
+                return out.error(
+                    title="Invalid selector",
+                    message=f""""{format_id}" is not a valid function signature or selector.""",
+                )
+            case ResolvedEIP712Context():
+                return format_id
+            case _:
+                assert_never(context)
 
     @classmethod
     def _resolve_format(

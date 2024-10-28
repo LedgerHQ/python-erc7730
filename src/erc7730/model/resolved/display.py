@@ -1,5 +1,6 @@
 from typing import Annotated, ForwardRef
 
+from eip712.model.schema import EIP712Type
 from pydantic import Discriminator, Field, Tag
 
 from erc7730.model.base import Model
@@ -12,7 +13,7 @@ from erc7730.model.display import (
 )
 from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.resolved.path import ResolvedPath
-from erc7730.model.types import Address, HexStr, Id
+from erc7730.model.types import Address, HexStr, Id, Selector
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -252,7 +253,7 @@ class ResolvedDisplay(Model):
     Display Formatting Info Section.
     """
 
-    formats: dict[str, ResolvedFormat] = Field(
+    formats: dict[EIP712Type | Selector, ResolvedFormat] = Field(
         title="List of field formats",
         description="The list includes formatting info for each field of a structure. This list is indexed by a key"
         "identifying uniquely the message's type in the abi. For smartcontracts, it is the selector of the"

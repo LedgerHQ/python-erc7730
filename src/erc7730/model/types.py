@@ -30,6 +30,17 @@ Address = Annotated[
     ),
 ]
 
+Selector = Annotated[
+    str,
+    Field(
+        title="Selector",
+        description="An Ethereum contract function identifier, in 4 bytes, hex encoded form.",
+        min_length=10,
+        max_length=10,
+        pattern=r"^0x[a-z0-9]+$",
+    ),
+]
+
 HexStr = Annotated[
     str,
     Field(
