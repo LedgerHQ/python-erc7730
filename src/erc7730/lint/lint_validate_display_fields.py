@@ -1,6 +1,6 @@
 from typing import final, override
 
-from erc7730.common.abi import function_to_selector, reduce_signature, signature_to_selector
+from erc7730.common.abi import function_to_selector
 from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
 from erc7730.model.paths import DataPath, Field
@@ -100,10 +100,6 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     )
 
     @classmethod
-    def _display(cls, selector: str, keccak: str) -> str:
-        return selector if selector == keccak else f"`{keccak}/{selector}`"
-
-    @classmethod
     def _validate_abi_paths(cls, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor.context, ResolvedContractContext):
             abi_paths_by_selector: dict[str, set[DataPath]] = {}
@@ -112,31 +108,19 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     abi_paths_by_selector[function_to_selector(abi)] = compute_abi_schema_paths(abi)
 
             for selector, fmt in descriptor.display.formats.items():
-                keccak = selector
-                if not selector.startswith("0x"):
-                    if (reduced_signature := reduce_signature(selector)) is not None:
-                        keccak = signature_to_selector(reduced_signature)
-                    else:
-                        out.error(
-                            title="Invalid selector",
-                            message=f"Selector {cls._display(selector, keccak)} is not a valid function signature.",
-                        )
-                        continue
-                if keccak not in abi_paths_by_selector:
+                if selector not in abi_paths_by_selector:
                     out.error(
                         title="Invalid selector",
-                        message=f"Selector {cls._display(selector, keccak)} not found in ABI.",
+                        message=f"Selector {selector} not found in ABI.",
                     )
                     continue
                 format_paths = compute_format_schema_paths(fmt).data_paths
-                abi_paths = abi_paths_by_selector[keccak]
+                abi_paths = abi_paths_by_selector[selector]
 
                 if (excluded := fmt.excluded) is not None:
                     excluded_paths = [to_absolute(path) for path in excluded]
                 else:
                     excluded_paths = []
-
-                function = cls._display(selector, keccak)
 
                 for path in abi_paths - format_paths:
                     if any(path_starts_with(path, excluded_path) for excluded_path in excluded_paths):
@@ -145,17 +129,17 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                     if any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
                         out.debug(
                             title="Optional Display field missing",
-                            message=f"Display field for path `{path}` is missing for selector {function}. If "
+                            message=f"Display field for path `{path}` is missing for selector {selector}. If "
                             f"intentionally excluded, please add it to `excluded` list to avoid this warning.",
                         )
                     else:
                         out.warning(
                             title="Missing Display field",
-                            message=f"Display field for path `{path}` is missing for selector {function}. If "
+                            message=f"Display field for path `{path}` is missing for selector {selector}. If "
                             f"intentionally excluded, please add it to `excluded` list to avoid this warning.",
                         )
                 for path in format_paths - abi_paths:
                     out.error(
                         title="Invalid Display field",
-                        message=f"Display field for path `{path}` is not in selector {function}.",
+                        message=f"Display field for path `{path}` is not in selector {selector}.",
                     )
