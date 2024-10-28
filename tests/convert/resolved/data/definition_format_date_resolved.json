@@ -1,67 +1,35 @@
 {
-    "context": {
-        "eip712": {
-            "deployments": [
-                {
-                    "chainId": 1,
-                    "address": "0x0000000000000000000000000000000000000000"
-                }
+  "context": {
+    "eip712": {
+      "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000000" }],
+      "schemas": [
+        {
+          "primaryType": "TestPrimaryType",
+          "types": {
+            "EIP712Domain": [
+              { "name": "name", "type": "string" },
+              { "name": "chainId", "type": "uint256" },
+              { "name": "verifyingContract", "type": "address" }
             ],
-            "schemas": [
-                {
-                    "primaryType": "TestPrimaryType",
-                    "types": {
-                        "EIP712Domain": [
-                            {
-                                "name": "name",
-                                "type": "string"
-                            },
-                            {
-                                "name": "chainId",
-                                "type": "uint256"
-                            },
-                            {
-                                "name": "verifyingContract",
-                                "type": "address"
-                            }
-                        ],
-                        "TestPrimaryType": [
-                            {
-                                "name": "param1",
-                                "type": "uint256"
-                            }
-                        ]
-                    }
-                }
-            ]
+            "TestPrimaryType": [{ "name": "param1", "type": "uint256" }]
+          }
         }
-    },
-    "metadata": {
-        "enums": {}
-    },
-    "display": {
-        "formats": {
-            "TestPrimaryType": {
-                "fields": [
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "Param 1",
-                        "format": "date",
-                        "params": {
-                            "encoding": "blockheight"
-                        }
-                    }
-                ]
-            }
-        }
+      ]
     }
+  },
+  "metadata": { "enums": {} },
+  "display": {
+    "formats": {
+      "TestPrimaryType": {
+        "fields": [
+          {
+            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "label": "Param 1",
+            "format": "date",
+            "params": { "encoding": "blockheight" }
+          }
+        ]
+      }
+    }
+  }
 }

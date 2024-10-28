@@ -1,55 +1,29 @@
 {
-    "context": {
-        "contract": {
-            "deployments": [
-                {
-                    "chainId": 1,
-                    "address": "0x0000000000000000000000000000000000000000"
-                }
-            ],
-            "abi": [
-                {
-                    "type": "function",
-                    "name": "function1",
-                    "inputs": [
-                        {
-                            "name": "param1",
-                            "type": "bytes4"
-                        }
-                    ],
-                    "outputs": [
-                        {
-                            "name": "",
-                            "type": "address"
-                        }
-                    ]
-                }
-            ]
+  "context": {
+    "contract": {
+      "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000000" }],
+      "abi": [
+        {
+          "type": "function",
+          "name": "function1",
+          "inputs": [{ "name": "param1", "type": "bytes4" }],
+          "outputs": [{ "name": "", "type": "address" }]
         }
-    },
-    "metadata": {
-        "enums": {}
-    },
-    "display": {
-        "formats": {
-            "function1(bytes4)": {
-                "fields": [
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "Param 1",
-                        "format": "raw"
-                    }
-                ]
-            }
-        }
+      ]
     }
+  },
+  "metadata": { "enums": {} },
+  "display": {
+    "formats": {
+      "function1(bytes4)": {
+        "fields": [
+          {
+            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "label": "Param 1",
+            "format": "raw"
+          }
+        ]
+      }
+    }
+  }
 }

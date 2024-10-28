@@ -1,131 +1,56 @@
 {
-    "context": {
-        "eip712": {
-            "deployments": [
-                {
-                    "chainId": 1,
-                    "address": "0x0000000000000000000000000000000000000000"
-                }
+  "context": {
+    "eip712": {
+      "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000000" }],
+      "schemas": [
+        {
+          "primaryType": "TestPrimaryType",
+          "types": {
+            "EIP712Domain": [
+              { "name": "name", "type": "string" },
+              { "name": "chainId", "type": "uint256" },
+              { "name": "verifyingContract", "type": "address" }
             ],
-            "schemas": [
-                {
-                    "primaryType": "TestPrimaryType",
-                    "types": {
-                        "EIP712Domain": [
-                            {
-                                "name": "name",
-                                "type": "string"
-                            },
-                            {
-                                "name": "chainId",
-                                "type": "uint256"
-                            },
-                            {
-                                "name": "verifyingContract",
-                                "type": "address"
-                            }
-                        ],
-                        "TestPrimaryType": [
-                            {
-                                "name": "token1",
-                                "type": "address"
-                            },
-                            {
-                                "name": "token2",
-                                "type": "address"
-                            }
-                        ]
-                    }
-                }
-            ]
+            "TestPrimaryType": [{ "name": "token1", "type": "address" }, { "name": "token2", "type": "address" }]
+          }
         }
-    },
-    "metadata": {
-        "enums": {}
-    },
-    "display": {
-        "formats": {
-            "TestPrimaryType": {
-                "fields": [
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "With minimal set of parameters specified",
-                        "format": "tokenAmount"
-                    },
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "With all parameters specified, string nativeCurrencyAddress",
-                        "format": "tokenAmount",
-                        "params": {
-                            "tokenPath": {
-                                "type": "data",
-                                "absolute": true,
-                                "elements": [
-                                    {
-                                        "type": "field",
-                                        "identifier": "token1"
-                                    }
-                                ]
-                            },
-                            "nativeCurrencyAddress": [
-                                "0x0000000000000000000000000000000000000001"
-                            ],
-                            "threshold": "0xffffffff",
-                            "message": "Max"
-                        }
-                    },
-                    {
-                        "path": {
-                            "type": "data",
-                            "absolute": true,
-                            "elements": [
-                                {
-                                    "type": "field",
-                                    "identifier": "param1"
-                                }
-                            ]
-                        },
-                        "label": "With all parameters specified, array nativeCurrencyAddress",
-                        "format": "tokenAmount",
-                        "params": {
-                            "tokenPath": {
-                                "type": "data",
-                                "absolute": true,
-                                "elements": [
-                                    {
-                                        "type": "field",
-                                        "identifier": "token1"
-                                    }
-                                ]
-                            },
-                            "nativeCurrencyAddress": [
-                                "0x0000000000000000000000000000000000000001",
-                                "0x0000000000000000000000000000000000000002"
-                            ],
-                            "threshold": "0xffffffff",
-                            "message": "Max"
-                        }
-                    }
-                ]
-            }
-        }
+      ]
     }
+  },
+  "metadata": { "enums": {} },
+  "display": {
+    "formats": {
+      "TestPrimaryType": {
+        "fields": [
+          {
+            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "label": "With minimal set of parameters specified",
+            "format": "tokenAmount"
+          },
+          {
+            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "label": "With all parameters specified, string nativeCurrencyAddress",
+            "format": "tokenAmount",
+            "params": {
+              "tokenPath": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "token1" }] },
+              "nativeCurrencyAddress": ["0x0000000000000000000000000000000000000001"],
+              "threshold": "0xffffffff",
+              "message": "Max"
+            }
+          },
+          {
+            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "label": "With all parameters specified, array nativeCurrencyAddress",
+            "format": "tokenAmount",
+            "params": {
+              "tokenPath": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "token1" }] },
+              "nativeCurrencyAddress": ["0x0000000000000000000000000000000000000001", "0x0000000000000000000000000000000000000002"],
+              "threshold": "0xffffffff",
+              "message": "Max"
+            }
+          }
+        ]
+      }
+    }
+  }
 }
