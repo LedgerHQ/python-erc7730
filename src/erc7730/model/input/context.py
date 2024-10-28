@@ -3,13 +3,69 @@ from pydantic_string_url import HttpUrl
 
 from erc7730.model.abi import ABI
 from erc7730.model.base import Model
-from erc7730.model.context import BindingContext, Domain, EIP712JsonSchema, Factory
-from erc7730.model.types import Id
+from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.types import Id, MixedCaseAddress
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
-class InputContract(BindingContext):
+class InputDomain(Model):
+    """
+    EIP 712 Domain Binding constraint.
+
+    Each value of the domain constraint MUST match the corresponding eip 712 message domain value.
+    """
+
+    name: str | None = Field(default=None, title="Name", description="The EIP-712 domain name.")
+
+    version: str | None = Field(default=None, title="Version", description="The EIP-712 version.")
+
+    chainId: int | None = Field(default=None, title="Chain ID", description="The EIP-155 chain id.")
+
+    verifyingContract: MixedCaseAddress | None = Field(
+        default=None, title="Verifying Contract", description="The EIP-712 verifying contract address."
+    )
+
+
+class InputDeployment(Model):
+    """
+    A deployment describing where the contract is deployed.
+
+    The target contract (Tx to or factory) MUST match one of those deployments.
+    """
+
+    chainId: int = Field(title="Chain ID", description="The deployment EIP-155 chain id.")
+
+    address: MixedCaseAddress = Field(title="Contract Address", description="The deployment contract address.")
+
+
+class InputFactory(Model):
+    """
+    A factory constraint is used to check whether the target contract is deployed by a specified factory.
+    """
+
+    deployments: list[InputDeployment] = Field(
+        title="Deployments",
+        description="An array of deployments describing where the contract is deployed. The target contract (Tx to or"
+        "factory) MUST match one of those deployments.",
+    )
+
+    deployEvent: str = Field(
+        title="Deploy Event signature",
+        description="The event signature that the factory emits when deploying a new contract.",
+    )
+
+
+class InputBindingContext(Model):
+    deployments: list[InputDeployment] = Field(
+        title="Deployments",
+        description="An array of deployments describing where the contract is deployed. The target contract (Tx to or"
+        "factory) MUST match one of those deployments.",
+        min_length=1,
+    )
+
+
+class InputContract(InputBindingContext):
     """
     The contract binding context is a set constraints that are used to bind the ERC7730 file to a specific smart
     contract.
@@ -27,7 +83,7 @@ class InputContract(BindingContext):
         description="An URL of a contract address matcher that should be used to match the contract address.",
     )
 
-    factory: Factory | None = Field(
+    factory: InputFactory | None = Field(
         None,
         title="Factory Constraint",
         description="A factory constraint is used to check whether the target contract is deployed by a specified"
@@ -35,14 +91,14 @@ class InputContract(BindingContext):
     )
 
 
-class InputEIP712(BindingContext):
+class InputEIP712(InputBindingContext):
     """
     EIP 712 Binding.
 
     The EIP-712 binding context is a set of constraints that must be verified by the message being signed.
     """
 
-    domain: Domain | None = Field(
+    domain: InputDomain | None = Field(
         default=None,
         title="EIP 712 Domain Binding constraint",
         description="Each value of the domain constraint MUST match the corresponding eip 712 message domain value.",

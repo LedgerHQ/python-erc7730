@@ -4,8 +4,7 @@ from pydantic_string_url import HttpUrl
 
 from erc7730.common.output import RaisingOutputAdder
 from erc7730.convert.resolved.constants import DefaultConstantProvider
-from erc7730.model.context import Deployment
-from erc7730.model.input.context import InputContract, InputContractContext
+from erc7730.model.input.context import InputContract, InputContractContext, InputDeployment
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import InputDisplay, InputFieldDescription, InputFormat
 from erc7730.model.input.metadata import InputMetadata
@@ -21,8 +20,8 @@ def _provider(**constants: str | int | bool | float | None) -> DefaultConstantPr
                 contract=InputContract(
                     abi=HttpUrl("https://example.net/abi.json"),
                     deployments=[
-                        Deployment(chainId=1, address="0x1111111111111111111111111111111111111111"),
-                        Deployment(chainId=42, address="0x4242424242424242424242424242424242424242"),
+                        InputDeployment(chainId=1, address="0x1111111111111111111111111111111111111111"),
+                        InputDeployment(chainId=42, address="0x4242424242424242424242424242424242424242"),
                     ],
                 )
             ),

@@ -11,7 +11,7 @@ from erc7730.model.display import (
     FormatBase,
 )
 from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
-from erc7730.model.types import Address, HexStr, Id
+from erc7730.model.types import HexStr, Id, MixedCaseAddress
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -71,7 +71,7 @@ class InputTokenAmountParameters(Model):
         '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: DescriptorPathStr | Address | list[Address] | None = Field(
+    nativeCurrencyAddress: DescriptorPathStr | list[MixedCaseAddress] | MixedCaseAddress | None = Field(
         default=None,
         title="Native Currency Address",
         description="An address or array of addresses, any of which are interpreted as an amount in native currency "

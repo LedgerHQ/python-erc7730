@@ -15,7 +15,15 @@ from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.display import (
     FieldFormat,
 )
-from erc7730.model.input.context import InputContract, InputContractContext, InputEIP712, InputEIP712Context
+from erc7730.model.input.context import (
+    InputContract,
+    InputContractContext,
+    InputDeployment,
+    InputDomain,
+    InputEIP712,
+    InputEIP712Context,
+    InputFactory,
+)
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import (
     InputDisplay,
@@ -33,8 +41,11 @@ from erc7730.model.paths.path_ops import data_or_container_path_concat, data_pat
 from erc7730.model.resolved.context import (
     ResolvedContract,
     ResolvedContractContext,
+    ResolvedDeployment,
+    ResolvedDomain,
     ResolvedEIP712,
     ResolvedEIP712Context,
+    ResolvedFactory,
 )
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
@@ -45,7 +56,7 @@ from erc7730.model.resolved.display import (
     ResolvedNestedFields,
 )
 from erc7730.model.resolved.metadata import ResolvedMetadata
-from erc7730.model.types import Id, Selector
+from erc7730.model.types import Address, Id, Selector
 
 
 @final
@@ -55,7 +66,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     After conversion, the descriptor is in resolved form:
      - URLs have been fetched
-     - Contract addresses have been normalized to lowercase (TODO not implemented)
+     - Contract addresses have been normalized to lowercase
      - References have been inlined
      - Constants have been inlined
      - Field definitions have been inlined
@@ -133,10 +144,38 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     def _resolve_contract(cls, contract: InputContract, out: OutputAdder) -> ResolvedContract | None:
         if (abi := cls._resolve_abis(contract.abi, out)) is None:
             return None
+        if (deployments := cls._resolve_deployments(contract.deployments, out)) is None:
+            return None
+
+        if contract.factory is None:
+            factory = None
+        elif (factory := cls._resolve_factory(contract.factory, out)) is None:
+            return None
 
         return ResolvedContract(
-            abi=abi, deployments=contract.deployments, addressMatcher=contract.addressMatcher, factory=contract.factory
+            abi=abi, deployments=deployments, addressMatcher=contract.addressMatcher, factory=factory
         )
+
+    @classmethod
+    def _resolve_deployments(
+        cls, deployments: list[InputDeployment], out: OutputAdder
+    ) -> list[ResolvedDeployment] | None:
+        resolved_deployments = []
+        for deployment in deployments:
+            if (resolved_deployment := cls._resolve_deployment(deployment, out)) is not None:
+                resolved_deployments.append(resolved_deployment)
+        return resolved_deployments
+
+    @classmethod
+    def _resolve_deployment(cls, deployment: InputDeployment, out: OutputAdder) -> ResolvedDeployment | None:
+        return ResolvedDeployment(chainId=deployment.chainId, address=Address(deployment.address))
+
+    @classmethod
+    def _resolve_factory(cls, factory: InputFactory, out: OutputAdder) -> ResolvedFactory | None:
+        if (deployments := cls._resolve_deployments(factory.deployments, out)) is None:
+            return None
+
+        return ResolvedFactory(deployments=deployments, deployEvent=factory.deployEvent)
 
     @classmethod
     def _resolve_abis(cls, abis: list[ABI] | HttpUrl, out: OutputAdder) -> list[ABI] | None:
@@ -163,16 +202,30 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _resolve_eip712(cls, eip712: InputEIP712, out: OutputAdder) -> ResolvedEIP712 | None:
-        schemas = cls._resolve_schemas(eip712.schemas, out)
+        if eip712.domain is None:
+            domain = None
+        elif (domain := cls._resolve_domain(eip712.domain, out)) is None:
+            return None
 
-        if schemas is None:
+        if (schemas := cls._resolve_schemas(eip712.schemas, out)) is None:
+            return None
+        if (deployments := cls._resolve_deployments(eip712.deployments, out)) is None:
             return None
 
         return ResolvedEIP712(
-            domain=eip712.domain,
+            domain=domain,
             schemas=schemas,
             domainSeparator=eip712.domainSeparator,
-            deployments=eip712.deployments,
+            deployments=deployments,
+        )
+
+    @classmethod
+    def _resolve_domain(cls, domain: InputDomain, out: OutputAdder) -> ResolvedDomain | None:
+        return ResolvedDomain(
+            name=domain.name,
+            version=domain.version,
+            chainId=domain.chainId,
+            verifyingContract=None if domain.verifyingContract is None else Address(domain.verifyingContract),
         )
 
     @classmethod

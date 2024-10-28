@@ -1,9 +1,8 @@
 from erc7730.common.abi import compute_signature
 from erc7730.common.client import get_contract_abis
 from erc7730.model.abi import Function, InputOutput
-from erc7730.model.context import Deployment
 from erc7730.model.display import FieldFormat
-from erc7730.model.input.context import InputContract, InputContractContext
+from erc7730.model.input.context import InputContract, InputContractContext, InputDeployment
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import InputDisplay, InputField, InputFieldDescription, InputFormat
 from erc7730.model.input.metadata import InputMetadata
@@ -26,7 +25,7 @@ def generate_contract(chain_id: int, contract_address: Address) -> InputERC7730D
         context=InputContractContext(
             contract=InputContract(
                 abi=abis,
-                deployments=[Deployment(chainId=chain_id, address=contract_address)],
+                deployments=[InputDeployment(chainId=chain_id, address=contract_address)],
             )
         ),
         metadata=InputMetadata(),

@@ -19,15 +19,27 @@ Id = Annotated[
     ),
 ]
 
+MixedCaseAddress = Annotated[
+    str,
+    Field(
+        title="Contract Address",
+        description="An Ethereum contract address, can be lowercase or EIP-55.",
+        min_length=42,
+        max_length=42,
+        pattern=r"^0x[a-fA-F0-9]+$",
+    ),
+]
+
 Address = Annotated[
     str,
     Field(
         title="Contract Address",
-        description="An Ethereum contract address.",
+        description="An Ethereum contract address (normalized to lowercase).",
         min_length=42,
         max_length=42,
-        pattern=r"^0x[a-zA-Z0-9_\-]+$",
+        pattern=r"^0x[a-f0-9]+$",
     ),
+    BeforeValidator(lambda v: v.lower()),
 ]
 
 Selector = Annotated[

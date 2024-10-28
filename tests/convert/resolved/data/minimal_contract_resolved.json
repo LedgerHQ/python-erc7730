@@ -1,7 +1,7 @@
 {
   "context": {
     "contract": {
-      "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000000" }],
+      "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000aaa" }],
       "abi": [
         {
           "type": "function",

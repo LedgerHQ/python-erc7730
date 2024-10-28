@@ -9,12 +9,12 @@ from pydantic_string_url import HttpUrl
 
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, Domain, EIP712JsonSchema
+from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.display import (
     DateEncoding,
     FieldFormat,
 )
-from erc7730.model.input.context import InputEIP712, InputEIP712Context
+from erc7730.model.input.context import InputDeployment, InputDomain, InputEIP712, InputEIP712Context
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import (
     InputDateParameters,
@@ -63,14 +63,14 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
             descriptors[contract.address] = InputERC7730Descriptor(
                 context=InputEIP712Context(
                     eip712=InputEIP712(
-                        domain=Domain(
+                        domain=InputDomain(
                             name=descriptor.name,
                             version=None,
                             chainId=descriptor.chainId,
                             verifyingContract=contract.address,
                         ),
                         schemas=schemas,
-                        deployments=[Deployment(chainId=descriptor.chainId, address=contract.address)],
+                        deployments=[InputDeployment(chainId=descriptor.chainId, address=contract.address)],
                     )
                 ),
                 metadata=InputMetadata(

@@ -9,13 +9,11 @@ from eip712.model.types import EIP712Format
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.output import OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import Deployment, EIP712JsonSchema
-from erc7730.model.display import (
-    FieldFormat,
-)
+from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.display import FieldFormat
 from erc7730.model.paths import ContainerField, ContainerPath, DataPath
 from erc7730.model.paths.path_ops import data_path_concat, to_relative
-from erc7730.model.resolved.context import ResolvedEIP712Context
+from erc7730.model.resolved.context import ResolvedDeployment, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
     ResolvedField,
@@ -76,7 +74,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
     @classmethod
     def _build_network_descriptor(
         cls,
-        deployment: Deployment,
+        deployment: ResolvedDeployment,
         dapp_name: str,
         contract_name: str,
         messages: list[InputEIP712Message],
