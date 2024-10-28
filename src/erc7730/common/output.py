@@ -111,8 +111,12 @@ class ConsoleOutputAdder(OutputAdder):
                 assert_never(output.level)
 
         log = f"[{style}]{prefix}"
+        context = []
+        if output.file is not None:
+            context.append(f"{output.file}")
         if output.line is not None:
-            log += f"line {output.line}: "
+            context.append(f"line {output.line}")
+        log += ", ".join(context)
         if output.title is not None:
             log += f"{output.title}: "
         log += f"[/{style}]{output.message}"
@@ -176,7 +180,7 @@ class GithubAnnotationsAdder(OutputAdder):
         builtin_print(log)
 
 
-class FileOutputAdder(OutputAdder):
+class AddFileOutputAdder(OutputAdder):
     """An output adder wrapper that adds a specific file to all outputs."""
 
     def __init__(self, delegate: OutputAdder, file: FilePath) -> None:
@@ -188,6 +192,19 @@ class FileOutputAdder(OutputAdder):
     def add(self, output: Output) -> None:
         super().add(output)
         self.delegate.add(output.model_copy(update={"file": self.file}))
+
+
+class DropFileOutputAdder(OutputAdder):
+    """An output adder wrapper that drops file information from all outputs."""
+
+    def __init__(self, delegate: OutputAdder) -> None:
+        super().__init__()
+        self.delegate: OutputAdder = delegate
+
+    @override
+    def add(self, output: Output) -> None:
+        super().add(output)
+        self.delegate.add(output.model_copy(update={"file": None}))
 
 
 @final

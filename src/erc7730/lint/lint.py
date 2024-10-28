@@ -7,7 +7,14 @@ from pydantic import ValidationError
 from rich import print
 
 from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
-from erc7730.common.output import BufferAdder, ConsoleOutputAdder, FileOutputAdder, GithubAnnotationsAdder, OutputAdder
+from erc7730.common.output import (
+    AddFileOutputAdder,
+    BufferAdder,
+    ConsoleOutputAdder,
+    DropFileOutputAdder,
+    GithubAnnotationsAdder,
+    OutputAdder,
+)
 from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.lint import ERC7730Linter
 from erc7730.lint.lint_base import MultiLinter
@@ -18,7 +25,7 @@ from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
 def lint_all_and_print_errors(paths: list[Path], gha: bool = False) -> bool:
-    out = GithubAnnotationsAdder() if gha else ConsoleOutputAdder()
+    out = GithubAnnotationsAdder() if gha else DropFileOutputAdder(delegate=ConsoleOutputAdder())
 
     count = lint_all(paths, out)
 
@@ -91,7 +98,7 @@ def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder, show_as: Path
     """
 
     label = path if show_as is None else show_as
-    file_out = FileOutputAdder(delegate=out, file=path)
+    file_out = AddFileOutputAdder(delegate=out, file=path)
 
     with BufferAdder(file_out, prolog=f"➡️ checking [bold]{label}[/bold]…", epilog="") as out:
         try:
