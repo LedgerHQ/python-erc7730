@@ -86,19 +86,6 @@ class AddressNameType(str, Enum):
     """Address is a well known NFT collection."""
 
 
-class AddressNameSources(str, Enum):
-    """
-    Trusted Source for names.
-    """
-
-    LOCAL = "local"
-    """Address MAY be replaced with a local name trusted by user. Wallets MAY consider that local setting for sources
-    is always valid."""
-
-    ENS = "ens"
-    """Address MAY be replaced with an associated ENS domain."""
-
-
 class Screen(RootModel[dict[str, Any]]):
     """
     Screens section is used to group multiple fields to display into screens. Each key is a wallet type name. The

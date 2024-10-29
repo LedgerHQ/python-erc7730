@@ -4,7 +4,6 @@ from pydantic import Discriminator, Field, Tag
 
 from erc7730.model.base import Model
 from erc7730.model.display import (
-    AddressNameSources,
     AddressNameType,
     DateEncoding,
     FieldFormat,
@@ -105,11 +104,11 @@ class InputAddressNameParameters(Model):
         min_length=1,
     )
 
-    sources: list[AddressNameSources] | DescriptorPathStr | None = Field(
+    sources: list[str] | DescriptorPathStr | None = Field(
         default=None,
         title="Trusted Sources",
-        description="An array of acceptable sources for names (see next section). If set, the wallet SHOULD restrict "
-        "name lookup to relevant sources.",
+        description="An array of acceptable sources for names. If set, the wallet SHOULD restrict name lookup to "
+        "relevant sources.",
         min_length=1,
     )
 
