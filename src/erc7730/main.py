@@ -84,6 +84,7 @@ def lint(
         - References inlined
         - Constants inlined
         - Field definitions inlined
+        - Nested fields flattened where possible
         - Selectors converted to 4 bytes form
     
     See `erc7730 schema resolved` for the resolved descriptor schema.

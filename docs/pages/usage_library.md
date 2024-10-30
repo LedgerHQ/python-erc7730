@@ -46,6 +46,7 @@ Descriptors can be manipulated in 2 forms:
     - References have been inlined
     - Constants have been inlined
     - Field definitions have been inlined
+    - Nested fields have been flattened where possible
     - Selectors have been converted to 4 bytes form
    This form is the most adapted to be used by tools and applications.
 

@@ -253,6 +253,16 @@ def test_registry_files(input_file: Path) -> None:
             description="use of a valid reference to a valid display definition, with invalid overrides",
             error="Extra inputs are not permitted",
         ),
+        TestCase(
+            id="nested_fields_eip712_array",
+            label="nested fields - array parameter (EIP-712 descriptor)",
+            description="use of nested fields on an array parameter (EIP-712 descriptor)",
+        ),
+        TestCase(
+            id="nested_fields_eip712_struct",
+            label="nested fields - struct parameter (EIP-712 descriptor)",
+            description="use of nested fields on a struct parameter (EIP-712 descriptor)",
+        ),
     ],
     ids=case_id,
 )

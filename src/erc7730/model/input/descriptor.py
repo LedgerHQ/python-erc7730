@@ -7,6 +7,7 @@ This model represents descriptors before resolution phase:
     - References have not been inlined
     - Constants have not been inlined
     - Field definitions have not been inlined
+    - Nested fields have been flattened where possible
     - Selectors have been converted to 4 bytes form
 """
 

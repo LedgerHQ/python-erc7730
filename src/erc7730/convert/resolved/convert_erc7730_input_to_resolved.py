@@ -36,7 +36,7 @@ from erc7730.model.input.display import (
 )
 from erc7730.model.input.metadata import InputMetadata
 from erc7730.model.metadata import EnumDefinition
-from erc7730.model.paths import ROOT_DATA_PATH, ContainerPath, DataPath
+from erc7730.model.paths import ROOT_DATA_PATH, Array, ArrayElement, ArraySlice, ContainerPath, DataPath, Field
 from erc7730.model.paths.path_ops import data_or_container_path_concat, data_path_concat
 from erc7730.model.resolved.context import (
     ResolvedContract,
@@ -70,6 +70,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
      - References have been inlined
      - Constants have been inlined
      - Field definitions have been inlined
+     - Nested fields have been flattened where possible
      - Selectors have been converted to 4 bytes form
     """
 
@@ -385,7 +386,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         for input_format in fields:
             if (resolved_field := cls._resolve_field(prefix, input_format, definitions, enums, constants, out)) is None:
                 return None
-            resolved_fields.append(resolved_field)
+            resolved_fields.extend(resolved_field)
         return resolved_fields
 
     @classmethod
@@ -397,16 +398,28 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
-    ) -> ResolvedField | None:
+    ) -> list[ResolvedField] | None:
+        resolved_fields: list[ResolvedField] = []
         match field:
             case InputReference():
-                return resolve_reference(prefix, field, definitions, enums, constants, out)
+                if (resolved_field := resolve_reference(prefix, field, definitions, enums, constants, out)) is None:
+                    return None
+                resolved_fields.append(resolved_field)
             case InputFieldDescription():
-                return cls._resolve_field_description(prefix, field, enums, constants, out)
+                if (resolved_field := cls._resolve_field_description(prefix, field, enums, constants, out)) is None:
+                    return None
+                resolved_fields.append(resolved_field)
             case InputNestedFields():
-                return cls._resolve_nested_fields(prefix, field, definitions, enums, constants, out)
+                if (
+                    resolved_nested_fields := cls._resolve_nested_fields(
+                        prefix, field, definitions, enums, constants, out
+                    )
+                ) is None:
+                    return None
+                resolved_fields.extend(resolved_nested_fields)
             case _:
                 assert_never(field)
+        return resolved_fields
 
     @classmethod
     def _resolve_nested_fields(
@@ -417,7 +430,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
-    ) -> ResolvedNestedFields | None:
+    ) -> list[ResolvedNestedFields | ResolvedFieldDescription] | None:
         path: DataPath
         match constants.resolve_path(fields.path, out):
             case None:
@@ -432,7 +445,22 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             case _:
                 assert_never(fields.path)
 
-        if (resolved_fields := cls._resolve_fields(path, fields.fields, definitions, enums, constants, out)) is None:
+        if (
+            resolved_fields := cls._resolve_fields(
+                prefix=path, fields=fields.fields, definitions=definitions, enums=enums, constants=constants, out=out
+            )
+        ) is None:
             return None
 
-        return ResolvedNestedFields(path=path, fields=resolved_fields)
+        match path.elements[-1]:
+            case Field() | ArrayElement():
+                return resolved_fields
+            case ArraySlice():
+                return out.error(
+                    title="Invalid nested fields",
+                    message="Using nested fields on an array slice is not allowed.",
+                )
+            case Array():
+                return [ResolvedNestedFields(path=path, fields=resolved_fields)]
+            case _:
+                assert_never(path.elements[-1])
