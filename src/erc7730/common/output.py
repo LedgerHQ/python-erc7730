@@ -116,7 +116,8 @@ class ConsoleOutputAdder(OutputAdder):
             context.append(f"{output.file}")
         if output.line is not None:
             context.append(f"line {output.line}")
-        log += ", ".join(context)
+        if context:
+            log += ", ".join(context) + ": "
         if output.title is not None:
             log += f"{output.title}: "
         log += f"[/{style}]{output.message}"
