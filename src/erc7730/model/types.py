@@ -9,14 +9,18 @@ from typing import Annotated
 
 from pydantic import BeforeValidator, Field
 
+from erc7730.common.pydantic import ErrorTypeLabel
+
 Id = Annotated[
     str,
     Field(
         title="Id",
-        description="An internal identifier that can be used either for clarity specifying what the element is or as a"
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a "
         "reference in device specific sections.",
         min_length=1,
+        examples=["some_identifier"],
     ),
+    ErrorTypeLabel('identifier, such as "some_identifier".'),
 ]
 
 MixedCaseAddress = Annotated[
@@ -27,6 +31,10 @@ MixedCaseAddress = Annotated[
         min_length=42,
         max_length=42,
         pattern=r"^0x[a-fA-F0-9]+$",
+    ),
+    ErrorTypeLabel(
+        '20 bytes, hexadecimal Ethereum address prefixed with "0x" (EIP-55 or lowercase), such as '
+        + '"0xdac17f958d2ee523a2206206994597c13d831ec7".'
     ),
 ]
 
@@ -40,6 +48,10 @@ Address = Annotated[
         pattern=r"^0x[a-f0-9]+$",
     ),
     BeforeValidator(lambda v: v.lower()),
+    ErrorTypeLabel(
+        '20 bytes, lowercase hexadecimal Ethereum address prefixed with "0x", such as '
+        + '"0xdac17f958d2ee523a2206206994597c13d831ec7".'
+    ),
 ]
 
 Selector = Annotated[
@@ -51,6 +63,9 @@ Selector = Annotated[
         max_length=10,
         pattern=r"^0x[a-z0-9]+$",
     ),
+    ErrorTypeLabel(
+        '4 bytes, lowercase hexadecimal Ethereum function selector prefixed with "0x", such as ' + '"0xdac17f95".'
+    ),
 ]
 
 HexStr = Annotated[
@@ -61,6 +76,7 @@ HexStr = Annotated[
         pattern=r"^0x[a-f0-9]+$",
     ),
     BeforeValidator(lambda v: v.lower()),
+    ErrorTypeLabel('lowercase hexadecimal string prefixed with "0x", such as "0xdac17f95".'),
 ]
 
 ScalarType = str | int | bool | float
