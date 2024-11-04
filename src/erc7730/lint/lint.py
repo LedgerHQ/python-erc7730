@@ -3,7 +3,6 @@ from collections.abc import Generator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 
-from pydantic import ValidationError
 from rich import print
 
 from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
@@ -12,6 +11,7 @@ from erc7730.common.output import (
     BufferAdder,
     ConsoleOutputAdder,
     DropFileOutputAdder,
+    ExceptionsToOutput,
     GithubAnnotationsAdder,
     OutputAdder,
 )
@@ -80,6 +80,9 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
     def label(f: Path) -> Path | None:
         return f.relative_to(root_path) if root_path is not None else None
 
+    if len(files) > 1:
+        print(f"🔍 checking {len(files)} descriptor files…\n")
+
     with ThreadPoolExecutor() as executor:
         for future in (executor.submit(lint_file, file, linter, out, label(file)) for file in files):
             future.result()
@@ -100,20 +103,8 @@ def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder, show_as: Path
     label = path if show_as is None else show_as
     file_out = AddFileOutputAdder(delegate=out, file=path)
 
-    with BufferAdder(file_out, prolog=f"➡️ checking [bold]{label}[/bold]…", epilog="") as out:
-        try:
-            input_descriptor = InputERC7730Descriptor.load(path)
-            resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, out)
-            if resolved_descriptor is not None:
-                linter.lint(resolved_descriptor, out)
-        except ValidationError as e:
-            for ex in e.errors(include_url=False, include_context=True, include_input=True):
-                loc = ex["loc"]
-                if loc == ():
-                    out.error(title="Validation error", message=str(ex))
-                else:
-                    loc_str = ".".join(map(str, loc))
-                    out.error(title=f"{loc_str}", message=ex["msg"])
-        except Exception as e:
-            # TODO unwrap pydantic validation errors here to provide more user-friendly error messages
-            out.error(title="Failed to parse descriptor", message=str(e))
+    with BufferAdder(file_out, prolog=f"➡️ checking [bold]{label}[/bold]…", epilog="") as out, ExceptionsToOutput(out):
+        input_descriptor = InputERC7730Descriptor.load(path)
+        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, out)
+        if resolved_descriptor is not None:
+            linter.lint(resolved_descriptor, out)
