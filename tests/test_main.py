@@ -53,6 +53,18 @@ def test_resolve_registry_files(input_file: Path) -> None:
     assert json.loads(out) is not None
 
 
+@pytest.mark.parametrize(
+    "label,chain_id,contract_address",
+    [
+        ("Uniswap v3 Router 2", 8453, "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD"),
+    ],
+)
+def test_generate_from_contract_address(label: str, chain_id: int, contract_address: str) -> None:
+    result = runner.invoke(app, ["generate", f"--chain-id={chain_id}", f"--address={contract_address}"])
+    out = "".join(result.stdout.splitlines())
+    assert json.loads(out) is not None
+
+
 @pytest.mark.parametrize("input_file", LEGACY_EIP712_DESCRIPTORS, ids=path_id)
 def test_convert_legacy_registry_eip712_files(input_file: Path, tmp_path: Path) -> None:
     result = runner.invoke(app, ["convert", "eip712-to-erc7730", str(input_file), str(tmp_path / input_file.name)])
