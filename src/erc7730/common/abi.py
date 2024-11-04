@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from enum import StrEnum, auto
 from typing import Any, cast
 
 from eth_typing import ABIFunction
@@ -114,3 +115,16 @@ def get_functions(abis: list[ABI]) -> Functions:
             if abi.name in ("proxyType", "getImplementation", "implementation", "proxy__getImplementation"):
                 functions.proxy = True
     return functions
+
+
+class ABIDataType(StrEnum):
+    """Solidity data type."""
+
+    UINT = auto()
+    INT = auto()
+    UFIXED = auto()
+    FIXED = auto()
+    ADDRESS = auto()
+    BOOL = auto()
+    BYTES = auto()
+    STRING = auto()
