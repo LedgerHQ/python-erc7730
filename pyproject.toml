@@ -34,6 +34,8 @@ dependencies = [
     "hishel>=0.0.33",
     "xdg-base-dirs>=6.0.2",
     "limiter>=0.5.0",
+    "eth-abi>=5.1.0",
+    "stringcase>=1.2.0",
 ]
 
 [project.urls]
