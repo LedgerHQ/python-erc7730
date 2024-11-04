@@ -99,6 +99,8 @@ SimpleIntent = Annotated[
     Field(
         title="Simple Intent",
         description="A description of the intent of the structured data signing, that will be displayed to the user.",
+        min_length=1,
+        max_length=256,  # TODO: arbitrary value, to be refined
     ),
 ]
 
@@ -107,6 +109,8 @@ ComplexIntent = Annotated[
     Field(
         title="Complex Intent",
         description="A description of the intent of the structured data signing, that will be displayed to the user.",
+        min_length=1,
+        max_length=32,  # TODO: arbitrary value, to be refined
     ),
 ]
 
