@@ -7,7 +7,7 @@ from eip712.model.types import EIP712Format
 from eip712.utils import MissingRootTypeError, MultipleRootTypesError, get_primary_type
 from pydantic_string_url import HttpUrl
 
-from erc7730.common.output import OutputAdder
+from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.display import (
@@ -41,50 +41,51 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
     def convert(
         self, descriptor: ResolvedEIP712DAppDescriptor, out: OutputAdder
     ) -> dict[str, InputERC7730Descriptor] | None:
-        descriptors: dict[str, InputERC7730Descriptor] = {}
+        with ExceptionsToOutput(out):
+            descriptors: dict[str, InputERC7730Descriptor] = {}
 
-        for contract in descriptor.contracts:
-            formats: dict[str, InputFormat] = {}
-            schemas: list[EIP712JsonSchema | HttpUrl] = []
+            for contract in descriptor.contracts:
+                formats: dict[str, InputFormat] = {}
+                schemas: list[EIP712JsonSchema | HttpUrl] = []
 
-            for message in contract.messages:
-                if (primary_type := self._get_primary_type(message.schema_, out)) is None:
-                    return None
+                for message in contract.messages:
+                    if (primary_type := self._get_primary_type(message.schema_, out)) is None:
+                        return None
 
-                schemas.append(EIP712JsonSchema(primaryType=primary_type, types=message.schema_))
+                    schemas.append(EIP712JsonSchema(primaryType=primary_type, types=message.schema_))
 
-                formats[primary_type] = InputFormat(
-                    intent=message.mapper.label,
-                    fields=[self._convert_field(field) for field in message.mapper.fields],
-                    required=None,
-                    screens=None,
-                )
-
-            descriptors[contract.address] = InputERC7730Descriptor(
-                context=InputEIP712Context(
-                    eip712=InputEIP712(
-                        domain=InputDomain(
-                            name=descriptor.name,
-                            version=None,
-                            chainId=descriptor.chainId,
-                            verifyingContract=contract.address,
-                        ),
-                        schemas=schemas,
-                        deployments=[InputDeployment(chainId=descriptor.chainId, address=contract.address)],
+                    formats[primary_type] = InputFormat(
+                        intent=message.mapper.label,
+                        fields=[self._convert_field(field) for field in message.mapper.fields],
+                        required=None,
+                        screens=None,
                     )
-                ),
-                metadata=InputMetadata(
-                    owner=contract.contractName,
-                    info=None,
-                    token=None,
-                    constants=None,
-                    enums=None,
-                ),
-                display=InputDisplay(
-                    definitions=None,
-                    formats=formats,
-                ),
-            )
+
+                descriptors[contract.address] = InputERC7730Descriptor(
+                    context=InputEIP712Context(
+                        eip712=InputEIP712(
+                            domain=InputDomain(
+                                name=descriptor.name,
+                                version=None,
+                                chainId=descriptor.chainId,
+                                verifyingContract=contract.address,
+                            ),
+                            schemas=schemas,
+                            deployments=[InputDeployment(chainId=descriptor.chainId, address=contract.address)],
+                        )
+                    ),
+                    metadata=InputMetadata(
+                        owner=contract.contractName,
+                        info=None,
+                        token=None,
+                        constants=None,
+                        enums=None,
+                    ),
+                    display=InputDisplay(
+                        definitions=None,
+                        formats=formats,
+                    ),
+                )
 
         return descriptors
 

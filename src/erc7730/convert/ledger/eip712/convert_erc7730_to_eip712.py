@@ -7,7 +7,7 @@ from eip712.model.schema import EIP712SchemaField
 from eip712.model.types import EIP712Format
 
 from erc7730.common.ledger import ledger_network_id
-from erc7730.common.output import OutputAdder
+from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.model.context import EIP712JsonSchema
 from erc7730.model.display import FieldFormat
@@ -35,40 +35,42 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
     def convert(
         self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
     ) -> dict[str, InputEIP712DAppDescriptor] | None:
-        context = descriptor.context
-        if not isinstance(context, ResolvedEIP712Context):
-            return out.error("context is not EIP712")
+        with ExceptionsToOutput(out):
+            context = descriptor.context
+            if not isinstance(context, ResolvedEIP712Context):
+                return out.error("context is not EIP712")
 
-        if (domain := context.eip712.domain) is None or (dapp_name := domain.name) is None:
-            return out.error("EIP712 domain is not defined")
+            if (domain := context.eip712.domain) is None or (dapp_name := domain.name) is None:
+                return out.error("EIP712 domain is not defined")
 
-        if (contract_name := descriptor.metadata.owner) is None:
-            return out.error("metadata.owner is not defined")
+            if (contract_name := descriptor.metadata.owner) is None:
+                return out.error("metadata.owner is not defined")
 
-        messages: list[InputEIP712Message] = []
-        for primary_type, format in descriptor.display.formats.items():
-            schema = self._get_schema(primary_type, context.eip712.schemas, out)
+            messages: list[InputEIP712Message] = []
+            for primary_type, format in descriptor.display.formats.items():
+                schema = self._get_schema(primary_type, context.eip712.schemas, out)
 
-            if schema is None:
-                return out.error(f"EIP-712 schema for {primary_type} is missing")
+                if schema is None:
+                    return out.error(f"EIP-712 schema for {primary_type} is missing")
 
-            label = format.intent if isinstance(format.intent, str) else primary_type
+                label = format.intent if isinstance(format.intent, str) else primary_type
 
-            output_fields = []
-            for input_field in format.fields:
-                if (out_field := self.convert_field(input_field, None, out)) is None:
-                    return None
-                output_fields.extend(out_field)
+                output_fields = []
+                for input_field in format.fields:
+                    if (out_field := self.convert_field(input_field, None, out)) is None:
+                        return None
+                    output_fields.extend(out_field)
 
-            messages.append(
-                InputEIP712Message(schema=schema, mapper=InputEIP712Mapper(label=label, fields=output_fields))
-            )
+                messages.append(
+                    InputEIP712Message(schema=schema, mapper=InputEIP712Mapper(label=label, fields=output_fields))
+                )
 
-        descriptors: dict[str, InputEIP712DAppDescriptor] = {}
-        for deployment in context.eip712.deployments:
-            output_descriptor = self._build_network_descriptor(deployment, dapp_name, contract_name, messages, out)
-            if output_descriptor is not None:
-                descriptors[str(deployment.chainId)] = output_descriptor
+            descriptors: dict[str, InputEIP712DAppDescriptor] = {}
+            for deployment in context.eip712.deployments:
+                output_descriptor = self._build_network_descriptor(deployment, dapp_name, contract_name, messages, out)
+                if output_descriptor is not None:
+                    descriptors[str(deployment.chainId)] = output_descriptor
+
         return descriptors
 
     @classmethod

@@ -5,7 +5,7 @@ from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
 from erc7730.common.abi import reduce_signature, signature_to_selector
-from erc7730.common.output import OutputAdder
+from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.convert.resolved.constants import ConstantProvider, DefaultConstantProvider
 from erc7730.convert.resolved.parameters import resolve_field_parameters
@@ -76,18 +76,20 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @override
     def convert(self, descriptor: InputERC7730Descriptor, out: OutputAdder) -> ResolvedERC7730Descriptor | None:
-        constants = DefaultConstantProvider(descriptor)
+        with ExceptionsToOutput(out):
+            constants = DefaultConstantProvider(descriptor)
 
-        if (context := self._resolve_context(descriptor.context, out)) is None:
-            return None
-        if (metadata := self._resolve_metadata(descriptor.metadata, out)) is None:
-            return None
-        if (
-            display := self._resolve_display(descriptor.display, context, metadata.enums or {}, constants, out)
-        ) is None:
-            return None
+            if (context := self._resolve_context(descriptor.context, out)) is None:
+                return None
+            if (metadata := self._resolve_metadata(descriptor.metadata, out)) is None:
+                return None
+            if (display := self._resolve_display(descriptor.display, context, metadata.enums, constants, out)) is None:
+                return None
 
-        return ResolvedERC7730Descriptor(context=context, metadata=metadata, display=display)
+            return ResolvedERC7730Descriptor(context=context, metadata=metadata, display=display)
+
+        # noinspection PyUnreachableCode
+        return None
 
     @classmethod
     def _resolve_context(
@@ -260,17 +262,17 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         cls,
         display: InputDisplay,
         context: ResolvedContractContext | ResolvedEIP712Context,
-        enums: dict[Id, EnumDefinition],
+        enums: dict[Id, EnumDefinition] | None,
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> ResolvedDisplay | None:
+        definitions = display.definitions or {}
+        enums = enums or {}
         formats = {}
         for format_id, format in display.formats.items():
             if (resolved_format_id := cls._resolve_format_id(format_id, context, out)) is None:
                 return None
-            if (
-                resolved_format := cls._resolve_format(format, display.definitions or {}, enums, constants, out)
-            ) is None:
+            if (resolved_format := cls._resolve_format(format, definitions, enums, constants, out)) is None:
                 return None
             if resolved_format_id in formats:
                 return out.error(
