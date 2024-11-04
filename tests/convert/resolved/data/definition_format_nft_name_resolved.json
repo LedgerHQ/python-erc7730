@@ -11,7 +11,7 @@
               { "name": "chainId", "type": "uint256" },
               { "name": "verifyingContract", "type": "address" }
             ],
-            "TestPrimaryType": [{ "name": "param1", "type": "string" }]
+            "TestPrimaryType": [{ "name": "param1", "type": "string" }, { "name": "collection1", "type": "address" }]
           }
         }
       ]
@@ -26,13 +26,7 @@
             "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
             "label": "Param 1",
             "format": "nftName",
-            "params": {
-              "collectionPath": {
-                "type": "data",
-                "absolute": true,
-                "elements": [{ "type": "field", "identifier": "0x0000000000000000000000000000000000000001" }]
-              }
-            }
+            "params": { "collectionPath": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "collection1" }] } }
           }
         ]
       }

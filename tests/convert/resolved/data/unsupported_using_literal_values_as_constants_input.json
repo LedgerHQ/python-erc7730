@@ -32,7 +32,7 @@
                                 "type": "string"
                             },
                             {
-                                "name": "collection1",
+                                "name": "token1",
                                 "type": "address"
                             }
                         ]
@@ -41,23 +41,22 @@
             ]
         }
     },
-    "metadata": {},
+    "metadata": {
+        "constants": {
+            "token_path": "0x0000000000000000000000000000000000000001"
+        }
+    },
     "display": {
-        "definitions": {
-            "test_definition": {
-                "label": "Param 1",
-                "format": "nftName",
-                "params": {
-                    "collectionPath": "collection1"
-                }
-            }
-        },
         "formats": {
             "TestPrimaryType": {
                 "fields": [
                     {
-                        "path": "param1",
-                        "$ref": "$.display.definitions.test_definition"
+                        "path": "#.param1",
+                        "label": "Param 1",
+                        "format": "tokenAmount",
+                        "params": {
+                            "tokenPath": "$.metadata.constants.token_path"
+                        }
                     }
                 ]
             }

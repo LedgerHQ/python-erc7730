@@ -213,13 +213,13 @@ def test_registry_files(input_file: Path) -> None:
             id="definition_invalid_container_path",
             label="display definition / reference - using a container path",
             description="use of a reference to a display definition with a container path",
-            error="Input should be an instance of DescriptorPath",
+            error="descriptor path referencing a value in the descriptor document using jsonpath syntax, such as",
         ),
         TestCase(
             id="definition_invalid_data_path",
             label="display definition / reference - using a data path",
             description="use of a reference to a display definition with a data path",
-            error="Input should be an instance of DescriptorPath",
+            error="descriptor path referencing a value in the descriptor document using jsonpath syntax, such as",
         ),
         TestCase(
             id="definition_invalid_path_does_not_exist",
@@ -263,12 +263,24 @@ def test_registry_files(input_file: Path) -> None:
             label="nested fields - struct parameter (EIP-712 descriptor)",
             description="use of nested fields on a struct parameter (EIP-712 descriptor)",
         ),
+        TestCase(
+            id="unsupported_using_literal_values",
+            label="unsupported: using literal value instead of data path",
+            description="using a literal value where a data path is expected",
+            error="It seems you are trying to use a constant address value instead",
+        ),
+        TestCase(
+            id="unsupported_using_literal_values_as_constants",
+            label="unsupported: using literal value instead of data path",
+            description="using a literal value where a data path is expected, defined in constants section",
+            error="It seems you are trying to use a constant address value instead",
+        ),
     ],
     ids=case_id,
 )
 def test_by_reference(testcase: TestCase) -> None:
     """
-    Test converting ERC-7730 registry files from input to resolved form, and compare against reference files.
+    Test converting ERC-7730 descriptor files from input to resolved form, and compare against reference files.
     """
     input_descriptor_path = DATA / f"{testcase.id}_input.json"
     resolved_descriptor_path = DATA / f"{testcase.id}_resolved.json"
