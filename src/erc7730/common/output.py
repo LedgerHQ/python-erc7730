@@ -1,11 +1,14 @@
+import re
 import threading
 from builtins import print as builtin_print
 from contextlib import AbstractContextManager
 from enum import IntEnum, auto
+from itertools import groupby
 from types import TracebackType
 from typing import assert_never, final, override
 
-from pydantic import BaseModel, FilePath
+from pydantic import BaseModel, ConfigDict, FilePath, ValidationError
+from pydantic_core import ErrorDetails
 from rich import print
 
 MUX = threading.Lock()
@@ -13,6 +16,17 @@ MUX = threading.Lock()
 
 class Output(BaseModel):
     """An output info/debug/warning/error."""
+
+    model_config = ConfigDict(
+        strict=True,
+        frozen=True,
+        extra="forbid",
+        validate_default=True,
+        validate_return=True,
+        validate_assignment=True,
+        arbitrary_types_allowed=False,
+        allow_inf_nan=False,
+    )
 
     class Level(IntEnum):
         """ERC7730Linter output level."""
@@ -88,6 +102,19 @@ class ListOutputAdder(OutputAdder):
         self.outputs.append(output)
 
 
+@final
+class SetOutputAdder(OutputAdder):
+    """An output adder that stores outputs in a set."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.outputs: set[Output] = set()
+
+    def add(self, output: Output) -> None:
+        super().add(output)
+        self.outputs.add(output)
+
+
 class ConsoleOutputAdder(OutputAdder):
     """An output adder that prints to the console."""
 
@@ -120,7 +147,10 @@ class ConsoleOutputAdder(OutputAdder):
             log += ", ".join(context) + ": "
         if output.title is not None:
             log += f"{output.title}: "
-        log += f"[/{style}]{output.message}"
+        log += f"[/{style}]"
+        if "\n" in output.message:
+            log += "\n"
+        log += output.message
 
         print(log)
 
@@ -210,10 +240,10 @@ class DropFileOutputAdder(OutputAdder):
 
 @final
 class BufferAdder(AbstractContextManager[OutputAdder]):
-    """A context manager that buffers outputs and outputs them all at once."""
+    """A context manager that buffers outputs and outputs them all at once, sorted and deduplicated."""
 
     def __init__(self, delegate: OutputAdder, prolog: str | None = None, epilog: str | None = None) -> None:
-        self._buffer = ListOutputAdder()
+        self._buffer = SetOutputAdder()
         self._delegate = delegate
         self._prolog = prolog
         self._epilog = epilog
@@ -228,10 +258,85 @@ class BufferAdder(AbstractContextManager[OutputAdder]):
         try:
             if self._prolog is not None:
                 print(self._prolog)
-            for output in self._buffer.outputs:
-                self._delegate.add(output)
+            if self._buffer.outputs:
+                for output in sorted(self._buffer.outputs, key=lambda x: (x.file, x.line, x.level, x.title, x.message)):
+                    self._delegate.add(output)
+            else:
+                print("no issue found ✔️")
             if self._epilog is not None:
                 print(self._epilog)
         finally:
             MUX.release()
         return None
+
+
+@final
+class ExceptionsToOutput(AbstractContextManager[None]):
+    """A context manager that catches exceptions and redirects them to an OutputAdder."""
+
+    def __init__(self, delegate: OutputAdder) -> None:
+        self._delegate = delegate
+
+    @override
+    def __enter__(self) -> None:
+        return None
+
+    @override
+    def __exit__(self, etype: type[BaseException] | None, e: BaseException | None, tb: TracebackType | None) -> bool:
+        if isinstance(e, Exception):
+            exception_to_output(e, self._delegate)
+            return True
+        return False
+
+
+def exception_to_output(e: Exception, out: OutputAdder) -> None:
+    """
+    Sanitize an exception and add it to an OutputAdder.
+
+    :param e: exception to handle
+    :param out: output handler
+    """
+    match e:
+        case ValidationError() as e:
+            pydantic_error_to_output(e, out)
+        case Exception() as e:
+            out.error(title="Failed processing descriptor", message=str(e))
+        case _:
+            assert_never(e)
+
+
+def pydantic_error_to_output(e: ValidationError, out: OutputAdder) -> None:
+    """
+    Sanitize a pydantic validation exception and add it to an OutputAdder.
+
+    This cleans up location, and groups errors by location to avoid outputting multiple errors when not necessary, for
+    instance for union types.
+
+    :param e: exception to handle
+    :param out: output handler
+    """
+
+    def filter_location(loc: int | str) -> bool:
+        if isinstance(loc, int):
+            return True
+        return bool(re.match(r"(list|set)\[.*", loc))
+
+    def get_location(ex: ErrorDetails) -> str:
+        if not (loc := ex.get("loc")):
+            return "unknown location"
+        return ".".join(map(str, filter(filter_location, loc[:-1])))
+
+    def get_value(ex: ErrorDetails) -> str:
+        return str(ex.get("input", "unknown value"))
+
+    def get_details(ex: ErrorDetails) -> str:
+        return ex.get("msg", "unknown error")
+
+    def get_message(ex: ErrorDetails) -> str:
+        return f"""Value "{get_value(ex)}" is not valid: {get_details(ex)}"""
+
+    for location, location_errors in groupby(e.errors(include_url=False), get_location):
+        if (len(errors := list(location_errors))) > 1:
+            out.error(title=f"Invalid value at {location}", message="* " + "\n * ".join(map(get_message, errors)))
+        else:
+            out.error(title=f"Invalid value at {location}", message=get_message(errors[0]))
