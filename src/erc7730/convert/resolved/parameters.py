@@ -13,6 +13,7 @@ from erc7730.model.input.display import (
     InputTokenAmountParameters,
     InputUnitParameters,
 )
+from erc7730.model.input.path import DescriptorPathStr
 from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import DataPath
 from erc7730.model.paths.path_ops import data_or_container_path_concat
@@ -26,7 +27,7 @@ from erc7730.model.resolved.display import (
     ResolvedTokenAmountParameters,
     ResolvedUnitParameters,
 )
-from erc7730.model.types import Address, HexStr, Id
+from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress
 
 
 def resolve_field_parameters(
@@ -81,12 +82,23 @@ def resolve_token_amount_parameters(
 ) -> ResolvedTokenAmountParameters | None:
     token_path = constants.resolve_path_or_none(params.tokenPath, out)
 
-    input_addresses = cast(Address | list[Address] | None, constants.resolve_or_none(params.nativeCurrencyAddress, out))
+    input_addresses = cast(
+        list[DescriptorPathStr | MixedCaseAddress] | MixedCaseAddress | None,
+        constants.resolve_or_none(params.nativeCurrencyAddress, out),
+    )
     resolved_addresses: list[Address] | None
-    if input_addresses is not None:
-        resolved_addresses = [input_addresses] if isinstance(input_addresses, str) else input_addresses
-    else:
+    if input_addresses is None:
         resolved_addresses = None
+    elif isinstance(input_addresses, list):
+        resolved_addresses = []
+        for input_address in input_addresses:
+            if (resolved_address := constants.resolve(input_address, out)) is None:
+                return None
+            resolved_addresses.append(Address(resolved_address))
+    elif isinstance(input_addresses, str):
+        resolved_addresses = [Address(input_addresses)]
+    else:
+        raise Exception("Invalid nativeCurrencyAddress type")
 
     input_threshold = cast(HexStr | int | None, constants.resolve_or_none(params.threshold, out))
     resolved_threshold: HexStr | None

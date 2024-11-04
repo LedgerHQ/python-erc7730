@@ -70,11 +70,13 @@ class InputTokenAmountParameters(Model):
         '"Unknown token" warning.',
     )
 
-    nativeCurrencyAddress: DescriptorPathStr | list[MixedCaseAddress] | MixedCaseAddress | None = Field(
-        default=None,
-        title="Native Currency Address",
-        description="An address or array of addresses, any of which are interpreted as an amount in native currency "
-        "rather than a token.",
+    nativeCurrencyAddress: list[DescriptorPathStr | MixedCaseAddress] | DescriptorPathStr | MixedCaseAddress | None = (
+        Field(
+            default=None,
+            title="Native Currency Address",
+            description="An address or array of addresses, any of which are interpreted as an amount in native "
+            "currency rather than a token.",
+        )
     )
 
     threshold: DescriptorPathStr | HexStr | int | None = Field(
