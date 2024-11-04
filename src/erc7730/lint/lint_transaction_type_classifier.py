@@ -5,7 +5,7 @@ from erc7730.lint import ERC7730Linter
 from erc7730.lint.classifier import TxClass
 from erc7730.lint.classifier.abi_classifier import ABIClassifier
 from erc7730.lint.classifier.eip712_classifier import EIP712Classifier
-from erc7730.model.resolved.context import EIP712JsonSchema, ResolvedContractContext, ResolvedEIP712Context
+from erc7730.model.resolved.context import EIP712Schema, ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import ResolvedDisplay, ResolvedFormat
 
@@ -34,7 +34,7 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
             classifier = EIP712Classifier()
             if descriptor.context.eip712.schemas is not None:
                 first_schema = descriptor.context.eip712.schemas[0]
-                if isinstance(first_schema, EIP712JsonSchema):
+                if isinstance(first_schema, EIP712Schema):
                     return classifier.classify(first_schema)
                 # url should have been resolved earlier
         elif isinstance(descriptor.context, ResolvedContractContext):

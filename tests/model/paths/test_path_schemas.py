@@ -1,7 +1,7 @@
 from eip712.model.schema import EIP712SchemaField
 
 from erc7730.model.abi import Component, Function, InputOutput
-from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.context import EIP712Schema
 from erc7730.model.paths.path_parser import to_path
 from erc7730.model.paths.path_schemas import compute_abi_schema_paths, compute_eip712_schema_paths
 
@@ -69,7 +69,7 @@ def test_compute_abi_paths_with_multiple_nested_params() -> None:
 
 
 def test_compute_eip712_paths_with_slicable_params() -> None:
-    schema = EIP712JsonSchema(
+    schema = EIP712Schema(
         primaryType="Foo",
         types={"Foo": [EIP712SchemaField(name="bar", type="bytes")]},
     )
@@ -81,7 +81,7 @@ def test_compute_eip712_paths_with_slicable_params() -> None:
 
 
 def test_compute_eip712_paths_with_multiple_nested_params() -> None:
-    schema = EIP712JsonSchema(
+    schema = EIP712Schema(
         primaryType="Foo",
         types={
             "Foo": [

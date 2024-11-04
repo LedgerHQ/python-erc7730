@@ -11,7 +11,7 @@ from erc7730.convert.resolved.constants import ConstantProvider, DefaultConstant
 from erc7730.convert.resolved.parameters import resolve_field_parameters
 from erc7730.convert.resolved.references import resolve_reference
 from erc7730.model.abi import ABI
-from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.context import EIP712Schema
 from erc7730.model.display import (
     FieldFormat,
 )
@@ -232,9 +232,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _resolve_schemas(
-        cls, schemas: list[EIP712JsonSchema | HttpUrl], out: OutputAdder
-    ) -> list[EIP712JsonSchema] | None:
+    def _resolve_schemas(cls, schemas: list[EIP712Schema | HttpUrl], out: OutputAdder) -> list[EIP712Schema] | None:
         resolved_schemas = []
         for schema in schemas:
             if (resolved_schema := cls._resolve_schema(schema, out)) is not None:
@@ -242,17 +240,17 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         return resolved_schemas
 
     @classmethod
-    def _resolve_schema(cls, schema: EIP712JsonSchema | HttpUrl, out: OutputAdder) -> EIP712JsonSchema | None:
+    def _resolve_schema(cls, schema: EIP712Schema | HttpUrl, out: OutputAdder) -> EIP712Schema | None:
         match schema:
             case HttpUrl() as url:
                 try:
-                    return client.get(url=url, model=EIP712JsonSchema)
+                    return client.get(url=url, model=EIP712Schema)
                 except Exception as e:
                     return out.error(
                         title="Failed to fetch EIP-712 schema from URL",
                         message=f'Failed to fetch EIP-712 schema from URL "{url}": {e}',
                     )
-            case EIP712JsonSchema():
+            case EIP712Schema():
                 return schema
             case _:
                 assert_never(schema)

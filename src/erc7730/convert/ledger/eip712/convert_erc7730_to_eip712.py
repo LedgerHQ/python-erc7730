@@ -9,7 +9,7 @@ from eip712.model.types import EIP712Format
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.context import EIP712Schema
 from erc7730.model.display import FieldFormat
 from erc7730.model.paths import ContainerField, ContainerPath, DataPath
 from erc7730.model.paths.path_ops import data_path_concat, to_relative
@@ -96,7 +96,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
 
     @classmethod
     def _get_schema(
-        cls, primary_type: str, schemas: list[EIP712JsonSchema], out: OutputAdder
+        cls, primary_type: str, schemas: list[EIP712Schema], out: OutputAdder
     ) -> dict[str, list[EIP712SchemaField]] | None:
         for schema in schemas:
             if schema.primaryType == primary_type:

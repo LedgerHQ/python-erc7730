@@ -4,7 +4,7 @@ from typing import assert_never
 from eip712.model.schema import EIP712SchemaField
 
 from erc7730.model.abi import Component, Function, InputOutput
-from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.context import EIP712Schema
 from erc7730.model.paths import (
     ROOT_DATA_PATH,
     Array,
@@ -38,7 +38,7 @@ class FormatPaths:
     container_paths: set[ContainerPath]  # References to values in the container
 
 
-def compute_eip712_schema_paths(schema: EIP712JsonSchema) -> set[DataPath]:
+def compute_eip712_schema_paths(schema: EIP712Schema) -> set[DataPath]:
     """
     Compute the sets of valid schema paths for an EIP-712 schema.
 

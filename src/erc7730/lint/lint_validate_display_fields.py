@@ -10,7 +10,7 @@ from erc7730.model.paths.path_schemas import (
     compute_eip712_schema_paths,
     compute_format_schema_paths,
 )
-from erc7730.model.resolved.context import EIP712JsonSchema, ResolvedContractContext, ResolvedEIP712Context
+from erc7730.model.resolved.context import EIP712Schema, ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
 AUTHORIZED_MISSING_DISPLAY_FIELDS = {
@@ -36,7 +36,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         if isinstance(descriptor.context, ResolvedEIP712Context) and descriptor.context.eip712.schemas is not None:
             primary_types: set[str] = set()
             for schema in descriptor.context.eip712.schemas:
-                if isinstance(schema, EIP712JsonSchema):
+                if isinstance(schema, EIP712Schema):
                     primary_types.add(schema.primaryType)
                     if schema.primaryType not in schema.types:
                         out.error(

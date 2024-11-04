@@ -3,7 +3,7 @@ from enum import StrEnum, auto
 from typing import Generic, TypeVar
 
 from erc7730.model.abi import ABI
-from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.context import EIP712Schema
 
 
 class TxClass(StrEnum):
@@ -13,7 +13,7 @@ class TxClass(StrEnum):
     WITHDRAW = auto()
 
 
-Schema = TypeVar("Schema", list[ABI], EIP712JsonSchema)
+Schema = TypeVar("Schema", list[ABI], EIP712Schema)
 
 
 class Classifier(ABC, Generic[Schema]):

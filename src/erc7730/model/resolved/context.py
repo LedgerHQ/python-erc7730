@@ -3,7 +3,7 @@ from pydantic_string_url import HttpUrl
 
 from erc7730.model.abi import ABI
 from erc7730.model.base import Model
-from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.context import EIP712Schema
 from erc7730.model.types import Address, Id
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -111,7 +111,7 @@ class ResolvedEIP712(ResolvedBindingContext):
         description="The domain separator value that must be matched by the message. In hex string representation.",
     )
 
-    schemas: list[EIP712JsonSchema] = Field(title="EIP-712 messages schemas", description="Schemas of all messages.")
+    schemas: list[EIP712Schema] = Field(title="EIP-712 messages schemas", description="Schemas of all messages.")
 
 
 class ResolvedContractContext(Model):

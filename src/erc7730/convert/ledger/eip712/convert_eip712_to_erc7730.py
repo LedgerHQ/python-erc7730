@@ -9,7 +9,7 @@ from pydantic_string_url import HttpUrl
 
 from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
-from erc7730.model.context import EIP712JsonSchema
+from erc7730.model.context import EIP712Schema
 from erc7730.model.display import (
     DateEncoding,
     FieldFormat,
@@ -46,13 +46,13 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
 
             for contract in descriptor.contracts:
                 formats: dict[str, InputFormat] = {}
-                schemas: list[EIP712JsonSchema | HttpUrl] = []
+                schemas: list[EIP712Schema | HttpUrl] = []
 
                 for message in contract.messages:
                     if (primary_type := self._get_primary_type(message.schema_, out)) is None:
                         return None
 
-                    schemas.append(EIP712JsonSchema(primaryType=primary_type, types=message.schema_))
+                    schemas.append(EIP712Schema(primaryType=primary_type, types=message.schema_))
 
                     formats[primary_type] = InputFormat(
                         intent=message.mapper.label,
