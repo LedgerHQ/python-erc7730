@@ -11,6 +11,7 @@ from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.path import ContainerPathStr, DataPathStr
 from erc7730.model.paths import ROOT_DESCRIPTOR_PATH, ArrayElement, ContainerPath, DataPath, DescriptorPath, Field
 from erc7730.model.paths.path_ops import descriptor_path_append, to_absolute
+from erc7730.model.types import MixedCaseAddress
 
 _T = TypeVar("_T", covariant=True)
 
@@ -61,34 +62,60 @@ class ConstantProvider(ABC):
         :param out: error handler
         :return: resolved data/container path
         """
+
+        def assert_not_address(path: DataPath | ContainerPath) -> bool:
+            match path:
+                case ContainerPath():
+                    return True
+                case DataPath():
+                    if path.absolute:
+                        return True
+                    try:
+                        TypeAdapter(MixedCaseAddress).validate_strings(str(path))
+                        out.error(
+                            title="Invalid data path",
+                            message=f""""{path}" is invalid, it must contain a data path to the address in the """
+                            "transaction data. It seems you are trying to use a constant address value instead, please "
+                            "note this feature is not supported (yet).",
+                        )
+                        return False
+                    except ValidationError:
+                        return True
+                case _:
+                    assert_never(path)
+
         if isinstance(value, DataPath | ContainerPath):
+            if not assert_not_address(value):
+                return None
             return value
+
         resolved_value: Any
         if (resolved_value := self.resolve(value, out)) is None:
             return None
+
         if not isinstance(resolved_value, str):
             return out.error(
                 title="Invalid constant path",
                 message=f"Constant path defined at {value} must be a path string, got {type(resolved_value).__name__}.",
             )
-        try:
-            match TypeAdapter(DataPathStr | ContainerPathStr).validate_strings(resolved_value):
-                case ContainerPath() as path:
-                    return path
-                case DataPath() as path:
-                    if not path.absolute:
-                        return out.error(
-                            title="Invalid data path constant",
-                            message=f"Data path defined at {value} must be absolute, please change it to "
-                            f"{to_absolute(path)}. If your intention was to define a literal constant rather "
-                            f"than a data path, please note this feature is not supported.",
-                        )
-                    return path
-                case _:
-                    assert_never(resolved_value)
-        except ValidationError as e:
-            # FIXME error handling
-            out.error(title="Invalid constant path", message=str(e))
+
+        match TypeAdapter(DataPathStr | ContainerPathStr).validate_strings(resolved_value):
+            case ContainerPath() as path:
+                return path
+            case DataPath() as path:
+                if not assert_not_address(path):
+                    return None
+                if not path.absolute:
+                    return out.error(
+                        title="Invalid data path constant",
+                        message=f"Data path defined at {value} must be absolute, please change it to "
+                        f"{to_absolute(path)}.",
+                    )
+                return path
+            case _:
+                assert_never(resolved_value)
+
+        # noinspection PyUnreachableCode
         return None
 
     def resolve_path_or_none(
