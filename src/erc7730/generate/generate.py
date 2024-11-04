@@ -2,9 +2,9 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Any, assert_never
 
+from caseswitcher import to_title
 from pydantic import TypeAdapter
 from pydantic_string_url import HttpUrl
-from stringcase import titlecase
 
 from erc7730.common.abi import ABIDataType, compute_signature, get_functions
 from erc7730.common.client import get_contract_abis
@@ -233,7 +233,7 @@ def _get_leaf_name(path: DataPath) -> str:
     for element in reversed(path.elements):
         match element:
             case Field(identifier=name):
-                return titlecase(name).strip()
+                return to_title(name).strip()
             case Array() | ArrayElement() | ArraySlice():
                 continue
             case _:
