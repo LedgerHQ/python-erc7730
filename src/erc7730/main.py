@@ -4,6 +4,8 @@ from typing import Annotated, assert_never
 
 from eip712.convert.input_to_resolved import EIP712InputToResolvedConverter
 from eip712.model.input.descriptor import InputEIP712DAppDescriptor
+from pydantic_string_url import HttpUrl
+from rich import print
 from typer import Argument, Exit, Option, Typer
 
 from erc7730.common.output import ConsoleOutputAdder
@@ -11,7 +13,7 @@ from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
 from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
-from erc7730.generate.generate import generate_contract
+from erc7730.generate.generate import generate_descriptor
 from erc7730.lint.lint import lint_all_and_print_errors
 from erc7730.model import ERC7730ModelType
 from erc7730.model.base import Model
@@ -109,10 +111,21 @@ def resolve(
 def generate(
     chain_id: Annotated[int, Option(help="The EIP-155 chain id")],
     address: Annotated[Address, Option(help="The contract address")],
+    abi: Annotated[Path | None, Option(help="Path to a JSON ABI file (to generate a calldata descriptor)")] = None,
+    schema: Annotated[Path | None, Option(help="Path to an EIP-712 schema (to generate an EIP-712 descriptor)")] = None,
+    owner: Annotated[str | None, Option(help="The display name of the owner or target of the contract")] = None,
+    legal_name: Annotated[str | None, Option(help="The full legal name of the owner")] = None,
+    url: Annotated[str | None, Option(help="URL with more info on the entity interacted with")] = None,
 ) -> None:
-    # TODO: add support for providing ABI file
-    # TODO: add support for providing EIP-712 schema file
-    descriptor = generate_contract(chain_id, address)
+    descriptor = generate_descriptor(
+        chain_id=chain_id,
+        contract_address=address,
+        abi_file=abi,
+        eip712_schema_file=schema,
+        owner=owner,
+        legal_name=legal_name,
+        url=HttpUrl(url) if url is not None else None,
+    )
     print(descriptor.to_json_string())
 
 
