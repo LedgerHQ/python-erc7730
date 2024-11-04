@@ -12,6 +12,7 @@ from pydantic_core.core_schema import (
     to_string_ser_schema,
 )
 
+from erc7730.common.pydantic import ErrorTypeLabel
 from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
 from erc7730.model.paths.path_parser import to_path
 
@@ -30,6 +31,9 @@ ContainerPathStr = Annotated[
         title="Input Path",
         description="A path applying to the container of the structured data to be signed. Such paths are prefixed "
         """with "@".""",
+    ),
+    ErrorTypeLabel(
+        "path applying to the container of the structured data to be signed, such as " + '"@.to" or "@.value".'
     ),
 ]
 
@@ -50,6 +54,7 @@ DataPathStr = Annotated[
         "itself for EIP-712). A data path can reference multiple values if it contains array elements or slices. Such "
         """paths are prefixed with "#".""",
     ),
+    ErrorTypeLabel("data path referencing a value in the structured data schema, such as " + '"#.foo.[0].bar.[0:-1]".'),
 ]
 
 DESCRIPTOR_PATH_STR_JSON_SCHEMA = chain_schema(
@@ -68,5 +73,10 @@ DescriptorPathStr = Annotated[
         description="A path applying to the current file describing the structured data formatting, after merging "
         "with includes. A descriptor path can only reference a single value in the document. Such paths are prefixed "
         """with "$".""",
+        examples=["$.foo.bar"],
+    ),
+    ErrorTypeLabel(
+        "descriptor path referencing a value in the descriptor document using jsonpath syntax, such as "
+        + '"$.foo.bar".'
     ),
 ]
