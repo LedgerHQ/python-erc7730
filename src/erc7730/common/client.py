@@ -9,7 +9,7 @@ from httpx import URL, BaseTransport, Client, HTTPTransport, Request, Response
 from httpx._content import IteratorByteStream
 from httpx_file import FileTransport
 from limiter import Limiter
-from pydantic import ConfigDict, TypeAdapter
+from pydantic import ConfigDict, TypeAdapter, ValidationError
 from pydantic_string_url import FileUrl, HttpUrl
 from xdg_base_dirs import xdg_cache_home
 
@@ -50,14 +50,19 @@ def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
     :return: deserialized list of ABIs
     :raises NotImplementedError: if chain id not supported, API key not setup, or unexpected response
     """
-    return get(
-        url=HttpUrl(f"https://{ETHERSCAN}/v2/api"),
-        chainid=chain_id,
-        module="contract",
-        action="getabi",
-        address=contract_address,
-        model=list[ABI],
-    )
+    try:
+        return get(
+            url=HttpUrl(f"https://{ETHERSCAN}/v2/api"),
+            chainid=chain_id,
+            module="contract",
+            action="getabi",
+            address=contract_address,
+            model=list[ABI],
+        )
+    except Exception as e:
+        if "Contract source code not verified" in str(e):
+            raise Exception("contract source is not available on Etherscan") from e
+        raise e
 
 
 def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpUrl:
@@ -91,7 +96,11 @@ def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
     :raises Exception: if URL type is not supported, API key not setup, or unexpected response
     """
     with _client() as client:
-        return TypeAdapter(model).validate_json(client.get(url, params=params).raise_for_status().content)
+        response = client.get(url, params=params).raise_for_status().content
+    try:
+        return TypeAdapter(model).validate_json(response)
+    except ValidationError as e:
+        raise Exception(f"Received unexpected response from {url}: {response.decode()}") from e
 
 
 def _client() -> Client:
