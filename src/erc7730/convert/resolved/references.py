@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from pydantic import TypeAdapter, ValidationError
+from pydantic import TypeAdapter
 
 from erc7730.common.options import first_not_none
 from erc7730.common.output import OutputAdder
@@ -56,15 +56,9 @@ def resolve_reference(
     resolved_params: ResolvedFieldParameters | None = None
 
     if params:
-        try:
-            input_params: InputFieldParameters = TypeAdapter(InputFieldParameters).validate_json(json.dumps(params))
-            if (resolved_params := resolve_field_parameters(prefix, input_params, enums, constants, out)) is None:
-                return None
-        except ValidationError as e:
-            return out.error(
-                title="Invalid display field parameters",
-                message=f"Error parsing display field parameters: {e}",
-            )
+        input_params: InputFieldParameters = TypeAdapter(InputFieldParameters).validate_json(json.dumps(params))
+        if (resolved_params := resolve_field_parameters(prefix, input_params, enums, constants, out)) is None:
+            return None
 
     if (path := constants.resolve_path(reference.path, out)) is None:
         return None
