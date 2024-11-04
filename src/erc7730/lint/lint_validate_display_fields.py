@@ -42,12 +42,12 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                         out.error(
                             title="Invalid EIP712 Schema",
                             message=f"Primary type `{schema.primaryType}` is not present in schema types. Please make "
-                            f"sure the EIP-712 includes a definition for the primary type.",
+                            f"sure the EIP-712 schema includes a definition for the primary type.",
                         )
                         continue
                     if schema.primaryType not in descriptor.display.formats:
                         out.error(
-                            title="Missing Display field",
+                            title="Missing Display Format",
                             message=f"Schema primary type `{schema.primaryType}` must have a display format defined.",
                         )
                         continue
@@ -67,22 +67,23 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                         if any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
                             out.debug(
                                 title="Optional Display field missing",
-                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}. "
-                                f"If intentionally excluded, please add it to `excluded` list to avoid this "
-                                f"warning.",
+                                message=f"No display field is defined for path `{path}` in message "
+                                f"{schema.primaryType}. If intentionally excluded, please add it to `excluded` "
+                                f"list to avoid this warning.",
                             )
                         else:
                             out.warning(
                                 title="Missing Display field",
-                                message=f"Display field for path `{path}` is missing for message {schema.primaryType}. "
+                                message=f"No display field is defined for path `{path}` in {schema.primaryType}. "
                                 f"If intentionally excluded, please add it to `excluded` list to avoid this "
                                 f"warning.",
                             )
                     for path in format_paths - eip712_paths:
                         out.error(
-                            title="Extra Display field",
-                            message=f"Display field for path `{path}` is not in message {schema.primaryType}. Please "
-                            f"check the field path is valid according to the EIP-712 schema.",
+                            title="Invalid Display field",
+                            message=f"A display field is defined for `{path}`, but it does not exist in message "
+                            f"{schema.primaryType}. Please check the field path is valid according to the EIP-712 "
+                            f"schema.",
                         )
 
                 else:
@@ -94,9 +95,9 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             for fmt in descriptor.display.formats:
                 if fmt not in primary_types:
                     out.error(
-                        title="Invalid Display field",
-                        message=f"Format message `{fmt}` is not in EIP712 schemas. Please check the field path is "
-                        f"valid according to the EIP-712 schema.",
+                        title="Invalid Display Format",
+                        message=f"Type `{fmt}` is not in EIP712 schemas. Please check the type is valid according to "
+                        f"the EIP-712 schema.",
                     )
 
     @classmethod
@@ -128,18 +129,19 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
 
                     if any(data_path_ends_with(path, allowed) for allowed in AUTHORIZED_MISSING_DISPLAY_FIELDS):
                         out.debug(
-                            title="Optional Display field missing",
-                            message=f"Display field for path `{path}` is missing for selector {selector}. If "
+                            title="Optional Display Field Missing",
+                            message=f"No display field is defined for path `{path}` in function {selector}. If "
                             f"intentionally excluded, please add it to `excluded` list to avoid this warning.",
                         )
                     else:
                         out.warning(
                             title="Missing Display field",
-                            message=f"Display field for path `{path}` is missing for selector {selector}. If "
+                            message=f"No display field is defined for path `{path}` in function {selector}. If "
                             f"intentionally excluded, please add it to `excluded` list to avoid this warning.",
                         )
                 for path in format_paths - abi_paths:
                     out.error(
                         title="Invalid Display field",
-                        message=f"Display field for path `{path}` is not in selector {selector}.",
+                        message=f"A display field is defined for `{path}`, but it does not exist in function "
+                        f"{selector} ABI. Please check the field path is valid according to the ABI.",
                     )

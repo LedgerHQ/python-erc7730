@@ -1,7 +1,5 @@
 from typing import final, override
 
-from pydantic import ValidationError
-
 from erc7730.common import client
 from erc7730.common.abi import compute_signature, get_functions
 from erc7730.common.output import OutputAdder
@@ -41,7 +39,7 @@ class ValidateABILinter(ERC7730Linter):
             try:
                 if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
                     continue
-            except ValidationError as e:
+            except Exception as e:
                 out.warning(
                     title="Could not fetch ABI",
                     message=f"Fetching reference ABI for chain id {deployment.chainId} failed, descriptor ABIs will "
