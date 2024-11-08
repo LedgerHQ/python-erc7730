@@ -61,7 +61,7 @@ It can be called with single files or directories, in which case all descriptors
 
 ### `erc7730 generate`
 
-The `generate` bootstraps a new descriptor file from a template:
+The `generate` command bootstraps a new descriptor file from ABIs or message schemas:
 ```shell
 # fetch ABIs from etherscan and generate a new calldata descriptor
 erc7730 generate --chain-id=1 --address=0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45
