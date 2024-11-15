@@ -67,24 +67,30 @@ class ArraySlice(Model):
         description="The path component type identifier (discriminator for path components discriminated union).",
     )
 
-    start: ArrayIndex = PydanticField(
+    start: ArrayIndex | None = PydanticField(
+        default=None,
         title="Slice Start Index",
-        description="The start index of the slice. Must be lower than the end index.",
+        description="The start index of the slice (inclusive). Must be lower than the end index. If unset, slice "
+        "starts from the beginning of the array.",
     )
 
-    end: ArrayIndex = PydanticField(
+    end: ArrayIndex | None = PydanticField(
+        default=None,
         title="Slice End Index",
-        description="The end index of the slice. Must be greater than the start index.",
+        description="The end index of the slice (exclusive). Must be greater than the start index. If unset, slice "
+        "ends at the end of the array.",
     )
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
-        if self.start > self.end:
-            raise ValueError("Array slice start index must be lower than end index.")
+        if (start := self.start) is None or (end := self.end) is None:
+            return self
+        if 0 <= end <= start or end <= start < 0:
+            raise ValueError("Array slice start index must be strictly lower than end index.")
         return self
 
     def __str__(self) -> str:
-        return f"[{self.start}:{self.end}]"
+        return f"[{'' if self.start is None else self.start}:{'' if self.end is None else self.end}]"
 
 
 class Array(Model):

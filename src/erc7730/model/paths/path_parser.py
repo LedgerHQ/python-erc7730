@@ -36,7 +36,8 @@ PATH_PARSER = Lark(
         array: "[]"
         array_index: /-?[0-9]+/
         array_element: "[" array_index "]"
-        array_slice: "[" array_index ":" array_index "]"
+        slice_array_index: array_index?
+        array_slice: "[" slice_array_index ":" slice_array_index "]"
     """,
     start="path",
 )
@@ -59,6 +60,12 @@ class PathTransformer(Transformer_InPlaceRecursive):
     def array_element(self, ast: Any) -> ArrayElement:
         (value,) = ast
         return ArrayElement(index=value)
+
+    def slice_array_index(self, ast: Any) -> ArrayIndex | None:
+        if len(ast) == 1:
+            (value,) = ast
+            return value
+        return None
 
     def array_slice(self, ast: Any) -> ArraySlice:
         (start, end) = ast

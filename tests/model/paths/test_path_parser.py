@@ -42,7 +42,7 @@ def test_valid_input_container_path() -> None:
 
 def test_valid_input_data_path_absolute() -> None:
     _test_valid_input_path(
-        string="#.params.[].[-2].[1:5].amountIn",
+        string="#.params.[].[-2].[1:5].[:5].[5:].amountIn",
         obj=DataPath(
             absolute=True,
             elements=[
@@ -50,6 +50,8 @@ def test_valid_input_data_path_absolute() -> None:
                 Array(),
                 ArrayElement(index=-2),
                 ArraySlice(start=1, end=5),
+                ArraySlice(start=None, end=5),
+                ArraySlice(start=5, end=None),
                 Field(identifier="amountIn"),
             ],
         ),
@@ -62,6 +64,8 @@ def test_valid_input_data_path_absolute() -> None:
                 { "type": "array" },
                 { "type": "array_element", "index": -2 },
                 { "type": "array_slice", "start": 1, "end": 5 },
+                { "type": "array_slice", "end": 5 },
+                { "type": "array_slice", "start": 5 },
                 { "type": "field", "identifier": "amountIn" }
               ]
             }
@@ -211,7 +215,7 @@ def test_invalid_array_slice_inverted() -> None:
     message = str(e.value)
     assert "Invalid path" in message
     assert "#.[1:0]" in message
-    assert "Array slice start index must be lower than end index" in message
+    assert "Array slice start index must be strictly lower than end index" in message
 
 
 def test_invalid_array_slice_used_in_descriptor_path() -> None:
