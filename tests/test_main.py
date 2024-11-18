@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from shutil import copytree
 
 import pytest
 from typer.testing import CliRunner
@@ -7,7 +8,12 @@ from typer.testing import CliRunner
 from erc7730.main import app
 from erc7730.model import ERC7730ModelType
 from tests.cases import path_id
-from tests.files import ERC7730_DESCRIPTORS, ERC7730_EIP712_DESCRIPTORS, LEGACY_EIP712_DESCRIPTORS
+from tests.files import (
+    ERC7730_DESCRIPTORS,
+    ERC7730_EIP712_DESCRIPTORS,
+    ERC7730_REGISTRY_ROOT,
+    LEGACY_EIP712_DESCRIPTORS,
+)
 
 runner = CliRunner()
 
@@ -26,6 +32,24 @@ def test_schema(model_type: ERC7730ModelType) -> None:
     out = "".join(result.stdout.splitlines())
     assert result.exit_code == 0
     assert json.loads(out) is not None
+
+
+def test_list() -> None:
+    result = runner.invoke(app, ["list", str(ERC7730_REGISTRY_ROOT)])
+    out = "".join(result.stdout.splitlines())
+    assert "calldata-" in out
+    assert "eip712-" in out
+    assert ".json" in out
+
+
+def test_format(tmp_path: Path) -> None:
+    copytree(ERC7730_REGISTRY_ROOT, tmp_path / "registry")
+    result = runner.invoke(app, ["format", str(tmp_path)])
+    out = "".join(result.stdout.splitlines())
+    assert "calldata-" in out
+    assert "eip712-" in out
+    assert ".json" in out
+    assert "no errors occurred ✅" in out
 
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
