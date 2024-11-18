@@ -62,6 +62,8 @@ def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
     except Exception as e:
         if "Contract source code not verified" in str(e):
             raise Exception("contract source is not available on Etherscan") from e
+        if "Max calls per sec rate limit reached" in str(e):
+            raise Exception("Etherscan rate limit exceeded, please retry") from e
         raise e
 
 

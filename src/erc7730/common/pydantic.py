@@ -1,4 +1,3 @@
-import json
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -8,7 +7,7 @@ from typing import Any, LiteralString, TypeVar
 from pydantic import BaseModel, ValidationInfo, WrapValidator
 from pydantic_core import PydanticCustomError
 
-from erc7730.common.json import CompactJSONEncoder, read_json_with_includes
+from erc7730.common.json import dict_to_json_file, dict_to_json_str, read_json_with_includes
 
 _BaseModel = TypeVar("_BaseModel", bound=BaseModel)
 
@@ -40,15 +39,12 @@ def model_to_json_dict(obj: _BaseModel) -> dict[str, Any]:
 
 def model_to_json_str(obj: _BaseModel) -> str:
     """Serialize a pydantic model into a JSON string."""
-    return json.dumps(model_to_json_dict(obj), indent=2, cls=CompactJSONEncoder)
+    return dict_to_json_str(model_to_json_dict(obj))
 
 
 def model_to_json_file(path: Path, model: _BaseModel) -> None:
     """Write a model to a JSON file, creating parent directories as needed."""
-    os.makedirs(path.parent, exist_ok=True)
-    with open(path, "w") as f:
-        f.write(model_to_json_str(model))
-        f.write("\n")
+    dict_to_json_file(path, model_to_json_dict(model))
 
 
 @dataclass(frozen=True)

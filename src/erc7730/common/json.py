@@ -1,4 +1,5 @@
 import json
+import os
 from collections.abc import Iterator
 from json import JSONEncoder
 from pathlib import Path
@@ -35,9 +36,7 @@ def read_json_with_includes(path: Path) -> Any:
       - circular includes are not detected and will result in a stack overflow.
       - "includes" key can only be used at root level of an object.
     """
-    result: Any
-    with open(path) as f:
-        result = json.load(f)
+    result: dict[str, Any] = dict_from_json_file(path)
     if isinstance(result, dict) and (includes := result.pop("includes", None)) is not None:
         if isinstance(includes, list):
             parent = read_jsons_with_includes(paths=[path.parent / p for p in includes])
@@ -66,6 +65,30 @@ def _merge_dicts(d1: dict[str, Any], d2: dict[str, Any]) -> dict[str, Any]:
         else:
             merged[key] = val1
     return {**d2, **merged}
+
+
+def dict_from_json_str(value: str) -> dict[str, Any]:
+    """Deserialize a dict from a JSON string."""
+    return json.loads(value)
+
+
+def dict_from_json_file(path: Path) -> dict[str, Any]:
+    """Deserialize a dict from a JSON file."""
+    with open(path, "rb") as f:
+        return json.load(f)
+
+
+def dict_to_json_str(values: dict[str, Any]) -> str:
+    """Serialize a dict into a JSON string."""
+    return json.dumps(values, indent=2, cls=CompactJSONEncoder)
+
+
+def dict_to_json_file(path: Path, values: dict[str, Any]) -> None:
+    """Serialize a dict into a JSON file, creating parent directories as needed."""
+    os.makedirs(path.parent, exist_ok=True)
+    with open(path, "w") as f:
+        f.write(dict_to_json_str(values))
+        f.write("\n")
 
 
 class CompactJSONEncoder(JSONEncoder):
