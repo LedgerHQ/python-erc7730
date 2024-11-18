@@ -1,11 +1,9 @@
 import os
-from collections.abc import Generator
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 
 from rich import print
 
-from erc7730 import ERC_7730_REGISTRY_CALLDATA_PREFIX, ERC_7730_REGISTRY_EIP712_PREFIX
 from erc7730.common.output import (
     AddFileOutputAdder,
     BufferAdder,
@@ -21,6 +19,7 @@ from erc7730.lint.lint_base import MultiLinter
 from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
 from erc7730.lint.lint_validate_abi import ValidateABILinter
 from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinter
+from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
@@ -59,20 +58,7 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
         ]
     )
 
-    def get_descriptor_files() -> Generator[Path, None, None]:
-        for path in paths:
-            if path.is_file():
-                yield path
-            elif path.is_dir():
-                for file in path.rglob("*.json"):
-                    if file.name.startswith(ERC_7730_REGISTRY_CALLDATA_PREFIX) or file.name.startswith(
-                        ERC_7730_REGISTRY_EIP712_PREFIX
-                    ):
-                        yield file
-            else:
-                raise ValueError(f"Invalid path: {path}")
-
-    files = list(get_descriptor_files())
+    files = list(get_erc7730_files(*paths, out=out))
 
     if len(files) <= 1 or not (root_path := os.path.commonpath(files)):
         root_path = None
