@@ -30,6 +30,20 @@ You can validate your setup by running the `erc7730` command:
 
 ## Commands
 
+### `erc7730 list`
+
+The `list` command recursively lists descriptors files in directory:
+
+```shell
+$ erc7730 list
+ercs/calldata-erc721-nfts.json
+ercs/eip712-erc2612-permit.json
+ercs/calldata-erc20-tokens.json
+registry/1inch/calldata-AggregationRouterV5.json
+registry/1inch/eip712-1inch-aggregation-router.json
+...
+```
+
 ### `erc7730 lint`
 
 The `lint` command runs validations on descriptors and outputs warnings and errors to the console:
@@ -110,4 +124,23 @@ machine processing:
 $ erc7730 schema                    # print JSON schema of input form (ERC-7730 specification)
 $ erc7730 schema resolved           # print JSON schema of resolved form
 $ erc7730 resolve <descriptor>.json # convert descriptor from input to resolved form
+```
+
+### `erc7730 format`
+
+The `format` command recursively finds and formats all descriptor files, starting from current directory by default:
+
+```shell
+$ erc7730 format
+📝 formatting 294 descriptor files…
+
+➡️ formatting registry/uniswap/eip712-uniswap-permit2.json…
+no issue found ✔️
+
+➡️ formatting registry/tether/calldata-usdt.json…
+no issue found ✔️
+
+...
+
+formatted 294 descriptor files, no errors occurred ✅
 ```
