@@ -13,8 +13,10 @@ from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
 from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
+from erc7730.format.format import format_all_and_print_errors
 from erc7730.generate.generate import generate_descriptor
 from erc7730.lint.lint import lint_all_and_print_errors
+from erc7730.list.list import list_all
 from erc7730.model import ERC7730ModelType
 from erc7730.model.base import Model
 from erc7730.model.input.descriptor import InputERC7730Descriptor
@@ -46,7 +48,7 @@ app.add_typer(convert_app)
     Print ERC-7730 descriptor JSON schema.
     """,
 )
-def schema(
+def command_schema(
     model_type: Annotated[ERC7730ModelType, Argument(help="The descriptor form ")] = ERC7730ModelType.INPUT,
 ) -> None:
     descriptor_type: type[Model]
@@ -68,11 +70,39 @@ def schema(
     Validate descriptor files.
     """,
 )
-def lint(
+def command_lint(
     paths: Annotated[list[Path], Argument(help="The files or directory paths to lint")],
     gha: Annotated[bool, Option(help="Enable Github annotations output")] = False,
 ) -> None:
     if not lint_all_and_print_errors(paths, gha):
+        raise Exit(1)
+
+
+@app.command(
+    name="list",
+    short_help="List descriptor files.",
+    help="""
+    Recursively list all descriptor files, starting from current directory by default.
+    """,
+)
+def command_list(
+    paths: Annotated[list[Path] | None, Argument(help="The files or directory paths to search")] = None,
+) -> None:
+    if not list_all(paths or [Path.cwd()]):
+        raise Exit(1)
+
+
+@app.command(
+    name="format",
+    short_help="Format descriptor files.",
+    help="""
+    Recursively find and format all descriptor files, starting from current directory by default.
+    """,
+)
+def command_format(
+    paths: Annotated[list[Path] | None, Argument(help="The files or directory paths to search")] = None,
+) -> None:
+    if not format_all_and_print_errors(paths or [Path.cwd()]):
         raise Exit(1)
 
 
@@ -92,7 +122,7 @@ def lint(
     See `erc7730 schema resolved` for the resolved descriptor schema.
     """,
 )
-def resolve(
+def command_resolve(
     input_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
 ) -> None:
     input_descriptor = InputERC7730Descriptor.load(input_path)
@@ -108,7 +138,7 @@ def resolve(
     Fetches ABI or schema files and generates a minimal descriptor.
     """,
 )
-def generate(
+def command_generate(
     chain_id: Annotated[int, Option(help="The EIP-155 chain id")],
     address: Annotated[Address, Option(help="The contract address")],
     abi: Annotated[Path | None, Option(help="Path to a JSON ABI file (to generate a calldata descriptor)")] = None,
@@ -136,7 +166,7 @@ def generate(
     Convert a legacy EIP-712 descriptor file to an ERC-7730 file.
     """,
 )
-def convert_eip712_to_erc7730(
+def command_convert_eip712_to_erc7730(
     input_eip712_path: Annotated[Path, Argument(help="The input EIP-712 file path")],
     output_erc7730_path: Annotated[Path, Argument(help="The output ERC-7730 file path")],
 ) -> None:
@@ -157,7 +187,7 @@ def convert_eip712_to_erc7730(
     Convert an ERC-7730 file to a legacy EIP-712 descriptor file (if applicable).
     """,
 )
-def convert_erc7730_to_eip712(
+def command_convert_erc7730_to_eip712(
     input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
     output_eip712_path: Annotated[Path, Argument(help="The output EIP-712 file path")],
 ) -> None:
