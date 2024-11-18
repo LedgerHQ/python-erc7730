@@ -156,6 +156,7 @@ class GithubTransport(DelegateTransport):
 class EtherscanTransport(DelegateTransport):
     """Etherscan specific transport for handling rate limiting, API key parameter injection, response unwrapping."""
 
+    ETHERSCAN_API_HOST = "ETHERSCAN_API_HOST"
     ETHERSCAN_API_KEY = "ETHERSCAN_API_KEY"
 
     @Limiter(rate=5, capacity=5, consume=1)
@@ -164,12 +165,16 @@ class EtherscanTransport(DelegateTransport):
         if request.url.host != ETHERSCAN:
             return super().handle_request(request)
 
-        # add API key
-        if (api_key := os.environ.get(self.ETHERSCAN_API_KEY)) is None and (
+        # substitute base URL if provided
+        if (api_host := os.environ.get(self.ETHERSCAN_API_HOST)) is not None:
+            request.url = URL(str(request.url).replace(ETHERSCAN, api_host))
+            request.headers.update({"Host": api_host})
+
+        # add API key if provided
+        if (api_key := os.environ.get(self.ETHERSCAN_API_KEY)) is not None or (
             api_key := os.environ.get(f"SCAN_{self.ETHERSCAN_API_KEY}")
-        ) is None:
-            raise ValueError(f"{self.ETHERSCAN_API_KEY} environment variable is required")
-        request.url = request.url.copy_add_param("apikey", api_key)
+        ) is not None:
+            request.url = request.url.copy_add_param("apikey", api_key)
 
         # read response
         response = super().handle_request(request)
