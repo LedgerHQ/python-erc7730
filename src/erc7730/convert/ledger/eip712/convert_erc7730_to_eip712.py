@@ -11,7 +11,7 @@ from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.model.context import EIP712Schema
 from erc7730.model.display import FieldFormat
-from erc7730.model.paths import ContainerField, ContainerPath, DataPath
+from erc7730.model.paths import Array, ContainerField, ContainerPath, DataPath
 from erc7730.model.paths.path_ops import data_path_concat, to_relative
 from erc7730.model.resolved.context import ResolvedDeployment, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
@@ -132,10 +132,20 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
         field_path: DataPath
         asset_path: DataPath | None = None
         field_format: EIP712Format | None = None
+        in_array: bool = False
 
         match field.path:
             case DataPath() as field_path:
                 field_path = data_path_concat(prefix, field_path)
+
+                for element in field_path.elements:
+                    match element:
+                        case Array():
+                            in_array = True
+                            break
+                        case _:
+                            pass
+
             case ContainerPath() as container_path:
                 return out.error(f"Path {container_path} is not supported")
             case _:
@@ -163,20 +173,24 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             case FieldFormat.AMOUNT:
                 field_format = EIP712Format.AMOUNT
             case FieldFormat.TOKEN_AMOUNT:
-                field_format = EIP712Format.AMOUNT
-                if field.params is not None and isinstance(field.params, ResolvedTokenAmountParameters):
-                    match field.params.tokenPath:
-                        case None:
-                            pass
-                        case DataPath() as token_path:
-                            asset_path = data_path_concat(prefix, token_path)
-                        case ContainerPath() as container_path if container_path.field == ContainerField.TO:
-                            # In EIP-712 protocol, format=token with no token path => refers to verifyingContract
-                            asset_path = None
-                        case ContainerPath() as container_path:
-                            return out.error(f"Path {container_path} is not supported")
-                        case _:
-                            assert_never(field.params.tokenPath)
+                if in_array:
+                    # EIP-712 does not support token references in arrays, fallback to raw format
+                    field_format = EIP712Format.RAW
+                else:
+                    field_format = EIP712Format.AMOUNT
+                    if field.params is not None and isinstance(field.params, ResolvedTokenAmountParameters):
+                        match field.params.tokenPath:
+                            case None:
+                                pass
+                            case DataPath() as token_path:
+                                asset_path = data_path_concat(prefix, token_path)
+                            case ContainerPath() as container_path if container_path.field == ContainerField.TO:
+                                # In EIP-712 protocol, format=token with no token path => refers to verifyingContract
+                                asset_path = None
+                            case ContainerPath() as container_path:
+                                return out.error(f"Path {container_path} is not supported")
+                            case _:
+                                assert_never(field.params.tokenPath)
             case _:
                 assert_never(field.format)
 

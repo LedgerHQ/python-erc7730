@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Any
 
 import jsonschema
@@ -17,6 +18,12 @@ def assert_dict_equals(expected: dict[str, Any], actual: dict[str, Any]) -> None
 def assert_json_str_equals(expected: str, actual: str) -> None:
     """Assert deserialized JSON strings are equal."""
     assert_dict_equals(json.loads(expected), json.loads(actual))
+
+
+def assert_json_file_equals(expected: Path, actual: Path) -> None:
+    """Assert deserialized JSON files are equal."""
+    with open(expected) as exp, open(actual) as act:
+        assert_dict_equals(json.load(exp), json.load(act))
 
 
 def assert_model_json_equals(expected: _BaseModel, actual: _BaseModel) -> None:
