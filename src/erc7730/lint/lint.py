@@ -18,6 +18,7 @@ from erc7730.lint import ERC7730Linter
 from erc7730.lint.lint_base import MultiLinter
 from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
 from erc7730.lint.lint_validate_abi import ValidateABILinter
+from erc7730.lint.lint_validate_definitions import DefinitionLinter
 from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinter
 from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.descriptor import InputERC7730Descriptor
@@ -51,11 +52,7 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
     :return: number of files checked
     """
     linter = MultiLinter(
-        [
-            ValidateABILinter(),
-            ValidateDisplayFieldsLinter(),
-            ClassifyTransactionTypeLinter(),
-        ]
+        [ValidateABILinter(), ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter(), DefinitionLinter()]
     )
 
     files = list(get_erc7730_files(*paths, out=out))
