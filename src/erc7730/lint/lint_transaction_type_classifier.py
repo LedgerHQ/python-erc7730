@@ -5,6 +5,7 @@ from erc7730.lint import ERC7730Linter
 from erc7730.lint.classifier import TxClass
 from erc7730.lint.classifier.abi_classifier import ABIClassifier
 from erc7730.lint.classifier.eip712_classifier import EIP712Classifier
+from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.context import EIP712Schema, ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import ResolvedDisplay, ResolvedFormat
@@ -18,15 +19,16 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
-        if descriptor.context is None:
-            return None
-        if (tx_class := self._determine_tx_class(descriptor)) is None:
-            # could not determine transaction type
-            return None
-        if (display := descriptor.display) is None:
-            return None
-        DisplayFormatChecker(tx_class, display).check(out)
+    def lint(self, descriptor: ResolvedERC7730Descriptor | InputERC7730Descriptor, out: OutputAdder) -> None:
+        if isinstance(descriptor, ResolvedERC7730Descriptor):
+            if descriptor.context is None:
+                return None
+            if (tx_class := self._determine_tx_class(descriptor)) is None:
+                # could not determine transaction type
+                return None
+            if (display := descriptor.display) is None:
+                return None
+            DisplayFormatChecker(tx_class, display).check(out)
 
     @classmethod
     def _determine_tx_class(cls, descriptor: ResolvedERC7730Descriptor) -> TxClass | None:

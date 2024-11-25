@@ -4,6 +4,7 @@ from erc7730.common import client
 from erc7730.common.abi import compute_signature, get_functions
 from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
+from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
@@ -17,7 +18,7 @@ class ValidateABILinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
+    def lint(self, descriptor: ResolvedERC7730Descriptor | InputERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor.context, ResolvedEIP712Context):
             return self._validate_eip712_schemas(descriptor.context, out)
         if isinstance(descriptor.context, ResolvedContractContext):

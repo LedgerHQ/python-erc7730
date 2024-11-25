@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 from erc7730.common.output import OutputAdder
+from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 
 
@@ -13,5 +14,5 @@ class ERC7730Linter(ABC):
     """
 
     @abstractmethod
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
+    def lint(self, descriptor: ResolvedERC7730Descriptor | InputERC7730Descriptor, out: OutputAdder) -> None:
         raise NotImplementedError()

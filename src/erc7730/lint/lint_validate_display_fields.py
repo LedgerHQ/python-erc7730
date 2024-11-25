@@ -3,6 +3,7 @@ from typing import final, override
 from erc7730.common.abi import function_to_selector
 from erc7730.common.output import OutputAdder
 from erc7730.lint import ERC7730Linter
+from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.paths import DataPath, Field
 from erc7730.model.paths.path_ops import data_path_ends_with, path_starts_with, to_absolute
 from erc7730.model.paths.path_schemas import (
@@ -27,9 +28,10 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
-        self._validate_eip712_paths(descriptor, out)
-        self._validate_abi_paths(descriptor, out)
+    def lint(self, descriptor: ResolvedERC7730Descriptor | InputERC7730Descriptor, out: OutputAdder) -> None:
+        if isinstance(descriptor, ResolvedERC7730Descriptor):
+            self._validate_eip712_paths(descriptor, out)
+            self._validate_abi_paths(descriptor, out)
 
     @classmethod
     def _validate_eip712_paths(cls, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
