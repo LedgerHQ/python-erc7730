@@ -51,9 +51,8 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
     :param out: output adder
     :return: number of files checked
     """
-    linter = MultiLinter(
-        [ValidateABILinter(), ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter(), DefinitionLinter()]
-    )
+    input_linter = DefinitionLinter()
+    output_linter = MultiLinter([ValidateABILinter(), ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter()])
 
     files = list(get_erc7730_files(*paths, out=out))
 
@@ -67,7 +66,11 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
         print(f"🔍 checking {len(files)} descriptor files…\n")
 
     with ThreadPoolExecutor() as executor:
-        for future in (executor.submit(lint_file, file, linter, out, label(file)) for file in files):
+        for future in (executor.submit(lint_file, file, input_linter, out, label(file)) for file in files):
+            future.result()
+
+    with ThreadPoolExecutor() as executor:
+        for future in (executor.submit(lint_file, file, output_linter, out, label(file)) for file in files):
             future.result()
 
     return len(files)

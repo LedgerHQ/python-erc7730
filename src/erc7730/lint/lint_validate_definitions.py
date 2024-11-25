@@ -14,15 +14,18 @@ class DefinitionLinter(ERC7730Linter):
     @override
     def lint(self, descriptor: ResolvedERC7730Descriptor | InputERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor, InputERC7730Descriptor) and descriptor.display.definitions is not None:
-            for _, definition in descriptor.display.definitions.items():
+            for name, _ in descriptor.display.definitions.items():
                 found = False
                 for _, format in descriptor.display.formats.items():
                     if found is False:
                         for field in format.fields:
-                            if isinstance(field, InputReference) and field.ref == definition.label:
+                            if (
+                                isinstance(field, InputReference)
+                                and field.ref.__str__() == f"$.display.definitions.{name}"
+                            ):
                                 found = True
                 if found is False:
                     out.error(
                         title="Unused field definition",
-                        message=f"Field {definition.label} is not used in descriptor formats.",
+                        message=f"Field {name} is not used in descriptor formats.",
                     )
