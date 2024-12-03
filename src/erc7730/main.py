@@ -1,4 +1,6 @@
 import json
+import logging
+import os
 from pathlib import Path
 from typing import Annotated, assert_never
 
@@ -22,6 +24,12 @@ from erc7730.model.base import Model
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.types import Address
+
+if os.environ.get("DEBUG") is not None:
+    logging.basicConfig(
+        format="%(levelname)s [%(asctime)s] %(name)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG
+    )
+
 
 app = Typer(
     name="erc7730",
