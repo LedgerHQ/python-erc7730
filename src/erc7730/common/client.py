@@ -169,7 +169,7 @@ class EtherscanTransport(DelegateTransport):
 
         # substitute base URL if provided
         if (api_host := os.environ.get(self.ETHERSCAN_API_HOST)) is not None:
-            request.url = URL(str(request.url).replace(ETHERSCAN, api_host))
+            request.url = request.url.copy_with(host=api_host)
             request.headers.update({"Host": api_host})
 
         # add API key if provided
