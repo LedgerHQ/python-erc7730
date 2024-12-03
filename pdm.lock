@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:931f414b35c7aeea09da02ff2557664d6556b7015f5be5cc9997ae1c726893bd"
+content_hash = "sha256:57d3553f53483e5e3dbb80d52d1b7efcb8cf87ad4441adc3bacd34bf9ad409e4"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -485,7 +485,7 @@ files = [
 
 [[package]]
 name = "httpx"
-version = "0.28.0"
+version = "0.27.2"
 requires_python = ">=3.8"
 summary = "The next generation HTTP client."
 groups = ["default"]
@@ -494,10 +494,11 @@ dependencies = [
     "certifi",
     "httpcore==1.*",
     "idna",
+    "sniffio",
 ]
 files = [
-    {file = "httpx-0.28.0-py3-none-any.whl", hash = "sha256:dc0b419a0cfeb6e8b34e85167c0da2671206f5095f1baa9663d23bcfd6b535fc"},
-    {file = "httpx-0.28.0.tar.gz", hash = "sha256:0858d3bab51ba7e386637f22a61d8ccddaeec5f3fe4209da3a6168dbb91573e0"},
+    {file = "httpx-0.27.2-py3-none-any.whl", hash = "sha256:7bb2708e112d8fdd7829cd4243970f0c223274051cb35ee80c03301ee29a3df0"},
+    {file = "httpx-0.27.2.tar.gz", hash = "sha256:f7c2be1d2f3c3c3160d441802406b206c2b76f5947b11115e6df10c6c65e66c2"},
 ]
 
 [[package]]
