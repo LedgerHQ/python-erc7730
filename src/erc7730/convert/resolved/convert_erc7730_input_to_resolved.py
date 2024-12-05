@@ -141,7 +141,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if (contract := cls._resolve_contract(context.contract, out)) is None:
             return None
 
-        return ResolvedContractContext(contract=contract)
+        return ResolvedContractContext.model_validate({"$id": context.id, "contract": contract})
 
     @classmethod
     def _resolve_contract(cls, contract: InputContract, out: OutputAdder) -> ResolvedContract | None:
@@ -201,7 +201,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         if (eip712 := cls._resolve_eip712(context.eip712, out)) is None:
             return None
 
-        return ResolvedEIP712Context(eip712=eip712)
+        return ResolvedEIP712Context.model_validate({"$id": context.id, "eip712": eip712})
 
     @classmethod
     def _resolve_eip712(cls, eip712: InputEIP712, out: OutputAdder) -> ResolvedEIP712 | None:
