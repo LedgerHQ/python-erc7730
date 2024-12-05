@@ -1,0 +1,71 @@
+{
+    "context": {
+        "$id": "AugustusSwapper",
+        "contract" : {
+            "abi": "https://github.com/LedgerHQ/ledger-asset-dapps/blob/main/ethereum/paraswap/abis/0x1bd435f3c054b6e901b7b108a0ab7617c808677b.abi.json",
+            "deployments": [
+                {
+                    "chainId": 1,
+                    "address": "0x1bd435f3c054b6e901b7b108a0ab7617c808677b"        
+                },
+                {
+                    "chainId": 1,
+                    "address": "0xdef171fe48cf0115b1d80b88dc8eab59176fee57"        
+                },
+                {
+                    "chainId": 56,
+                    "address": "0x55a0e3b6579972055faa983482aceb4b251dcf15"        
+                },
+                {
+                    "chainId": 56,
+                    "address": "0xdef171fe48cf0115b1d80b88dc8eab59176fee57"        
+                },
+                {
+                    "chainId": 137,
+                    "address": "0x90249ed4d69d70e709ffcd8bee2c5a566f65dade"        
+                },
+                {
+                    "chainId": 137,
+                    "address": "0xdef171fe48cf0115b1d80b88dc8eab59176fee57"        
+                }
+            ]
+        }
+    },
+
+    "metadata": {
+        "owner": "Paraswap"
+    },
+    
+    "display": {
+        "definitions": {
+            "amountIn": {
+                "label": "Income Amount",
+                "format": "amount"
+            },
+            "amountOut": {
+                "label": "Outcome Amount",
+                "format": "amount"
+            },
+            "amountOutIn": {
+                "label": "Outcome/Income Amount",
+                "format": "amount"
+            }
+        },
+        "formats": {
+            "0xcfc0afeb" : {
+                "$id": "swapOnZeroXv2",
+                "fields": [
+                    {
+                        "path": "amountIn",
+                        "$ref": "$.display.definitions.amountIn"
+                    },
+                    {
+                        "path": "amountOut",
+                        "$ref": "$.display.definitions.amountOut"
+                    }
+                ],
+                "required": ["amountIn", "amountOut"]
+            }
+        }
+    }
+}
