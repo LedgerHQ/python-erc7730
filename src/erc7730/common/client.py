@@ -102,7 +102,7 @@ def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
     try:
         return TypeAdapter(model).validate_json(response)
     except ValidationError as e:
-        raise Exception(f"Received unexpected response from {url}: {response.decode()}") from e
+        raise Exception(f"Received unexpected response from {url}: {response.decode(errors='replace')}") from e
 
 
 def _client() -> Client:
@@ -184,8 +184,11 @@ class EtherscanTransport(DelegateTransport):
         response.close()
 
         # unwrap result, sometimes containing JSON directly, sometimes JSON in a string
-        if (result := response.json().get("result")) is not None:
-            data = result if isinstance(result, str) else json.dumps(result)
-            return Response(status_code=response.status_code, stream=IteratorByteStream([data.encode()]))
+        try:
+            if (result := response.json().get("result")) is not None:
+                data = result if isinstance(result, str) else json.dumps(result)
+                return Response(status_code=response.status_code, stream=IteratorByteStream([data.encode()]))
+        except Exception:
+            pass  # nosec B110 - intentional try/except/pass
 
-        raise Exception(f"Unexpected response from Etherscan: {response.content}")
+        raise Exception(f"Unexpected response from Etherscan: {response.content.decode(errors='replace')}")
