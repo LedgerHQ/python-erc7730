@@ -18,7 +18,7 @@
       "0x5ca8f297": {
         "fields": [
           {
-            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "value": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] } },
             "label": "Param 1",
             "format": "raw"
           }

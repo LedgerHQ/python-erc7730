@@ -1,6 +1,17 @@
 from typing import Any
 
 
+def has_any_property(target: Any, *names: str) -> bool:
+    """
+    Check if the target has a property with any of the given names.
+
+    :param target: object of dict like
+    :param names: attribute names
+    :return: true if the target has the property
+    """
+    return any(has_property(target, n) for n in names)
+
+
 def has_property(target: Any, name: str) -> bool:
     """
     Check if the target has a property with the given name.

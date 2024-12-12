@@ -23,13 +23,13 @@
       "TestPrimaryType": {
         "fields": [
           {
-            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "value": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] } },
             "label": "With minimal set of parameters set",
             "format": "unit",
             "params": { "base": "km/h" }
           },
           {
-            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] },
+            "value": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] } },
             "label": "With all parameters set",
             "format": "unit",
             "params": { "base": "km/h", "decimals": 2, "prefix": true }

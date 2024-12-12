@@ -8,6 +8,7 @@ from erc7730.common.output import OutputAdder
 from erc7730.common.pydantic import model_to_json_str
 from erc7730.convert.resolved.constants import ConstantProvider
 from erc7730.convert.resolved.parameters import resolve_field_parameters
+from erc7730.convert.resolved.values import resolve_value
 from erc7730.model.display import (
     FieldFormat,
 )
@@ -18,7 +19,7 @@ from erc7730.model.input.display import (
 )
 from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import DataPath, DescriptorPath, Field
-from erc7730.model.paths.path_ops import data_or_container_path_concat, descriptor_path_strip_prefix
+from erc7730.model.paths.path_ops import descriptor_path_strip_prefix
 from erc7730.model.resolved.display import (
     ResolvedField,
     ResolvedFieldDescription,
@@ -60,11 +61,11 @@ def resolve_reference(
         if (resolved_params := resolve_field_parameters(prefix, input_params, enums, constants, out)) is None:
             return None
 
-    if (path := constants.resolve_path(reference.path, out)) is None:
+    if (value := resolve_value(prefix, reference, constants, out)) is None:
         return None
 
     return ResolvedFieldDescription(
-        path=data_or_container_path_concat(prefix, path),
+        value=value,
         label=str(constants.resolve(label, out)),
         format=FieldFormat(definition.format),
         params=resolved_params,

@@ -23,13 +23,13 @@
       "TestPrimaryType": {
         "fields": [
           {
-            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param2" }] },
+            "value": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param2" }] } },
             "label": "With minimal set of parameters specified",
             "format": "calldata",
             "params": { "calleePath": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] } }
           },
           {
-            "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param2" }] },
+            "value": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param2" }] } },
             "label": "With all parameters specified",
             "format": "calldata",
             "params": {

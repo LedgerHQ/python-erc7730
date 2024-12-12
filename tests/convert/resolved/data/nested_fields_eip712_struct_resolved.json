@@ -24,19 +24,25 @@
       "TestPrimaryType": {
         "fields": [
           {
-            "path": {
-              "type": "data",
-              "absolute": true,
-              "elements": [{ "type": "field", "identifier": "param1" }, { "type": "field", "identifier": "subparam1" }]
+            "value": {
+              "type": "path",
+              "path": {
+                "type": "data",
+                "absolute": true,
+                "elements": [{ "type": "field", "identifier": "param1" }, { "type": "field", "identifier": "subparam1" }]
+              }
             },
             "label": "Subparam 1",
             "format": "raw"
           },
           {
-            "path": {
-              "type": "data",
-              "absolute": true,
-              "elements": [{ "type": "field", "identifier": "param1" }, { "type": "field", "identifier": "subparam2" }]
+            "value": {
+              "type": "path",
+              "path": {
+                "type": "data",
+                "absolute": true,
+                "elements": [{ "type": "field", "identifier": "param1" }, { "type": "field", "identifier": "subparam2" }]
+              }
             },
             "label": "Subparam 2",
             "format": "raw"

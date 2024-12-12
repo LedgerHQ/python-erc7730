@@ -10,6 +10,7 @@ from erc7730.convert import ERC7730Converter
 from erc7730.convert.resolved.constants import ConstantProvider, DefaultConstantProvider
 from erc7730.convert.resolved.parameters import resolve_field_parameters
 from erc7730.convert.resolved.references import resolve_reference
+from erc7730.convert.resolved.values import resolve_value
 from erc7730.model.abi import ABI
 from erc7730.model.context import EIP712Schema
 from erc7730.model.display import (
@@ -37,7 +38,7 @@ from erc7730.model.input.display import (
 from erc7730.model.input.metadata import InputMetadata
 from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import ROOT_DATA_PATH, Array, ArrayElement, ArraySlice, ContainerPath, DataPath, Field
-from erc7730.model.paths.path_ops import data_or_container_path_concat, data_path_concat
+from erc7730.model.paths.path_ops import data_path_concat
 from erc7730.model.resolved.context import (
     ResolvedContract,
     ResolvedContractContext,
@@ -54,6 +55,7 @@ from erc7730.model.resolved.display import (
     ResolvedFieldDescription,
     ResolvedFormat,
     ResolvedNestedFields,
+    ResolvedValuePath,
 )
 from erc7730.model.resolved.metadata import ResolvedMetadata
 from erc7730.model.types import Address, Id, Selector
@@ -312,13 +314,13 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
         params = resolve_field_parameters(prefix, definition.params, enums, constants, out)
 
-        if (path := constants.resolve_path(definition.path, out)) is None:
+        if (value := resolve_value(prefix, definition, constants, out)) is None:
             return None
 
         return ResolvedFieldDescription.model_validate(
             {
                 "$id": definition.id,
-                "path": data_or_container_path_concat(prefix, path),
+                "value": value,
                 "label": constants.resolve(definition.label, out),
                 "format": FieldFormat(definition.format) if definition.format is not None else None,
                 "params": params,
@@ -431,6 +433,12 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         constants: ConstantProvider,
         out: OutputAdder,
     ) -> list[ResolvedNestedFields | ResolvedFieldDescription] | None:
+        if fields.path is None:
+            return out.error(
+                title="Unsupported nested fields value",
+                message="Nested fields are only supported with data paths and not constant values.",
+            )
+
         path: DataPath
         match constants.resolve_path(fields.path, out):
             case None:
@@ -461,6 +469,6 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                     message="Using nested fields on an array slice is not allowed.",
                 )
             case Array():
-                return [ResolvedNestedFields(path=path, fields=resolved_fields)]
+                return [ResolvedNestedFields(value=ResolvedValuePath(path=path), fields=resolved_fields)]
             case _:
                 assert_never(path.elements[-1])

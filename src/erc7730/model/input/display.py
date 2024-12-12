@@ -1,6 +1,6 @@
-from typing import Annotated, Any, ForwardRef
+from typing import Annotated, Any, ForwardRef, Self
 
-from pydantic import Discriminator, Field, Tag
+from pydantic import Discriminator, Field, Tag, model_validator
 
 from erc7730.model.base import Model
 from erc7730.model.display import (
@@ -10,7 +10,7 @@ from erc7730.model.display import (
     FormatBase,
 )
 from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
-from erc7730.model.types import HexStr, Id, MixedCaseAddress
+from erc7730.model.types import HexStr, Id, MixedCaseAddress, ScalarType
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -21,11 +21,27 @@ class InputFieldBase(Model):
     A field formatter, containing formatting information of a single field in a message.
     """
 
-    path: DescriptorPathStr | DataPathStr | ContainerPathStr = Field(
+    path: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
         title="Path",
         description="A path to the field in the structured data. The path is a JSON path expression that can be used "
-        "to extract the field value from the structured data.",
+        """to extract the field value from the structured data. Exactly one of "path" or "value" must be set.""",
     )
+
+    value: DescriptorPathStr | ScalarType | None = Field(
+        default=None,
+        title="Value",
+        description="A literal value on which the format should be applied instead of looking up a field in the "
+        """structured data. Exactly one of "path" or "value" must be set.""",
+    )
+
+    @model_validator(mode="after")
+    def _validate_one_of_path_or_value(self) -> Self:
+        if self.path is None and self.value is None:
+            raise ValueError('Either "path" or "value" must be set.')
+        if self.path is not None and self.value is not None:
+            raise ValueError('"path" and "value" are mutually exclusive.')
+        return self
 
 
 class InputReference(InputFieldBase):

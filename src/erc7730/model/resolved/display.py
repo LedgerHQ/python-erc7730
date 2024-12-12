@@ -1,4 +1,4 @@
-from typing import Annotated, ForwardRef
+from typing import Annotated, ForwardRef, Literal
 
 from eip712.model.schema import EIP712Type
 from pydantic import Discriminator, Field, Tag
@@ -12,7 +12,7 @@ from erc7730.model.display import (
 )
 from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.resolved.path import ResolvedPath
-from erc7730.model.types import Address, HexStr, Id, Selector
+from erc7730.model.types import Address, HexStr, Id, ScalarType, Selector
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -158,15 +158,57 @@ ResolvedFieldParameters = Annotated[
 ]
 
 
-class ResolvedFieldBase(Model):
+class ResolvedValuePath(Model):
     """
-    A field formatter, containing formatting information of a single field in a message.
+    A path to the field in the structured data. The path is a JSON path expression that can be used to extract the
+    field value from the structured data.
     """
+
+    type: Literal["path"] = Field(
+        default="path",
+        title="Value Type",
+        description="The value type identifier (discriminator for values discriminated union).",
+    )
 
     path: ResolvedPath = Field(
         title="Path",
         description="A path to the field in the structured data. The path is a JSON path expression that can be used "
         "to extract the field value from the structured data.",
+    )
+
+
+class ResolvedValueConstant(Model):
+    """
+    A constant value.
+    """
+
+    type: Literal["constant"] = Field(
+        default="constant",
+        title="Value Type",
+        description="The value type identifier (discriminator for values discriminated union).",
+    )
+
+    value: ScalarType = Field(
+        title="Value",
+        description="The constant value.",
+    )
+
+
+ResolvedValue = Annotated[
+    ResolvedValuePath | ResolvedValueConstant,
+    Discriminator("type"),
+]
+
+
+class ResolvedFieldBase(Model):
+    """
+    A field formatter, containing formatting information of a single field in a message.
+    """
+
+    value: ResolvedValue = Field(
+        title="Value",
+        description="A reference to the value to display, either as path to a field in the structured data or a "
+        "constant value.",
     )
 
 
