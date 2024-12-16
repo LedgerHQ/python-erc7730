@@ -76,7 +76,7 @@ class ConstantProvider(ABC):
                             title="Invalid data path",
                             message=f""""{path}" is invalid, it must contain a data path to the address in the """
                             "transaction data. It seems you are trying to use a constant address value instead, please "
-                            "note this feature is not supported (yet).",
+                            "use the adequate parameter to provide a constant value.",
                         )
                         return False
                     except ValidationError:

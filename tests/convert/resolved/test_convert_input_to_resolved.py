@@ -20,11 +20,6 @@ def test_registry_files(input_file: Path) -> None:
     """
     Test converting ERC-7730 registry files from input to resolved form.
     """
-
-    # TODO: these descriptors use literal constants instead of token paths, which is not supported yet
-    if input_file.name in {"calldata-OssifiableProxy.json", "calldata-wstETH.json", "calldata-usdt.json"}:
-        pytest.skip("Descriptor uses literal constants instead of token paths, which is not supported yet")
-
     convert_and_raise_errors(InputERC7730Descriptor.load(input_file), ERC7730InputToResolved())
 
 
@@ -274,6 +269,9 @@ def test_registry_files(input_file: Path) -> None:
             label="unsupported: using literal value instead of data path",
             description="using a literal value where a data path is expected, defined in constants section",
             error="It seems you are trying to use a constant address value instead",
+        ),
+        TestCase(
+            id="literal_values", label="using literal values", description="using literal values anywhere possible"
         ),
     ],
     ids=case_id,

@@ -188,18 +188,29 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
                 else:
                     field_format = EIP712Format.AMOUNT
                     if field.params is not None and isinstance(field.params, ResolvedTokenAmountParameters):
-                        match field.params.tokenPath:
+                        match field.params.token:
                             case None:
-                                pass
-                            case DataPath() as token_path:
-                                asset_path = data_path_concat(prefix, token_path)
-                            case ContainerPath() as container_path if container_path.field == ContainerField.TO:
-                                # In EIP-712 protocol, format=token with no token path => refers to verifyingContract
-                                asset_path = None
-                            case ContainerPath() as container_path:
-                                return out.error(f"Path {container_path} is not supported")
+                                return out.error("Token path or reference must be set")
+
+                            case ResolvedValueConstant():
+                                return out.error("Constant values are not supported")
+
+                            case ResolvedValuePath(path=path):
+                                match path:
+                                    case None:
+                                        pass
+                                    case DataPath() as token_path:
+                                        asset_path = data_path_concat(prefix, token_path)
+                                    case ContainerPath() as container_path if container_path.field == ContainerField.TO:
+                                        # In EIP-712 protocol, format=token with no token path
+                                        #  => refers to verifyingContract
+                                        asset_path = None
+                                    case ContainerPath() as container_path:
+                                        return out.error(f"Path {container_path} is not supported")
+                                    case _:
+                                        assert_never(path)
                             case _:
-                                assert_never(field.params.tokenPath)
+                                assert_never(field.value)
             case _:
                 assert_never(field.format)
 

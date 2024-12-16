@@ -28,7 +28,7 @@
             "format": "calldata",
             "params": {
               "selector": "0x00000000",
-              "calleePath": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] }
+              "callee": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] } }
             }
           }
         ]

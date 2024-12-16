@@ -26,7 +26,9 @@
             "value": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] } },
             "label": "Param 1",
             "format": "tokenAmount",
-            "params": { "tokenPath": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "token1" }] } }
+            "params": {
+              "token": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "token1" }] } }
+            }
           }
         ]
       }

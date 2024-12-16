@@ -8,7 +8,7 @@ from erc7730.common.output import OutputAdder
 from erc7730.common.pydantic import model_to_json_str
 from erc7730.convert.resolved.constants import ConstantProvider
 from erc7730.convert.resolved.parameters import resolve_field_parameters
-from erc7730.convert.resolved.values import resolve_value
+from erc7730.convert.resolved.values import resolve_field_value
 from erc7730.model.display import (
     FieldFormat,
 )
@@ -61,7 +61,7 @@ def resolve_reference(
         if (resolved_params := resolve_field_parameters(prefix, input_params, enums, constants, out)) is None:
             return None
 
-    if (value := resolve_value(prefix, reference, constants, out)) is None:
+    if (value := resolve_field_value(prefix, reference, definition.format, constants, out)) is None:
         return None
 
     return ResolvedFieldDescription(

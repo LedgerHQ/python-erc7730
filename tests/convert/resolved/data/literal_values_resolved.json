@@ -1,0 +1,105 @@
+{
+  "context": {
+    "contract": {
+      "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000aaa" }],
+      "abi": [
+        {
+          "type": "function",
+          "name": "function1",
+          "inputs": [{ "name": "param1", "type": "bytes4" }],
+          "outputs": [{ "name": "", "type": "address" }]
+        }
+      ]
+    }
+  },
+  "metadata": { "enums": {} },
+  "display": {
+    "formats": {
+      "0x5ca8f297": {
+        "fields": [
+          {
+            "value": {
+              "type": "constant",
+              "value": "Hello world",
+              "raw": "0x000000000000000000000000000000000000000000000000000000000000000b48656c6c6f20776f726c64000000000000000000000000000000000000000000"
+            },
+            "label": "Test - raw",
+            "format": "raw"
+          },
+          {
+            "value": {
+              "type": "constant",
+              "value": "0x0000000000000000000000000000000000000Bbb",
+              "raw": "0x0000000000000000000000000000000000000bbb"
+            },
+            "label": "Test - addressName",
+            "format": "addressName",
+            "params": { "types": ["eoa"], "sources": ["ens"] }
+          },
+          {
+            "value": { "type": "constant", "value": 1337, "raw": "0x0000000000000000000000000000000000000000000000000000000000000539" },
+            "label": "Test - amount",
+            "format": "amount"
+          },
+          {
+            "value": {
+              "type": "constant",
+              "value": "0x0000000000000000000000000000000000000Bbb",
+              "raw": "0x0000000000000000000000000000000000000bbb"
+            },
+            "label": "Test - calldata",
+            "format": "calldata",
+            "params": {
+              "callee": {
+                "type": "constant",
+                "value": "0x0000000000000000000000000000000000000001",
+                "raw": "0x0000000000000000000000000000000000000001"
+              }
+            }
+          },
+          {
+            "value": { "type": "constant", "value": 1732003058, "raw": "0x00000000000000000000000000000000000000000000000000000000673c44f2" },
+            "label": "Test - date",
+            "format": "date",
+            "params": { "encoding": "timestamp" }
+          },
+          {
+            "value": { "type": "constant", "value": 7200000, "raw": "0x00000000000000000000000000000000000000000000000000000000006ddd00" },
+            "label": "Test - duration",
+            "format": "duration"
+          },
+          {
+            "value": { "type": "constant", "value": 42, "raw": "0x000000000000000000000000000000000000000000000000000000000000002a" },
+            "label": "Test - nftName",
+            "format": "nftName",
+            "params": {
+              "collection": {
+                "type": "constant",
+                "value": "0x0000000000000000000000000000000000000001",
+                "raw": "0x0000000000000000000000000000000000000001"
+              }
+            }
+          },
+          {
+            "value": { "type": "constant", "value": 127, "raw": "0x000000000000000000000000000000000000000000000000000000000000007f" },
+            "label": "Test - tokenAmount",
+            "format": "tokenAmount",
+            "params": {
+              "token": {
+                "type": "constant",
+                "value": "0x0000000000000000000000000000000000000001",
+                "raw": "0x0000000000000000000000000000000000000001"
+              }
+            }
+          },
+          {
+            "value": { "type": "constant", "value": 42, "raw": "0x000000000000000000000000000000000000000000000000000000000000002a" },
+            "label": "Test - unit",
+            "format": "unit",
+            "params": { "base": "km/h", "decimals": 2, "prefix": true }
+          }
+        ]
+      }
+    }
+  }
+}

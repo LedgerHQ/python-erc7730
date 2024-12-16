@@ -1,8 +1,10 @@
 from typing import assert_never, cast
 
+from erc7730.common.abi import ABIDataType
 from erc7730.common.output import OutputAdder
 from erc7730.convert.resolved.constants import ConstantProvider
 from erc7730.convert.resolved.enums import get_enum, get_enum_id
+from erc7730.convert.resolved.values import resolve_path_or_constant_value
 from erc7730.model.input.display import (
     InputAddressNameParameters,
     InputCallDataParameters,
@@ -16,7 +18,6 @@ from erc7730.model.input.display import (
 from erc7730.model.input.path import DescriptorPathStr
 from erc7730.model.metadata import EnumDefinition
 from erc7730.model.paths import DataPath
-from erc7730.model.paths.path_ops import data_or_container_path_concat
 from erc7730.model.resolved.display import (
     ResolvedAddressNameParameters,
     ResolvedCallDataParameters,
@@ -69,18 +70,35 @@ def resolve_address_name_parameters(
 def resolve_calldata_parameters(
     prefix: DataPath, params: InputCallDataParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedCallDataParameters | None:
-    if (callee_path := constants.resolve_path(params.calleePath, out)) is None:
+    if (
+        callee := resolve_path_or_constant_value(
+            prefix=prefix,
+            input_path=params.calleePath,
+            input_value=params.callee,
+            abi_type=ABIDataType.ADDRESS,
+            constants=constants,
+            out=out,
+        )
+    ) is None:
         return None
+
     return ResolvedCallDataParameters(
         selector=constants.resolve_or_none(params.selector, out),
-        calleePath=data_or_container_path_concat(prefix, callee_path),
+        callee=callee,
     )
 
 
 def resolve_token_amount_parameters(
     prefix: DataPath, params: InputTokenAmountParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedTokenAmountParameters | None:
-    token_path = constants.resolve_path_or_none(params.tokenPath, out)
+    token = resolve_path_or_constant_value(
+        prefix=prefix,
+        input_path=params.tokenPath,
+        input_value=params.token,
+        abi_type=ABIDataType.ADDRESS,
+        constants=constants,
+        out=out,
+    )
 
     input_addresses = cast(
         list[DescriptorPathStr | MixedCaseAddress] | MixedCaseAddress | None,
@@ -111,7 +129,7 @@ def resolve_token_amount_parameters(
         resolved_threshold = None
 
     return ResolvedTokenAmountParameters(
-        tokenPath=None if token_path is None else data_or_container_path_concat(prefix, token_path),
+        token=token,
         nativeCurrencyAddress=resolved_addresses,
         threshold=resolved_threshold,
         message=constants.resolve_or_none(params.message, out),
@@ -121,9 +139,19 @@ def resolve_token_amount_parameters(
 def resolve_nft_parameters(
     prefix: DataPath, params: InputNftNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedNftNameParameters | None:
-    if (collection_path := constants.resolve_path(params.collectionPath, out)) is None:
+    if (
+        collection := resolve_path_or_constant_value(
+            prefix=prefix,
+            input_path=params.collectionPath,
+            input_value=params.collection,
+            abi_type=ABIDataType.ADDRESS,
+            constants=constants,
+            out=out,
+        )
+    ) is None:
         return None
-    return ResolvedNftNameParameters(collectionPath=data_or_container_path_concat(prefix, collection_path))
+
+    return ResolvedNftNameParameters(collection=collection)
 
 
 def resolve_date_parameters(

@@ -83,7 +83,15 @@ class InputTokenAmountParameters(Model):
         title="Token Path",
         description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
         "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
-        '"Unknown token" warning.',
+        '"Unknown token" warning. Exactly one of "tokenPath" or "token" must be set.',
+    )
+
+    token: DescriptorPathStr | MixedCaseAddress | None = Field(
+        default=None,
+        title="Token",
+        description="The address of the token contract, as constant value. Used to associate correct ticker. If ticker "
+        "is not found or value is not set, the wallet SHOULD display the raw value instead with an "
+        '"Unknown token" warning. Exactly one of "tokenPath" or "token" must be set.',
     )
 
     nativeCurrencyAddress: list[DescriptorPathStr | MixedCaseAddress] | DescriptorPathStr | MixedCaseAddress | None = (
@@ -107,6 +115,12 @@ class InputTokenAmountParameters(Model):
         title="Unlimited Message",
         description="The message to display when the amount is above the threshold.",
     )
+
+    @model_validator(mode="after")
+    def _validate_one_of_token_path_or_value(self) -> Self:
+        if self.tokenPath is not None and self.token is not None:
+            raise ValueError('"tokenPath" and "token" are mutually exclusive.')
+        return self
 
 
 class InputAddressNameParameters(Model):
@@ -142,10 +156,27 @@ class InputCallDataParameters(Model):
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: DescriptorPathStr | DataPathStr | ContainerPathStr = Field(
+    calleePath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
         title="Callee Path",
-        description="The path to the address of the contract being called by this embedded calldata.",
+        description="The path to the address of the contract being called by this embedded calldata. Exactly one of "
+        '"calleePath" or "callee" must be set.',
     )
+
+    callee: DescriptorPathStr | MixedCaseAddress | None = Field(
+        default=None,
+        title="Callee",
+        description="The address of the contract being called by this embedded calldata, as a constant value. Exactly "
+        'one of "calleePath" or "callee" must be set.',
+    )
+
+    @model_validator(mode="after")
+    def _validate_one_of_callee_path_or_value(self) -> Self:
+        if self.calleePath is None and self.callee is None:
+            raise ValueError('Either "calleePath" or "callee" must be set.')
+        if self.calleePath is not None and self.callee is not None:
+            raise ValueError('"calleePath" and "callee" are mutually exclusive.')
+        return self
 
 
 class InputNftNameParameters(Model):
@@ -153,9 +184,27 @@ class InputNftNameParameters(Model):
     NFT Names Formatting Parameters.
     """
 
-    collectionPath: DescriptorPathStr | DataPathStr | ContainerPathStr = Field(
-        title="Collection Path", description="The path to the collection in the structured data."
+    collectionPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Collection Path",
+        description="The path to the collection in the structured data. Exactly one of "
+        '"collectionPath" or "collection" must be set.',
     )
+
+    collection: DescriptorPathStr | MixedCaseAddress | None = Field(
+        default=None,
+        title="Collection",
+        description="The address of the collection contract, as a constant value. Exactly one of "
+        '"collectionPath" or "collection" must be set.',
+    )
+
+    @model_validator(mode="after")
+    def _validate_one_of_collection_path_or_value(self) -> Self:
+        if self.collectionPath is None and self.collection is None:
+            raise ValueError('Either "collectionPath" or "collection" must be set.')
+        if self.collectionPath is not None and self.collection is not None:
+            raise ValueError('"collectionPath" and "collection" are mutually exclusive.')
+        return self
 
 
 class InputDateParameters(Model):

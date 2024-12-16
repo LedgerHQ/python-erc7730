@@ -68,10 +68,6 @@ def test_lint_registry_files(input_file: Path) -> None:
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_resolve_registry_files(input_file: Path) -> None:
-    # TODO: these descriptors use literal constants instead of token paths, which is not supported yet
-    if input_file.name in {"calldata-OssifiableProxy.json", "calldata-wstETH.json", "calldata-usdt.json"}:
-        pytest.skip("Descriptor uses literal constants instead of token paths, which is not supported yet")
-
     result = runner.invoke(app, ["resolve", str(input_file)])
     out = "".join(result.stdout.splitlines())
     assert json.loads(out) is not None

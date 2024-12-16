@@ -18,17 +18,64 @@ from erc7730.model.unions import field_discriminator, field_parameters_discrimin
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 
+class ResolvedValuePath(Model):
+    """
+    A path to the field in the structured data. The path is a JSON path expression that can be used to extract the
+    field value from the structured data.
+    """
+
+    type: Literal["path"] = Field(
+        default="path",
+        title="Value Type",
+        description="The value type identifier (discriminator for values discriminated union).",
+    )
+
+    path: ResolvedPath = Field(
+        title="Path",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
+        "to extract the field value from the structured data.",
+    )
+
+
+class ResolvedValueConstant(Model):
+    """
+    A constant value.
+    """
+
+    type: Literal["constant"] = Field(
+        default="constant",
+        title="Value Type",
+        description="The value type identifier (discriminator for values discriminated union).",
+    )
+
+    value: ScalarType = Field(
+        title="Value",
+        description="The constant value.",
+    )
+
+    raw: HexStr = Field(
+        title="Raw Value",
+        description="The constant value, serialized and hex encoded.",
+    )
+
+
+ResolvedValue = Annotated[
+    ResolvedValuePath | ResolvedValueConstant,
+    Discriminator("type"),
+]
+
+
 class ResolvedTokenAmountParameters(Model):
     """
     Token Amount Formatting Parameters.
     """
 
-    tokenPath: ResolvedPath | None = Field(
+    token: ResolvedValue | None = Field(
         default=None,
-        title="Token Path",
-        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
-        "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
-        '"Unknown token" warning.',
+        title="Token",
+        description="The address of the token contract, either as path to a field in the structured data or a constant "
+        "value. Used to associate correct ticker. If ticker is not found or value is not set, the wallet "
+        'SHOULD display the raw value instead with an "Unknown token" warning.',
     )
 
     nativeCurrencyAddress: list[Address] | None = Field(
@@ -85,9 +132,10 @@ class ResolvedCallDataParameters(Model):
         description="The selector being called, if not contained in the calldata. Hex string representation.",
     )
 
-    calleePath: ResolvedPath = Field(
-        title="Callee Path",
-        description="The path to the address of the contract being called by this embedded calldata.",
+    callee: ResolvedValue = Field(
+        title="Callee",
+        description="The address of the contract being called by this embedded calldata, either as path to a field in "
+        "the structured data or a constant value.",
     )
 
 
@@ -96,8 +144,10 @@ class ResolvedNftNameParameters(Model):
     NFT Names Formatting Parameters.
     """
 
-    collectionPath: ResolvedPath = Field(
-        title="Collection Path", description="The path to the collection in the structured data."
+    collection: ResolvedValue = Field(
+        title="Collection",
+        description="The address of the collection contract, either as path to a field in the structured data or a "
+        "constant value.",
     )
 
 
@@ -155,48 +205,6 @@ ResolvedFieldParameters = Annotated[
     | Annotated[ResolvedUnitParameters, Tag("unit")]
     | Annotated[ResolvedEnumParameters, Tag("enum")],
     Discriminator(field_parameters_discriminator),
-]
-
-
-class ResolvedValuePath(Model):
-    """
-    A path to the field in the structured data. The path is a JSON path expression that can be used to extract the
-    field value from the structured data.
-    """
-
-    type: Literal["path"] = Field(
-        default="path",
-        title="Value Type",
-        description="The value type identifier (discriminator for values discriminated union).",
-    )
-
-    path: ResolvedPath = Field(
-        title="Path",
-        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
-        "to extract the field value from the structured data.",
-    )
-
-
-class ResolvedValueConstant(Model):
-    """
-    A constant value.
-    """
-
-    type: Literal["constant"] = Field(
-        default="constant",
-        title="Value Type",
-        description="The value type identifier (discriminator for values discriminated union).",
-    )
-
-    value: ScalarType = Field(
-        title="Value",
-        description="The constant value.",
-    )
-
-
-ResolvedValue = Annotated[
-    ResolvedValuePath | ResolvedValueConstant,
-    Discriminator("type"),
 ]
 
 

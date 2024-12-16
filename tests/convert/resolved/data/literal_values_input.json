@@ -1,0 +1,81 @@
+{
+    "$schema": "../../../registries/clear-signing-erc7730-registry/specs/erc7730-v1.schema.json",
+    "context": {
+        "contract": {
+            "deployments": [
+                {
+                    "chainId": 1,
+                    "address": "0x0000000000000000000000000000000000000aAa"
+                }
+            ],
+            "abi": [
+                {
+                    "type": "function",
+                    "name": "function1",
+                    "inputs": [ { "name": "param1", "type": "bytes4" } ],
+                    "outputs": [ { "name": "", "type": "address" } ]
+                }
+            ]
+        }
+    },
+    "metadata": {},
+    "display": {
+        "formats": {
+            "function1(bytes4)": {
+                "fields": [
+                    {
+                        "label": "Test - raw",
+                        "value": "Hello world",
+                        "format": "raw"
+                    },
+                    {
+                        "label": "Test - addressName",
+                        "value": "0x0000000000000000000000000000000000000Bbb",
+                        "format": "addressName",
+                        "params": { "types": [ "eoa" ], "sources": [ "ens" ]}
+                    },
+                    {
+                        "label": "Test - amount",
+                        "value": 1337,
+                        "format": "amount"
+                    },
+                    {
+                        "label": "Test - calldata",
+                        "value": "0x0000000000000000000000000000000000000Bbb",
+                        "format": "calldata",
+                        "params": { "callee": "0x0000000000000000000000000000000000000001" }
+                    },
+                    {
+                        "label": "Test - date",
+                        "value": 1732003058,
+                        "format": "date",
+                        "params": { "encoding": "timestamp" }
+                    },
+                    {
+                        "label": "Test - duration",
+                        "value": 7200000,
+                        "format": "duration"
+                    },
+                    {
+                        "label": "Test - nftName",
+                        "value": 42,
+                        "format": "nftName",
+                        "params": { "collection": "0x0000000000000000000000000000000000000001" }
+                    },
+                    {
+                        "label": "Test - tokenAmount",
+                        "value": 127,
+                        "format": "tokenAmount",
+                        "params": { "token": "0x0000000000000000000000000000000000000001" }
+                    },
+                    {
+                        "label": "Test - unit",
+                        "value": 42,
+                        "format": "unit",
+                        "params": { "base": "km/h", "decimals": 2, "prefix": true }
+                    }
+                ]
+            }
+        }
+    }
+}

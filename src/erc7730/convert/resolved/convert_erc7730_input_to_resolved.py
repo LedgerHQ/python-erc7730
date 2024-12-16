@@ -10,7 +10,7 @@ from erc7730.convert import ERC7730Converter
 from erc7730.convert.resolved.constants import ConstantProvider, DefaultConstantProvider
 from erc7730.convert.resolved.parameters import resolve_field_parameters
 from erc7730.convert.resolved.references import resolve_reference
-from erc7730.convert.resolved.values import resolve_value
+from erc7730.convert.resolved.values import resolve_field_value
 from erc7730.model.abi import ABI
 from erc7730.model.context import EIP712Schema
 from erc7730.model.display import (
@@ -314,7 +314,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
         params = resolve_field_parameters(prefix, definition.params, enums, constants, out)
 
-        if (value := resolve_value(prefix, definition, constants, out)) is None:
+        if (value := resolve_field_value(prefix, definition, definition.format, constants, out)) is None:
             return None
 
         return ResolvedFieldDescription.model_validate(
