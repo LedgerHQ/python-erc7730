@@ -1,7 +1,5 @@
 from typing import assert_never
 
-from eth_abi.exceptions import EncodingError
-from eth_abi.registry import registry
 from pydantic import TypeAdapter, ValidationError
 
 from erc7730.common.abi import ABIDataType
@@ -125,13 +123,48 @@ def encode_value(value: ScalarType, abi_type: ABIDataType, out: OutputAdder) -> 
                 message=f""""{value}" is not a valid hexadecimal string.""",
             )
 
+    # this uses a custom Ledger specific encoding because the app was coded that way.
     try:
-        encoded = registry.get_encoder(abi_type.value.lower()).encode(value)
-    except EncodingError:
+        match abi_type:
+            case ABIDataType.UFIXED | ABIDataType.FIXED:
+                return out.error(title="Invalid constant", message="""Fixed precision number are not supported""")
+
+            case ABIDataType.UINT:
+                if not isinstance(value, int) or value < 0:
+                    return out.error(title="Invalid constant", message=f"""Value "{value}" is not an unsigned int""")
+                encoded = value.to_bytes(length=(max(value.bit_length(), 1) + 7) // 8, signed=False)
+
+            case ABIDataType.INT:
+                if not isinstance(value, int):
+                    return out.error(title="Invalid constant", message=f"""Value "{value}" is not an integer""")
+                encoded = value.to_bytes(length=(max(value.bit_length(), 1) + 7) // 8, signed=True)
+
+            case ABIDataType.BOOL:
+                if not isinstance(value, bool):
+                    return out.error(title="Invalid constant", message=f"""Value "{value}" is not a boolean""")
+                encoded = value.to_bytes()
+
+            case ABIDataType.STRING:
+                if not isinstance(value, str):
+                    return out.error(title="Invalid constant", message=f"""Value "{value}" is not a string""")
+                encoded = value.encode(encoding="ascii", errors="replace")
+
+            case ABIDataType.ADDRESS:
+                return out.error(
+                    title="Invalid constant", message=f"""Value "{value}" is not a valid address hexadecimal string."""
+                )
+
+            case ABIDataType.BYTES:
+                return out.error(
+                    title="Invalid constant", message=f"""Value "{value}" is not a valid hexadecimal string."""
+                )
+
+            case _:
+                assert_never(abi_type)
+    except OverflowError:
         return out.error(
-            title="Invalid constant value",
-            message=f"""Value "{value}" is not a {abi_type}. Please provide a valid of the expected type, or directly 
-            solidity encoded as an hex string (eg: "0x00000").""",
+            title="Invalid constant",
+            message=f"""Value "{value}" is too large for the specified type.""",
         )
 
     return HexStr("0x" + encoded.hex())

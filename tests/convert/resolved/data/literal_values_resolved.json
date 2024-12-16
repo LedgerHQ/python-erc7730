@@ -18,11 +18,7 @@
       "0x5ca8f297": {
         "fields": [
           {
-            "value": {
-              "type": "constant",
-              "value": "Hello world",
-              "raw": "0x000000000000000000000000000000000000000000000000000000000000000b48656c6c6f20776f726c64000000000000000000000000000000000000000000"
-            },
+            "value": { "type": "constant", "value": "Hello world", "raw": "0x48656c6c6f20776f726c64" },
             "label": "Test - raw",
             "format": "raw"
           },
@@ -36,11 +32,7 @@
             "format": "addressName",
             "params": { "types": ["eoa"], "sources": ["ens"] }
           },
-          {
-            "value": { "type": "constant", "value": 1337, "raw": "0x0000000000000000000000000000000000000000000000000000000000000539" },
-            "label": "Test - amount",
-            "format": "amount"
-          },
+          { "value": { "type": "constant", "value": 1337, "raw": "0x0539" }, "label": "Test - amount", "format": "amount" },
           {
             "value": {
               "type": "constant",
@@ -58,18 +50,14 @@
             }
           },
           {
-            "value": { "type": "constant", "value": 1732003058, "raw": "0x00000000000000000000000000000000000000000000000000000000673c44f2" },
+            "value": { "type": "constant", "value": 1732003058, "raw": "0x673c44f2" },
             "label": "Test - date",
             "format": "date",
             "params": { "encoding": "timestamp" }
           },
+          { "value": { "type": "constant", "value": 7200000, "raw": "0x6ddd00" }, "label": "Test - duration", "format": "duration" },
           {
-            "value": { "type": "constant", "value": 7200000, "raw": "0x00000000000000000000000000000000000000000000000000000000006ddd00" },
-            "label": "Test - duration",
-            "format": "duration"
-          },
-          {
-            "value": { "type": "constant", "value": 42, "raw": "0x000000000000000000000000000000000000000000000000000000000000002a" },
+            "value": { "type": "constant", "value": 42, "raw": "0x2a" },
             "label": "Test - nftName",
             "format": "nftName",
             "params": {
@@ -81,7 +69,7 @@
             }
           },
           {
-            "value": { "type": "constant", "value": 127, "raw": "0x000000000000000000000000000000000000000000000000000000000000007f" },
+            "value": { "type": "constant", "value": 127, "raw": "0x7f" },
             "label": "Test - tokenAmount",
             "format": "tokenAmount",
             "params": {
@@ -93,7 +81,7 @@
             }
           },
           {
-            "value": { "type": "constant", "value": 42, "raw": "0x000000000000000000000000000000000000000000000000000000000000002a" },
+            "value": { "type": "constant", "value": 42, "raw": "0x2a" },
             "label": "Test - unit",
             "format": "unit",
             "params": { "base": "km/h", "decimals": 2, "prefix": true }
