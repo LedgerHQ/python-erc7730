@@ -18,13 +18,15 @@
       "0x5ca8f297": {
         "fields": [
           {
-            "value": { "type": "constant", "value": "Hello world", "raw": "0x48656c6c6f20776f726c64" },
+            "value": { "type": "constant", "type_family": "string", "type_size": 11, "value": "Hello world", "raw": "0x48656c6c6f20776f726c64" },
             "label": "Test - raw",
             "format": "raw"
           },
           {
             "value": {
               "type": "constant",
+              "type_family": "address",
+              "type_size": 20,
               "value": "0x0000000000000000000000000000000000000Bbb",
               "raw": "0x0000000000000000000000000000000000000bbb"
             },
@@ -32,10 +34,16 @@
             "format": "addressName",
             "params": { "types": ["eoa"], "sources": ["ens"] }
           },
-          { "value": { "type": "constant", "value": 1337, "raw": "0x0539" }, "label": "Test - amount", "format": "amount" },
+          {
+            "value": { "type": "constant", "type_family": "uint", "type_size": 2, "value": 1337, "raw": "0x0539" },
+            "label": "Test - amount",
+            "format": "amount"
+          },
           {
             "value": {
               "type": "constant",
+              "type_family": "bytes",
+              "type_size": 20,
               "value": "0x0000000000000000000000000000000000000Bbb",
               "raw": "0x0000000000000000000000000000000000000bbb"
             },
@@ -44,44 +52,54 @@
             "params": {
               "callee": {
                 "type": "constant",
+                "type_family": "address",
+                "type_size": 20,
                 "value": "0x0000000000000000000000000000000000000001",
                 "raw": "0x0000000000000000000000000000000000000001"
               }
             }
           },
           {
-            "value": { "type": "constant", "value": 1732003058, "raw": "0x673c44f2" },
+            "value": { "type": "constant", "type_family": "uint", "type_size": 4, "value": 1732003058, "raw": "0x673c44f2" },
             "label": "Test - date",
             "format": "date",
             "params": { "encoding": "timestamp" }
           },
-          { "value": { "type": "constant", "value": 7200000, "raw": "0x6ddd00" }, "label": "Test - duration", "format": "duration" },
           {
-            "value": { "type": "constant", "value": 42, "raw": "0x2a" },
+            "value": { "type": "constant", "type_family": "uint", "type_size": 3, "value": 7200000, "raw": "0x6ddd00" },
+            "label": "Test - duration",
+            "format": "duration"
+          },
+          {
+            "value": { "type": "constant", "type_family": "uint", "type_size": 1, "value": 42, "raw": "0x2a" },
             "label": "Test - nftName",
             "format": "nftName",
             "params": {
               "collection": {
                 "type": "constant",
+                "type_family": "address",
+                "type_size": 20,
                 "value": "0x0000000000000000000000000000000000000001",
                 "raw": "0x0000000000000000000000000000000000000001"
               }
             }
           },
           {
-            "value": { "type": "constant", "value": 127, "raw": "0x7f" },
+            "value": { "type": "constant", "type_family": "uint", "type_size": 1, "value": 127, "raw": "0x7f" },
             "label": "Test - tokenAmount",
             "format": "tokenAmount",
             "params": {
               "token": {
                 "type": "constant",
+                "type_family": "address",
+                "type_size": 20,
                 "value": "0x0000000000000000000000000000000000000001",
                 "raw": "0x0000000000000000000000000000000000000001"
               }
             }
           },
           {
-            "value": { "type": "constant", "value": 42, "raw": "0x2a" },
+            "value": { "type": "constant", "type_family": "uint", "type_size": 1, "value": 42, "raw": "0x2a" },
             "label": "Test - unit",
             "format": "unit",
             "params": { "base": "km/h", "decimals": 2, "prefix": true }

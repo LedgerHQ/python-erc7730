@@ -3,6 +3,7 @@ from typing import Annotated, ForwardRef, Literal
 from eip712.model.schema import EIP712Type
 from pydantic import Discriminator, Field, Tag
 
+from erc7730.common.abi import ABIDataType
 from erc7730.model.base import Model
 from erc7730.model.display import (
     AddressNameType,
@@ -46,6 +47,15 @@ class ResolvedValueConstant(Model):
         default="constant",
         title="Value Type",
         description="The value type identifier (discriminator for values discriminated union).",
+    )
+
+    type_family: ABIDataType = Field(
+        title="Type family",
+        description="Type family of the value",
+    )
+
+    type_size: int | None = Field(
+        default=None, title="Type size", description="Size of the type (in bytes)", ge=0, le=255
     )
 
     value: ScalarType = Field(

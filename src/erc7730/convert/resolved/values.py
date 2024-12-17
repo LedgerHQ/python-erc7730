@@ -108,7 +108,7 @@ def resolve_path_or_constant_value(
         if (raw := encode_value(value, abi_type, out)) is None:
             return None
 
-        return ResolvedValueConstant(value=value, raw=raw)
+        return ResolvedValueConstant(type_family=abi_type, type_size=len(raw) // 2 - 1, value=value, raw=raw)
 
     return None
 
