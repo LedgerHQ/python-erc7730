@@ -55,8 +55,8 @@ def test_encode_value(abi_type: ABIDataType, value: ScalarType, expected: HexStr
         (ABIDataType.BOOL, "42", """Value "42" is not a bool"""),
         (ABIDataType.BYTES, "42", """Value "42" is not a valid hexadecimal string"""),
         (ABIDataType.STRING, 42, """Value "42" is not a string"""),
-        (ABIDataType.FIXED, 42, """Fixed precision number are not supported"""),
-        (ABIDataType.UFIXED, 42, """Fixed precision number are not supported"""),
+        (ABIDataType.FIXED, 42, """Fixed precision numbers are not supported"""),
+        (ABIDataType.UFIXED, 42, """Fixed precision numbers are not supported"""),
     ],
 )
 def test_encode_value_error(abi_type: ABIDataType, value: ScalarType, expected: str) -> None:

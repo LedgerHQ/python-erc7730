@@ -123,11 +123,11 @@ def encode_value(value: ScalarType, abi_type: ABIDataType, out: OutputAdder) -> 
                 message=f""""{value}" is not a valid hexadecimal string.""",
             )
 
-    # this uses a custom Ledger specific encoding because the app was coded that way.
+    # this uses a custom specific encoding because this is what the Ledger app expects
     try:
         match abi_type:
             case ABIDataType.UFIXED | ABIDataType.FIXED:
-                return out.error(title="Invalid constant", message="""Fixed precision number are not supported""")
+                return out.error(title="Invalid constant", message="""Fixed precision numbers are not supported""")
 
             case ABIDataType.UINT:
                 if not isinstance(value, int) or value < 0:
