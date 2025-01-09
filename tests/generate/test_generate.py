@@ -29,23 +29,49 @@ def test_generate_from_contract_address(label: str, chain_id: int, contract_addr
 
 
 @pytest.mark.parametrize("test_file", sorted(glob(str(DATA / "abis*.json"))), ids=lambda f: Path(f).stem)
-def test_generate_from_abis(test_file: str) -> None:
+def test_generate_from_abis_buffer(test_file: str) -> None:
     """Generate descriptor using a provided ABI file."""
-    _assert_descriptor_valid(
-        generate_descriptor(
-            chain_id=1, contract_address=Address("0x0000000000000000000000000000000000000000"), abi_file=Path(test_file)
+    with open(test_file, "rb") as f:
+        _assert_descriptor_valid(
+            generate_descriptor(
+                chain_id=1, contract_address=Address("0x0000000000000000000000000000000000000000"), abi=f.read()
+            )
         )
+
+
+@pytest.mark.parametrize("test_file", sorted(glob(str(DATA / "abis*.json"))), ids=lambda f: Path(f).stem)
+def test_generate_from_abis_string(test_file: str) -> None:
+    """Generate descriptor using a provided ABI file."""
+    with open(test_file, "rb") as f:
+        abi = f.read().decode("utf-8")
+    _assert_descriptor_valid(
+        generate_descriptor(chain_id=1, contract_address=Address("0x0000000000000000000000000000000000000000"), abi=abi)
     )
 
 
 @pytest.mark.parametrize("test_file", sorted(glob(str(DATA / "schemas*.json"))), ids=lambda f: Path(f).stem)
-def test_generate_from_eip712_schemas(test_file: str) -> None:
+def test_generate_from_eip712_schemas_buffer(test_file: str) -> None:
     """Generate descriptor using a provided EIP-712 file."""
+    with open(test_file, "rb") as f:
+        _assert_descriptor_valid(
+            generate_descriptor(
+                chain_id=1,
+                contract_address=Address("0x0000000000000000000000000000000000000000"),
+                eip712_schema=f.read(),
+            )
+        )
+
+
+@pytest.mark.parametrize("test_file", sorted(glob(str(DATA / "schemas*.json"))), ids=lambda f: Path(f).stem)
+def test_generate_from_eip712_schemas_string(test_file: str) -> None:
+    """Generate descriptor using a provided EIP-712 file."""
+    with open(test_file, "rb") as f:
+        schema = f.read().decode("utf-8")
     _assert_descriptor_valid(
         generate_descriptor(
             chain_id=1,
             contract_address=Address("0x0000000000000000000000000000000000000000"),
-            eip712_schema_file=Path(test_file),
+            eip712_schema=schema,
         )
     )
 

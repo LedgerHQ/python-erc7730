@@ -155,11 +155,24 @@ def command_generate(
     legal_name: Annotated[str | None, Option(help="The full legal name of the owner")] = None,
     url: Annotated[str | None, Option(help="URL with more info on the entity interacted with")] = None,
 ) -> None:
+    if schema is not None and abi is not None:
+        print("Cannot specify both ABI and schema.")
+        raise Exit(1)
+    schema_buffer = None
+    abi_buffer = None
+
+    if schema is not None:
+        with open(schema, "rb") as f:
+            schema_buffer = f.read()
+    elif abi is not None:
+        with open(abi, "rb") as f:
+            abi_buffer = f.read()
+
     descriptor = generate_descriptor(
         chain_id=chain_id,
         contract_address=address,
-        abi_file=abi,
-        eip712_schema_file=schema,
+        abi=abi_buffer,
+        eip712_schema=schema_buffer,
         owner=owner,
         legal_name=legal_name,
         url=HttpUrl(url) if url is not None else None,

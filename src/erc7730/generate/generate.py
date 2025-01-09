@@ -1,5 +1,4 @@
 from collections.abc import Generator
-from pathlib import Path
 from typing import Any, assert_never
 
 from caseswitcher import to_title
@@ -47,8 +46,8 @@ from erc7730.model.types import Address
 def generate_descriptor(
     chain_id: int,
     contract_address: Address,
-    abi_file: Path | None = None,
-    eip712_schema_file: Path | None = None,
+    abi: str | bytes | None = None,
+    eip712_schema: str | bytes | None = None,
     owner: str | None = None,
     legal_name: str | None = None,
     url: HttpUrl | None = None,
@@ -56,20 +55,20 @@ def generate_descriptor(
     """
     Generate an ERC-7730 descriptor.
 
-    If an EIP-712 schema file is provided, an EIP-712 descriptor is generated for this schema, otherwise a calldata
-    descriptor. If no ABI file is supplied, the ABIs are fetched from Etherscan using the chain id / contract address.
+    If an EIP-712 schema is provided, an EIP-712 descriptor is generated for this schema, otherwise a calldata
+    descriptor. If no ABI is supplied, the ABIs are fetched from Etherscan using the chain id / contract address.
 
     :param chain_id: contract chain id
     :param contract_address: contract address
-    :param abi_file: path to a JSON ABI file (to generate a calldata descriptor)
-    :param eip712_schema_file: path to an EIP-712 schema (to generate an EIP-712 descriptor)
+    :param abi: JSON ABI string or buffer representation (to generate a calldata descriptor)
+    :param eip712_schema: JSON EIP-712 schema string or buffer representation (to generate an EIP-712 descriptor)
     :param owner: the display name of the owner or target of the contract / message to be clear signed
     :param legal_name: the full legal name of the owner if different from the owner field
     :param url: URL with more info on the entity the user interacts with
     :return: a generated ERC-7730 descriptor
     """
 
-    context, trees = _generate_context(chain_id, contract_address, abi_file, eip712_schema_file)
+    context, trees = _generate_context(chain_id, contract_address, abi, eip712_schema)
     metadata = _generate_metadata(legal_name, owner, url)
     display = _generate_display(trees)
 
@@ -82,18 +81,17 @@ def _generate_metadata(owner: str | None, legal_name: str | None, url: HttpUrl |
 
 
 def _generate_context(
-    chain_id: int, contract_address: Address, abi_file: Path | None, eip712_schema_file: Path | None
+    chain_id: int, contract_address: Address, abi: str | bytes | None, eip712_schema: str | bytes | None
 ) -> tuple[InputContractContext | InputEIP712Context, dict[str, SchemaTree]]:
-    if eip712_schema_file is not None:
-        return _generate_context_eip712(chain_id, contract_address, eip712_schema_file)
-    return _generate_context_calldata(chain_id, contract_address, abi_file)
+    if eip712_schema is not None:
+        return _generate_context_eip712(chain_id, contract_address, eip712_schema)
+    return _generate_context_calldata(chain_id, contract_address, abi)
 
 
 def _generate_context_eip712(
-    chain_id: int, contract_address: Address, eip712_schema_file: Path
+    chain_id: int, contract_address: Address, eip712_schema: str | bytes
 ) -> tuple[InputEIP712Context, dict[str, SchemaTree]]:
-    with open(eip712_schema_file, "rb") as f:
-        schemas = TypeAdapter(list[EIP712Schema]).validate_json(f.read())
+    schemas = TypeAdapter(list[EIP712Schema]).validate_json(eip712_schema)
 
     context = InputEIP712Context(
         eip712=InputEIP712(schemas=schemas, deployments=[InputDeployment(chainId=chain_id, address=contract_address)])
@@ -105,11 +103,10 @@ def _generate_context_eip712(
 
 
 def _generate_context_calldata(
-    chain_id: int, contract_address: Address, abi_file: Path | None
+    chain_id: int, contract_address: Address, abi: str | bytes | None
 ) -> tuple[InputContractContext, dict[str, SchemaTree]]:
-    if abi_file is not None:
-        with open(abi_file, "rb") as f:
-            abis = TypeAdapter(list[ABI]).validate_json(f.read())
+    if abi is not None:
+        abis = TypeAdapter(list[ABI]).validate_json(abi)
 
     elif (abis := get_contract_abis(chain_id, contract_address)) is None:
         raise Exception("Failed to fetch contract ABIs")
