@@ -190,19 +190,21 @@ def data_path_to_schema_path(path: DataPath) -> DataPath:
     """
     Convert a data path to a schema path.
 
-    Example: #.foo.[].[-2].[1:5].bar -> #.foo.[].[].[].bar
+    Example: #.foo.[].[-2].bar.[1:5] -> #.foo.[].[].bar
 
     :param path: data path
     :return: schema path
     """
 
-    def to_schema(element: DataPathElement) -> DataPathElement:
+    def to_schema(element: DataPathElement) -> DataPathElement | None:
         match element:
             case Field() as f:
                 return f
-            case Array() | ArrayElement() | ArraySlice():
+            case Array() | ArrayElement():
                 return Array()
+            case ArraySlice():  # Array slice only valid on bytes / primitive types, not on structs
+                return None
             case _:
                 assert_never(element)
 
-    return path.model_copy(update={"elements": [to_schema(e) for e in path.elements]})
+    return path.model_copy(update={"elements": [to_schema(e) for e in path.elements if to_schema(e) is not None]})
