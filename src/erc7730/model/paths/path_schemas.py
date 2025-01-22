@@ -202,7 +202,8 @@ def data_path_to_schema_path(path: DataPath) -> DataPath:
                 return f
             case Array() | ArrayElement():
                 return Array()
-            case ArraySlice():  # Array slice only valid on bytes / primitive types, not on structs
+            # TODO: Spec also allows slicing on array type, but for now it is only used on primitive types
+            case ArraySlice():
                 return None
             case _:
                 assert_never(element)
