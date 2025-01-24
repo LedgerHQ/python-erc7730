@@ -35,7 +35,7 @@ class OwnerInfo(Model):
         default=None,
         title="[DEPRECATED] Last Update of the contract / message",
         description="The date of the last update of the contract / message."
-        "Field is deprecated and will be removed, use `deploymentDate`instead.",
+        "Field is deprecated and will be removed, use `deploymentDate` instead.",
         examples=[datetime.now(UTC)],
     )
 
