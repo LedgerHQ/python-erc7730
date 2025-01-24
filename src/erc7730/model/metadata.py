@@ -33,8 +33,16 @@ class OwnerInfo(Model):
 
     lastUpdate: datetime | None = Field(
         default=None,
-        title="Last Update of the contract / message",
-        description="The date of the last update of the contract / message.",
+        title="[DEPRECATED] Last Update of the contract / message",
+        description="The date of the last update of the contract / message."
+        "Field is deprecated and will be removed, use `deploymentDate` instead.",
+        examples=[datetime.now(UTC)],
+    )
+
+    deploymentDate: datetime | None = Field(
+        default=None,
+        title="Deployment date of contract / message",
+        description="The deployment date of the contract / message.",
         examples=[datetime.now(UTC)],
     )
 
