@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:57d3553f53483e5e3dbb80d52d1b7efcb8cf87ad4441adc3bacd34bf9ad409e4"
+content_hash = "sha256:510929ba0ea5671b0109512abd263e6da8345eea58fe6260aef4be070f5be508"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -318,7 +318,7 @@ files = [
 
 [[package]]
 name = "eip712-clearsign"
-version = "3.0.3"
+version = "4.0.1"
 requires_python = "<3.13,>=3.12"
 summary = "ERC-7730 descriptors validation and utilities."
 groups = ["default"]
@@ -326,8 +326,8 @@ dependencies = [
     "pydantic>=2.8.2",
 ]
 files = [
-    {file = "eip712-clearsign-3.0.3.tar.gz", hash = "sha256:84f2b2e1e7a9706e6a76e35546357c828ba1348d58747c24e327c0338d7708dc"},
-    {file = "eip712_clearsign-3.0.3-py3-none-any.whl", hash = "sha256:37af75ae15ae69a60ba67f704ff2e9672b9709a28f26c67c70dd4f316a277b21"},
+    {file = "eip712-clearsign-4.0.1.tar.gz", hash = "sha256:80a31c106a8b050badb50430886d66fee609a3d1289f595463cc677e522ea128"},
+    {file = "eip712_clearsign-4.0.1-py3-none-any.whl", hash = "sha256:bf6e34e5ade517e907443252ebb150e1be2fcbc0da6d633bd4abc480456d5b46"},
 ]
 
 [[package]]
@@ -919,7 +919,7 @@ files = [
 
 [[package]]
 name = "pydantic"
-version = "2.10.5"
+version = "2.10.6"
 requires_python = ">=3.8"
 summary = "Data validation using Python type hints"
 groups = ["default", "dev"]
@@ -929,8 +929,8 @@ dependencies = [
     "typing-extensions>=4.12.2",
 ]
 files = [
-    {file = "pydantic-2.10.5-py3-none-any.whl", hash = "sha256:4dd4e322dbe55472cb7ca7e73f4b63574eecccf2835ffa2af9021ce113c83c53"},
-    {file = "pydantic-2.10.5.tar.gz", hash = "sha256:278b38dbbaec562011d659ee05f63346951b3a248a6f3642e1bc68894ea2b4ff"},
+    {file = "pydantic-2.10.6-py3-none-any.whl", hash = "sha256:427d664bf0b8a2b34ff5dd0f5a18df00591adcee7198fbd71981054cef37b584"},
+    {file = "pydantic-2.10.6.tar.gz", hash = "sha256:ca5daa827cce33de7a42be142548b0096bf05a7e7b365aebfa5f8eeec7128236"},
 ]
 
 [[package]]
