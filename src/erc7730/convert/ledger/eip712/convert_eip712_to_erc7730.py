@@ -3,7 +3,7 @@ from typing import assert_never, final, override
 from eip712.model.resolved.descriptor import ResolvedEIP712DAppDescriptor
 from eip712.model.resolved.message import ResolvedEIP712MapperField
 from eip712.model.schema import EIP712SchemaField, EIP712Type
-from eip712.model.types import EIP712Format
+from eip712.model.types import EIP712Format, EIP712NameSource, EIP712NameType
 from eip712.utils import MissingRootTypeError, MultipleRootTypesError, get_primary_type
 from pydantic_string_url import HttpUrl
 
@@ -11,12 +11,14 @@ from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.model.context import EIP712Schema
 from erc7730.model.display import (
+    AddressNameType,
     DateEncoding,
     FieldFormat,
 )
 from erc7730.model.input.context import InputDeployment, InputDomain, InputEIP712, InputEIP712Context
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import (
+    InputAddressNameParameters,
     InputDateParameters,
     InputDisplay,
     InputFieldDescription,
@@ -56,7 +58,7 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
 
                     formats[primary_type] = InputFormat(
                         intent=message.mapper.label,
-                        fields=[self._convert_field(field) for field in message.mapper.fields],
+                        fields=[self._convert_field(field, out) for field in message.mapper.fields],
                         required=None,
                         screens=None,
                     )
@@ -91,7 +93,7 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
 
     @classmethod
     def _convert_field(
-        cls, field: ResolvedEIP712MapperField
+        cls, field: ResolvedEIP712MapperField, out: OutputAdder
     ) -> InputFieldDescription | InputReference | InputNestedFields:
         # FIXME must generate nested fields for arrays
         match field.format:
@@ -118,6 +120,19 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
                     format=FieldFormat.DATE,
                     params=InputDateParameters(encoding=DateEncoding.TIMESTAMP),
                 )
+            case EIP712Format.TRUSTED_NAME:
+                field_format = (
+                    FieldFormat.NFT_NAME if EIP712NameType.COLLECTION in field.nameTypes else FieldFormat.ADDRESS_NAME
+                )
+                return InputFieldDescription(
+                    path=field.path,
+                    label=field.label,
+                    format=field_format,
+                    params=InputAddressNameParameters(
+                        types=cls.convert_trusted_names_types(field.nameTypes, out),
+                        sources=cls.convert_trusted_names_sources(field.nameSources),
+                    ),
+                )
             case _:
                 assert_never(field.format)
 
@@ -139,3 +154,44 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
                 message="Primary type could not be determined on EIP-712 schema, as several types are not"
                 "referenced by any other type. Please make sure your schema has a single root type.",
             )
+
+    @classmethod
+    def convert_trusted_names_types(
+        cls, types: list[EIP712NameType] | None, out: OutputAdder
+    ) -> list[AddressNameType] | None:
+        if types is None:
+            return None
+
+        name_types: list[AddressNameType] = []
+        for name_type in types:
+            match name_type:
+                case EIP712NameType.WALLET:
+                    name_types.append(AddressNameType.WALLET)
+                case EIP712NameType.EOA:
+                    name_types.append(AddressNameType.EOA)
+                case EIP712NameType.SMART_CONTRACT:
+                    name_types.append(AddressNameType.CONTRACT)
+                case EIP712NameType.TOKEN:
+                    name_types.append(AddressNameType.TOKEN)
+                case EIP712NameType.COLLECTION:
+                    name_types.append(AddressNameType.COLLECTION)
+                case EIP712NameType.CONTEXT_ADDRESS:
+                    return out.error("EIP712 context_address trusted name type is not supported in ERC-7730")
+                case _:
+                    assert_never(name_type)
+
+        return name_types
+
+    @classmethod
+    def convert_trusted_names_sources(cls, sources: list[EIP712NameSource] | None) -> list[str] | None:
+        if sources is None:
+            return None
+        name_sources: list[str] = []
+
+        for name_source in sources:
+            if name_source == EIP712NameSource.LOCAL_ADDRESS_BOOK:
+                # ERC-7730 specs defines "local" as an example
+                name_sources.append("local")
+            else:
+                name_sources.append(name_source.value)
+        return name_sources

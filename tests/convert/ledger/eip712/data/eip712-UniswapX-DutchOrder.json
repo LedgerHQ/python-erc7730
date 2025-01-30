@@ -136,7 +136,14 @@
               {
                 "path": "spender",
                 "label": "Approve to spender",
-                "format": "raw"
+                "format": "trusted-name",
+                "nameTypes": [
+                  "smart_contract"
+                ],
+                "nameSources": [
+                  "local_address_book",
+                  "ens"
+                ]
               },
               {
                 "path": "permitted.amount",
@@ -158,7 +165,14 @@
               {
                 "path": "witness.outputs.[].recipient",
                 "label": "On Addresses",
-                "format": "raw"
+                "format": "trusted-name",
+                "nameTypes": [
+                  "smart_contract"
+                ],
+                "nameSources": [
+                  "local_address_book",
+                  "ens"
+                ]
               },
               {
                 "path": "deadline",

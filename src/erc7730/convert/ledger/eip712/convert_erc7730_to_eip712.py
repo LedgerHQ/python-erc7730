@@ -4,18 +4,19 @@ from eip712.model.input.contract import InputEIP712Contract
 from eip712.model.input.descriptor import InputEIP712DAppDescriptor
 from eip712.model.input.message import InputEIP712Mapper, InputEIP712MapperField, InputEIP712Message
 from eip712.model.schema import EIP712SchemaField
-from eip712.model.types import EIP712Format
+from eip712.model.types import EIP712Format, EIP712NameSource, EIP712NameType
 
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
 from erc7730.model.context import EIP712Schema
-from erc7730.model.display import FieldFormat
+from erc7730.model.display import AddressNameType, FieldFormat
 from erc7730.model.paths import Array, ContainerField, ContainerPath, DataPath
 from erc7730.model.paths.path_ops import data_path_concat, to_relative
 from erc7730.model.resolved.context import ResolvedDeployment, ResolvedEIP712Context
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
+    ResolvedAddressNameParameters,
     ResolvedField,
     ResolvedFieldDescription,
     ResolvedNestedFields,
@@ -164,7 +165,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             case None:
                 field_format = None
             case FieldFormat.ADDRESS_NAME:
-                field_format = EIP712Format.RAW
+                field_format = EIP712Format.TRUSTED_NAME
             case FieldFormat.RAW:
                 field_format = EIP712Format.RAW
             case FieldFormat.ENUM:
@@ -174,7 +175,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             case FieldFormat.DURATION:
                 field_format = EIP712Format.RAW
             case FieldFormat.NFT_NAME:
-                field_format = EIP712Format.RAW
+                field_format = EIP712Format.TRUSTED_NAME
             case FieldFormat.CALL_DATA:
                 field_format = EIP712Format.RAW
             case FieldFormat.DATE:
@@ -214,9 +215,61 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             case _:
                 assert_never(field.format)
 
+        name_types: list[EIP712NameType] | None = None
+        name_sources: list[EIP712NameSource] | None = None
+
+        if (
+            field_format == EIP712Format.TRUSTED_NAME
+            and field.params is not None
+            and isinstance(field.params, ResolvedAddressNameParameters)
+        ):
+            name_types = cls.convert_trusted_names_types(field.params.types)
+            name_sources = cls.convert_trusted_names_sources(field.params.sources)
+
         return InputEIP712MapperField(
             path=str(to_relative(field_path)),
             label=field.label,
             assetPath=None if asset_path is None else str(to_relative(asset_path)),
             format=field_format,
+            nameTypes=name_types,
+            nameSources=name_sources,
         )
+
+    @classmethod
+    def convert_trusted_names_types(cls, types: list[AddressNameType] | None) -> list[EIP712NameType] | None:
+        if types is None:
+            return None
+
+        name_types: list[EIP712NameType] = []
+        for name_type in types:
+            match name_type:
+                case AddressNameType.WALLET:
+                    name_types.append(EIP712NameType.WALLET)
+                case AddressNameType.EOA:
+                    name_types.append(EIP712NameType.EOA)
+                case AddressNameType.CONTRACT:
+                    name_types.append(EIP712NameType.SMART_CONTRACT)
+                case AddressNameType.TOKEN:
+                    name_types.append(EIP712NameType.TOKEN)
+                case AddressNameType.COLLECTION:
+                    name_types.append(EIP712NameType.COLLECTION)
+                case _:
+                    assert_never(name_type)
+
+        return name_types
+
+    _VALID_EIP712_SOURCES = tuple(s.value for s in EIP712NameSource)
+
+    @classmethod
+    def convert_trusted_names_sources(cls, sources: list[str] | None) -> list[EIP712NameSource] | None:
+        if sources is None:
+            return None
+        name_sources: list[EIP712NameSource] = []
+
+        for name_source in sources:
+            if name_source == "local":  # ERC-7730 specs defines "local" as an example
+                name_sources.append(EIP712NameSource.LOCAL_ADDRESS_BOOK)
+            elif name_source in cls._VALID_EIP712_SOURCES:
+                name_sources.append(EIP712NameSource(name_source))
+            # else ignore
+        return name_sources
