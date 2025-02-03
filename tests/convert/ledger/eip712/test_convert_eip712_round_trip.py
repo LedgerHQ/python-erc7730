@@ -104,20 +104,15 @@ def _assert_erc7730_json_equals_with_tolerance(input: InputERC7730Descriptor, ou
             del_by_path(message, "screens")
             if "fields" in message:
                 for field in message["fields"]:
-                    if "format" in field:
-                        format = field["format"]
-
-                        # Address name format parameters cannot be preserved
-                        if format == "addressName":
-                            del_by_path(field, "params")
-
-                        # Other formats are always converted to RAW
-                        if format not in (
-                            FieldFormat.AMOUNT,
-                            FieldFormat.TOKEN_AMOUNT,
-                            FieldFormat.DATE,
-                        ):
-                            field["format"] = "raw"
+                    # Other formats are always converted to RAW
+                    if "format" in field and field["format"] not in (
+                        FieldFormat.AMOUNT,
+                        FieldFormat.TOKEN_AMOUNT,
+                        FieldFormat.DATE,
+                        FieldFormat.ADDRESS_NAME,
+                        FieldFormat.NFT_NAME,
+                    ):
+                        field["format"] = "raw"
 
         return formats
 

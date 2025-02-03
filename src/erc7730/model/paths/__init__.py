@@ -196,7 +196,7 @@ class DataPath(Model):
 
     @override
     def __str__(self) -> str:
-        return f'{"#." if self.absolute else ""}{".".join(str(e) for e in self.elements)}'
+        return f"{'#.' if self.absolute else ''}{'.'.join(str(e) for e in self.elements)}"
 
     @override
     def __hash__(self) -> int:
@@ -226,7 +226,7 @@ class DescriptorPath(Model):
 
     @override
     def __str__(self) -> str:
-        return f'$.{".".join(str(e) for e in self.elements)}'
+        return f"$.{'.'.join(str(e) for e in self.elements)}"
 
     @override
     def __hash__(self) -> int:
