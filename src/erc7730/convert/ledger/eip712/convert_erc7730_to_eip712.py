@@ -258,8 +258,6 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
 
         return name_types
 
-    _VALID_EIP712_SOURCES = tuple(s.value for s in EIP712NameSource)
-
     @classmethod
     def convert_trusted_names_sources(cls, sources: list[str] | None) -> list[EIP712NameSource] | None:
         if sources is None:
@@ -269,7 +267,10 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
         for name_source in sources:
             if name_source == "local":  # ERC-7730 specs defines "local" as an example
                 name_sources.append(EIP712NameSource.LOCAL_ADDRESS_BOOK)
-            elif name_source in cls._VALID_EIP712_SOURCES:
+            elif name_source in set(EIP712NameSource) and name_source not in name_sources:
                 name_sources.append(EIP712NameSource(name_source))
-            # else ignore
+            # else: ignore
+
+        if not name_sources:  # default to all sources
+            name_sources = list(EIP712NameSource)
         return name_sources
