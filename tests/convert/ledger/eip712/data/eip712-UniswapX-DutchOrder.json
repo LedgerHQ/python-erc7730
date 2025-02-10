@@ -141,6 +141,7 @@
                   "smart_contract"
                 ],
                 "nameSources": [
+                  "crypto_asset_list",
                   "local_address_book",
                   "ens"
                 ]
@@ -170,6 +171,7 @@
                   "smart_contract"
                 ],
                 "nameSources": [
+                  "crypto_asset_list",
                   "local_address_book",
                   "ens"
                 ]

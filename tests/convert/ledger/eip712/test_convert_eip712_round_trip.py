@@ -95,7 +95,7 @@ def _assert_erc7730_json_equals_with_tolerance(input: InputERC7730Descriptor, ou
     del_by_path(input_dict, "context", "eip712", "domain", "version")
 
     # Adapt formats objects to match EIP-712 conversion
-    def _cleanup_formats(formats: dict[str, Any]) -> Any:
+    def _cleanup_erc7730_formats(formats: dict[str, Any]) -> Any:
         for _, message in formats.items():
             # Remove ERC-7730 specific fields
             del_by_path(message, "$id")
@@ -104,6 +104,9 @@ def _assert_erc7730_json_equals_with_tolerance(input: InputERC7730Descriptor, ou
             del_by_path(message, "screens")
             if "fields" in message:
                 for field in message["fields"]:
+                    # Default sources are added by ERC-7730 to EIP-712 conversion
+                    if "params" in field and "sources" in field["params"]:
+                        del_by_path(field, "params", "sources")
                     # Other formats are always converted to RAW
                     if "format" in field and field["format"] not in (
                         FieldFormat.AMOUNT,
@@ -116,7 +119,17 @@ def _assert_erc7730_json_equals_with_tolerance(input: InputERC7730Descriptor, ou
 
         return formats
 
-    map_by_path(input_dict, _cleanup_formats, "display", "formats")
+    def _cleanup_eip712_formats(formats: dict[str, Any]) -> Any:
+        for _, message in formats.items():
+            if "fields" in message:
+                for field in message["fields"]:
+                    # Default sources are added by ERC-7730 to EIP-712 conversion
+                    if "params" in field and "sources" in field["params"]:
+                        del_by_path(field, "params", "sources")
+        return formats
+
+    map_by_path(input_dict, _cleanup_erc7730_formats, "display", "formats")
+    map_by_path(output_dict, _cleanup_eip712_formats, "display", "formats")
 
     assert_dict_equals(input_dict, output_dict)
 

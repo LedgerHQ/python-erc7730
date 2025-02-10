@@ -224,7 +224,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             and isinstance(field.params, ResolvedAddressNameParameters)
         ):
             name_types = cls.convert_trusted_names_types(field.params.types)
-            name_sources = cls.convert_trusted_names_sources(field.params.sources)
+            name_sources = cls.convert_trusted_names_sources(field.params.sources, name_types)
 
         return InputEIP712MapperField(
             path=str(to_relative(field_path)),
@@ -259,10 +259,26 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
         return name_types
 
     @classmethod
-    def convert_trusted_names_sources(cls, sources: list[str] | None) -> list[EIP712NameSource] | None:
+    def convert_trusted_names_sources(
+        cls, sources: list[str] | None, names: list[EIP712NameType] | None
+    ) -> list[EIP712NameSource] | None:
         if sources is None:
             return None
         name_sources: list[EIP712NameSource] = []
+
+        if names is not None:
+            for name in names:
+                match name:
+                    case EIP712NameType.EOA | EIP712NameType.WALLET | EIP712NameType.COLLECTION:
+                        name_sources.append(EIP712NameSource.ENS)
+                        name_sources.append(EIP712NameSource.UNSTOPPABLE_DOMAIN)
+                        name_sources.append(EIP712NameSource.FREENAME)
+                    case EIP712NameType.SMART_CONTRACT | EIP712NameType.TOKEN:
+                        name_sources.append(EIP712NameSource.CRYPTO_ASSET_LIST)
+                    case EIP712NameType.CONTEXT_ADDRESS:
+                        name_sources.append(EIP712NameSource.DYNAMIC_RESOLVER)
+                    case _:
+                        assert_never(name)
 
         for name_source in sources:
             if name_source == "local":  # ERC-7730 specs defines "local" as an example
