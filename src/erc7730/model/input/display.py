@@ -327,7 +327,6 @@ class InputFormat(FormatBase):
     fields: list[InputField] = Field(
         title="Field Formats set",
         description="An array containing the ordered definitions of fields formats.",
-        min_length=1,
     )
 
     required: list[DataPathStr | ContainerPathStr] | None = Field(
