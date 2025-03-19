@@ -1,0 +1,55 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "multiSwap",
+    "inputs": [
+      {
+        "name": "data",
+        "type": "tuple",
+        "internalType": "struct Utils.SellData",
+        "components": [
+          {
+            "name": "path",
+            "type": "tuple[]",
+            "internalType": "struct Utils.Path[]",
+            "components": [{ "name": "to", "type": "address", "internalType": "address", "components": null }]
+          }
+        ],
+        "indexed": null,
+        "unit": null
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "payable",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "path": "#.data.path.[].to",
+  "result": {
+    "version": 1,
+    "type_family": "ADDRESS",
+    "type_size": 20,
+    "type": "path",
+    "abi_path": {
+      "type": "data",
+      "absolute": true,
+      "elements": [{ "type": "field", "identifier": "data" }, { "type": "field", "identifier": "path" }, { "type": "array" }, { "type": "field", "identifier": "to" }]
+    },
+    "binary_path": {
+      "version": 1,
+      "type": "DATA",
+      "elements": [
+        { "type": "TUPLE", "offset": 0 },
+        { "type": "REF" },
+        { "type": "TUPLE", "offset": 0 },
+        { "type": "REF" },
+        { "type": "ARRAY", "weight": 1, "start": null, "end": null },
+        { "type": "TUPLE", "offset": 0 },
+        { "type": "LEAF", "leaf_type": "STATIC_LEAF" }
+      ]
+    }
+  },
+  "error": null
+}

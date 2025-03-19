@@ -1,0 +1,26 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "test_dynamic",
+    "inputs": [
+      { "name": "p1", "type": "string", "internalType": "string", "components": null, "indexed": null, "unit": null },
+      { "name": "p2", "type": "uint256[]", "internalType": "uint256[]", "components": null, "indexed": null, "unit": null },
+      {
+        "name": "p3",
+        "type": "tuple",
+        "internalType": "struct Test.T",
+        "components": [{ "name": "c", "type": "bytes", "internalType": "bytes", "components": null }],
+        "indexed": null,
+        "unit": null
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "pure",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "path": "#.p2",
+  "error": "Array leaf is not supported in v1 of protocol"
+}

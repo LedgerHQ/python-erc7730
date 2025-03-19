@@ -1,0 +1,32 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "test_static",
+    "inputs": [
+      { "name": "p1", "type": "uint256", "internalType": "uint256", "components": null, "indexed": null, "unit": null },
+      { "name": "p2", "type": "bool", "internalType": "bool", "components": null, "indexed": null, "unit": null },
+      { "name": "p3", "type": "uint256[2]", "internalType": "uint256[2]", "components": null, "indexed": null, "unit": null },
+      {
+        "name": "p4",
+        "type": "tuple",
+        "internalType": "struct Test.S",
+        "components": [
+          { "name": "a", "type": "uint256", "internalType": "uint256", "components": null },
+          { "name": "b", "type": "uint256[3]", "internalType": "uint256[3]", "components": null }
+        ],
+        "indexed": null,
+        "unit": null
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "pure",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "args": [42, false, [1, 2], [3, [4, 5, 6]]],
+  "path": "#.p3.[1]",
+  "result": 2,
+  "error": null
+}

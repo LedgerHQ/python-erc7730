@@ -1,0 +1,15 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "test_array",
+    "inputs": [{ "name": "p1", "type": "uint256[2][][2]", "internalType": "uint256[2][][2]", "components": null, "indexed": null, "unit": null }],
+    "outputs": [],
+    "stateMutability": "pure",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "path": "#.p1",
+  "error": "Array leaf is not supported in v1 of protocol"
+}

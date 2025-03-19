@@ -1,0 +1,17 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "test_array",
+    "inputs": [{ "name": "p1", "type": "uint256[2][][2]", "internalType": "uint256[2][][2]", "components": null, "indexed": null, "unit": null }],
+    "outputs": [],
+    "stateMutability": "pure",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "args": [[[[1, 2], [3, 4], [5, 6]], [[7, 8], [9, 10]]]],
+  "path": "#.p1.[-1].[-1].[-1]",
+  "result": 10,
+  "error": null
+}

@@ -1,11 +1,13 @@
+import enum
 import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, LiteralString, TypeVar
 
-from pydantic import BaseModel, ValidationInfo, WrapValidator
-from pydantic_core import PydanticCustomError
+from pydantic import BaseModel, GetCoreSchemaHandler, ValidationInfo, WrapValidator
+from pydantic_core import PydanticCustomError, core_schema
+from pydantic_core.core_schema import WrapValidatorFunctionSchema
 
 from erc7730.common.json import dict_to_json_file, dict_to_json_str, read_json_with_includes
 
@@ -68,3 +70,33 @@ class ErrorTypeLabel(WrapValidator):
                 raise PydanticCustomError("custom_error", "expected a " + type_label) from None
 
         return validate
+
+
+_Enum = TypeVar("_Enum", bound=enum.Enum)
+
+
+def pydantic_enum_by_name(enum_cls: type[_Enum]) -> type[_Enum]:
+    """Enum decorator that serializes/deserializes by name."""
+
+    def __get_pydantic_core_schema__(  # noqa: N807
+        cls: type[_Enum], source_type: Any, handler: GetCoreSchemaHandler
+    ) -> WrapValidatorFunctionSchema:
+        def get_enum(value: Any, validate_next: core_schema.ValidatorFunctionWrapHandler) -> _Enum:
+            if isinstance(value, cls):
+                return value
+            else:
+                name: str = validate_next(value)
+                return enum_cls[name]
+
+        def serialize(value: _Enum) -> str:
+            return value.name
+
+        return core_schema.no_info_wrap_validator_function(
+            function=get_enum,
+            schema=core_schema.literal_schema([member.name for member in cls]),
+            ref=cls.__name__,
+            serialization=core_schema.plain_serializer_function_ser_schema(serialize),
+        )
+
+    setattr(enum_cls, "__get_pydantic_core_schema__", classmethod(__get_pydantic_core_schema__))  # noqa: B010
+    return enum_cls

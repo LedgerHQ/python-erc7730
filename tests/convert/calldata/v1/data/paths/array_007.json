@@ -1,0 +1,44 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "test_array",
+    "inputs": [{ "name": "p1", "type": "uint256[2][][2]", "internalType": "uint256[2][][2]", "components": null, "indexed": null, "unit": null }],
+    "outputs": [],
+    "stateMutability": "pure",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "path": "#.p1.[0].[2].[1]",
+  "result": {
+    "version": 1,
+    "type_family": "UINT",
+    "type_size": 32,
+    "type": "path",
+    "abi_path": {
+      "type": "data",
+      "absolute": true,
+      "elements": [
+        { "type": "field", "identifier": "p1" },
+        { "type": "array_element", "index": 0 },
+        { "type": "array_element", "index": 2 },
+        { "type": "array_element", "index": 1 }
+      ]
+    },
+    "binary_path": {
+      "version": 1,
+      "type": "DATA",
+      "elements": [
+        { "type": "TUPLE", "offset": 0 },
+        { "type": "REF" },
+        { "type": "TUPLE", "offset": 0 },
+        { "type": "REF" },
+        { "type": "ARRAY", "weight": 2, "start": 2, "end": 3 },
+        { "type": "TUPLE", "offset": 1 },
+        { "type": "LEAF", "leaf_type": "STATIC_LEAF" }
+      ]
+    }
+  },
+  "error": null
+}

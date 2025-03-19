@@ -1,0 +1,38 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "test_dynamic",
+    "inputs": [
+      { "name": "p1", "type": "string", "internalType": "string", "components": null, "indexed": null, "unit": null },
+      { "name": "p2", "type": "uint256[]", "internalType": "uint256[]", "components": null, "indexed": null, "unit": null },
+      {
+        "name": "p3",
+        "type": "tuple",
+        "internalType": "struct Test.T",
+        "components": [{ "name": "c", "type": "bytes", "internalType": "bytes", "components": null }],
+        "indexed": null,
+        "unit": null
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "pure",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "path": "#.p1.[0:5]",
+  "result": {
+    "version": 1,
+    "type_family": "STRING",
+    "type_size": null,
+    "type": "path",
+    "abi_path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "p1" }, { "type": "array_slice", "start": 0, "end": 5 }] },
+    "binary_path": {
+      "version": 1,
+      "type": "DATA",
+      "elements": [{ "type": "TUPLE", "offset": 0 }, { "type": "REF" }, { "type": "LEAF", "leaf_type": "DYNAMIC_LEAF" }, { "type": "SLICE", "start": 0, "end": 5 }]
+    }
+  },
+  "error": null
+}

@@ -1,0 +1,38 @@
+{
+  "abi": {
+    "type": "function",
+    "name": "test_static",
+    "inputs": [
+      { "name": "p1", "type": "uint256", "internalType": "uint256", "components": null, "indexed": null, "unit": null },
+      { "name": "p2", "type": "bool", "internalType": "bool", "components": null, "indexed": null, "unit": null },
+      { "name": "p3", "type": "uint256[2]", "internalType": "uint256[2]", "components": null, "indexed": null, "unit": null },
+      {
+        "name": "p4",
+        "type": "tuple",
+        "internalType": "struct Test.S",
+        "components": [
+          { "name": "a", "type": "uint256", "internalType": "uint256", "components": null },
+          { "name": "b", "type": "uint256[3]", "internalType": "uint256[3]", "components": null }
+        ],
+        "indexed": null,
+        "unit": null
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "pure",
+    "constant": null,
+    "payable": null,
+    "gas": null,
+    "signature": null
+  },
+  "path": "#.p3.[0]",
+  "result": {
+    "version": 1,
+    "type_family": "UINT",
+    "type_size": 32,
+    "type": "path",
+    "abi_path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "p3" }, { "type": "array_element", "index": 0 }] },
+    "binary_path": { "version": 1, "type": "DATA", "elements": [{ "type": "TUPLE", "offset": 2 }, { "type": "LEAF", "leaf_type": "STATIC_LEAF" }] }
+  },
+  "error": null
+}

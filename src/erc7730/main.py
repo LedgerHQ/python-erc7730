@@ -6,11 +6,13 @@ from typing import Annotated, assert_never
 
 from eip712.convert.input_to_resolved import EIP712InputToResolvedConverter
 from eip712.model.input.descriptor import InputEIP712DAppDescriptor
+from pydantic import RootModel
 from pydantic_string_url import HttpUrl
 from rich import print
 from typer import Argument, Exit, Option, Typer
 
 from erc7730.common.output import ConsoleOutputAdder
+from erc7730.convert.calldata.convert_erc7730_input_to_calldata import erc7730_descriptor_to_calldata_descriptors
 from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
@@ -21,6 +23,7 @@ from erc7730.lint.lint import lint_all_and_print_errors
 from erc7730.list.list import list_all
 from erc7730.model import ERC7730ModelType
 from erc7730.model.base import Model
+from erc7730.model.calldata.descriptor import CalldataDescriptor
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.types import Address
@@ -180,6 +183,32 @@ def command_generate(
     print(descriptor.to_json_string())
 
 
+@app.command(
+    name="calldata",
+    short_help="Display calldata descriptors for an ERC-7730 file.",
+    help="""
+    Display calldata descriptor(s) for an ERC-7730 file.
+    """,
+)
+def command_calldata(
+    input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
+    source: Annotated[str | None, Option(help="Source URL of the descriptor file")] = None,
+    chain_id: Annotated[int | None, Option(help="Only emit calldata descriptors for given chain ID")] = None,
+) -> None:
+    input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
+
+    model = RootModel[list[CalldataDescriptor]](
+        erc7730_descriptor_to_calldata_descriptors(
+            input_descriptor, source=HttpUrl(source) if source is not None else None, chain_id=chain_id
+        )
+    )
+    print(model.model_dump_json(indent=2, exclude_none=True))
+
+
+if __name__ == "__main__":
+    app()
+
+
 @convert_app.command(
     name="eip712-to-erc7730",
     short_help="Convert a legacy EIP-712 descriptor file to an ERC-7730 file.",
@@ -220,7 +249,3 @@ def command_convert_erc7730_to_eip712(
         converter=ERC7730toEIP712Converter(),
     ):
         raise Exit(1)
-
-
-if __name__ == "__main__":
-    app()
