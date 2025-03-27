@@ -42,7 +42,8 @@ CalldataDescriptorInstructionProtobuf = Annotated[
 ]
 
 
-class CalldataDescriptorInstructionBaseV1(CalldataDescriptorStructV1, ABC):
+# extra must be ignored because of descriptor computed field
+class CalldataDescriptorInstructionBaseV1(CalldataDescriptorStructV1, ABC, extra="ignore"):
     """Base class for calldata descriptor instructions."""
 
 

@@ -27,7 +27,7 @@ from erc7730.model.calldata.v1.param import (
 from erc7730.model.calldata.v1.value import (
     CalldataDescriptorValueV1,
 )
-from erc7730.model.display import DateEncoding, FieldFormat
+from erc7730.model.display import AddressNameType, DateEncoding, FieldFormat
 from erc7730.model.resolved.display import (
     ResolvedAddressNameParameters,
     ResolvedDateParameters,
@@ -108,7 +108,11 @@ def convert_param(
 
             if address_params is not None:
                 if (input_types := address_params.types) is not None:
-                    types = [TrustedNameType(type) for type in input_types]
+                    for input_type in input_types:
+                        if input_type == AddressNameType.CONTRACT:
+                            types.append(TrustedNameType.SMART_CONTRACT)
+                        else:
+                            types.append(TrustedNameType(input_type))
 
                 # since sources are free form in ERC-7730, we apply the following algorithm:
                 #   1) assign valid sources based on type
