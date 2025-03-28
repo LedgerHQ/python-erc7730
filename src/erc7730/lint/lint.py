@@ -18,6 +18,7 @@ from erc7730.lint import ERC7730Linter
 from erc7730.lint.lint_base import MultiLinter
 from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
 from erc7730.lint.lint_validate_abi import ValidateABILinter
+from erc7730.lint.lint_validate_definitions import DefinitionLinter
 from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinter
 from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.descriptor import InputERC7730Descriptor
@@ -50,13 +51,8 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
     :param out: output adder
     :return: number of files checked
     """
-    linter = MultiLinter(
-        [
-            ValidateABILinter(),
-            ValidateDisplayFieldsLinter(),
-            ClassifyTransactionTypeLinter(),
-        ]
-    )
+    input_linter = DefinitionLinter()
+    output_linter = MultiLinter([ValidateABILinter(), ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter()])
 
     files = list(get_erc7730_files(*paths, out=out))
 
@@ -70,7 +66,11 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
         print(f"🔍 checking {len(files)} descriptor files…\n")
 
     with ThreadPoolExecutor() as executor:
-        for future in (executor.submit(lint_file, file, linter, out, label(file)) for file in files):
+        for future in (executor.submit(lint_file, file, input_linter, out, label(file)) for file in files):
+            future.result()
+
+    with ThreadPoolExecutor() as executor:
+        for future in (executor.submit(lint_file, file, output_linter, out, label(file)) for file in files):
             future.result()
 
     return len(files)
@@ -91,6 +91,9 @@ def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder, show_as: Path
 
     with BufferAdder(file_out, prolog=f"➡️ checking [bold]{label}[/bold]…", epilog="") as out, ExceptionsToOutput(out):
         input_descriptor = InputERC7730Descriptor.load(path)
-        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, out)
-        if resolved_descriptor is not None:
-            linter.lint(resolved_descriptor, out)
+        if isinstance(linter, DefinitionLinter):
+            linter.lint(input_descriptor, out)
+        else:
+            resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, out)
+            if resolved_descriptor is not None:
+                linter.lint(resolved_descriptor, out)
