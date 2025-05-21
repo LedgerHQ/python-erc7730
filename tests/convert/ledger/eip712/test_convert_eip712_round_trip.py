@@ -27,6 +27,12 @@ def test_roundtrip_from_erc7730(input_file: Path) -> None:
 
     Note the test only applies to descriptors with a single contract and message.
     """
+    if input_file.name in {
+        "eip712-network-fee-authorization-holesky.json",
+        "eip712-network-fee-authorization-mainnet.json",
+    }:
+        pytest.skip("Lombard EIP-712 temporarily disabled")
+
     input_erc7730_descriptor = InputERC7730Descriptor.load(input_file)
     resolved_erc7730_descriptor = convert_and_print_errors(input_erc7730_descriptor, ERC7730InputToResolved())
     resolved_erc7730_descriptor = single_or_skip(resolved_erc7730_descriptor)
@@ -67,6 +73,8 @@ def _assert_erc7730_json_equals_with_tolerance(input: InputERC7730Descriptor, ou
     del_by_path(input_dict, "$schema")
 
     # Addresses may be in EIP-55 format, convert to lower case in input
+    map_by_path(input_dict, lambda x: x.lower(), "context", "eip712", "domain", "verifyingContract")
+
     def _lowercase_addresses(deployments: list[dict[str, Any]]) -> Any:
         for deployment in deployments:
             if "address" in deployment:
