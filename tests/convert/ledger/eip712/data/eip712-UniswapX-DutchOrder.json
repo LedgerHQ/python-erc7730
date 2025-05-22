@@ -136,15 +136,7 @@
               {
                 "path": "spender",
                 "label": "Approve to spender",
-                "format": "trusted-name",
-                "nameTypes": [
-                  "smart_contract"
-                ],
-                "nameSources": [
-                  "crypto_asset_list",
-                  "local_address_book",
-                  "ens"
-                ]
+                "format": "raw"
               },
               {
                 "path": "permitted.amount",
@@ -166,15 +158,7 @@
               {
                 "path": "witness.outputs.[].recipient",
                 "label": "On Addresses",
-                "format": "trusted-name",
-                "nameTypes": [
-                  "smart_contract"
-                ],
-                "nameSources": [
-                  "crypto_asset_list",
-                  "local_address_book",
-                  "ens"
-                ]
+                "format": "raw"
               },
               {
                 "path": "deadline",
