@@ -87,7 +87,7 @@ jobs:
       - name: Publish test reports
         timeout-minutes: 10
         if: ${{ !cancelled() }}
-        uses: pmeier/pytest-results-action@v0.7.1
+        uses: pmeier/pytest-results-action@v0.7.2
         with:
           path: tests/.tests.xml
           title: Test results
