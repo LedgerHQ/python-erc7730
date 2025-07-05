@@ -7,7 +7,7 @@ See https://docs.soliditylang.org/en/latest/abi-spec.html
 from enum import StrEnum
 from typing import Annotated, Literal, Self
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from erc7730.model.base import Model
 
@@ -48,6 +48,18 @@ class Function(Model):
     gas: int | None = None
     signature: str | None = None
 
+    @field_validator('stateMutability', mode='before')
+    @classmethod
+    def validate_state_mutability(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, StateMutability):
+            return v
+        try:
+            return StateMutability(v)
+        except Exception:
+            return v
+
 
 class Constructor(Model):
     type: Literal["constructor"] = "constructor"
@@ -59,6 +71,18 @@ class Constructor(Model):
     payable: bool | None = None
     gas: int | None = None
     signature: str | None = None
+
+    @field_validator('stateMutability', mode='before')
+    @classmethod
+    def validate_state_mutability(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, StateMutability):
+            return v
+        try:
+            return StateMutability(v)
+        except Exception:
+            return v
 
 
 class Receive(Model):
@@ -72,6 +96,18 @@ class Receive(Model):
     gas: int | None = None
     signature: str | None = None
 
+    @field_validator('stateMutability', mode='before')
+    @classmethod
+    def validate_state_mutability(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, StateMutability):
+            return v
+        try:
+            return StateMutability(v)
+        except Exception:
+            return v
+
 
 class Fallback(Model):
     type: Literal["fallback"] = "fallback"
@@ -83,6 +119,18 @@ class Fallback(Model):
     payable: bool | None = None
     gas: int | None = None
     signature: str | None = None
+
+    @field_validator('stateMutability', mode='before')
+    @classmethod
+    def validate_state_mutability(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, StateMutability):
+            return v
+        try:
+            return StateMutability(v)
+        except Exception:
+            return v
 
 
 class Event(Model):

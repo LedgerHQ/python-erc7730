@@ -77,7 +77,7 @@ It can be called with single files or directories, in which case all descriptors
 
 The `generate` command bootstraps a new descriptor file from ABIs or message schemas:
 ```shell
-# fetch ABIs from etherscan and generate a new calldata descriptor
+# fetch ABIs from Sourcify and generate a new calldata descriptor
 erc7730 generate --chain-id=1 --address=0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45
 
 # generate a new calldata descriptor using given ABI file
@@ -87,10 +87,6 @@ erc7730 generate --chain-id=1 --address=0x00000000000000000000000000000000000000
 erc7730 generate --chain-id=1 --address=0x0000000000000000000000000000000000000000 --schema schemas.json
 ```
 
-To fetch ABIs automatically, you will need to [setup an Etherscan API key](https://docs.etherscan.io/getting-started/viewing-api-usage-statistics):
-```shell
-export ETHERSCAN_API_KEY=XXXXXX
-```
 
 Please note that while the generator does its best to guess the right format based on fields name/type, the generated
 descriptor should be considered a starting point to refine.

@@ -17,13 +17,13 @@ from erc7730.model.abi import ABI
 from erc7730.model.base import Model
 from erc7730.model.types import Address
 
-ETHERSCAN = "api.etherscan.io"
+SOURCIFY = "repo.sourcify.dev"
 
 _T = TypeVar("_T")
 
 
-class EtherscanChain(Model):
-    """Etherscan supported chain info."""
+class SourcifyChain(Model):
+    """Sourcify supported chain info."""
 
     model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
     chainname: str
@@ -32,38 +32,48 @@ class EtherscanChain(Model):
 
 
 @cache
-def get_supported_chains() -> list[EtherscanChain]:
+def get_supported_chains() -> list[SourcifyChain]:
     """
-    Get supported chains from Etherscan.
+    Get supported chains from Sourcify.
 
-    :return: Etherscan supported chains, with name/chain id/block explorer URL
+    :return: Sourcify supported chains, with name/chain id/block explorer URL
     """
-    return get(url=HttpUrl(f"https://{ETHERSCAN}/v2/chainlist"), model=list[EtherscanChain])
+    # Sourcify doesn't provide a chains API, we'll use a static list for now
+    # This could be enhanced to fetch from a different source
+    return []
 
 
-def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
+def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI] | None:
     """
-    Get contract ABIs from Etherscan.
+    Get contract ABIs from Sourcify.
 
-    :param chain_id: EIP-155 chain ID
-    :param contract_address: EVM contract address
-    :return: deserialized list of ABIs
+    :param chain_id: chain id
+    :param contract_address: contract address
+    :return: list of ABIs or None if not found
     :raises NotImplementedError: if chain id not supported, API key not setup, or unexpected response
     """
     try:
-        return get(
-            url=HttpUrl(f"https://{ETHERSCAN}/v2/api"),
-            chainid=chain_id,
-            module="contract",
-            action="getabi",
-            address=contract_address,
-            model=list[ABI],
-        )
+        # Use a direct client without cache for Sourcify requests to avoid redirect issues
+        direct_client = Client(timeout=30, follow_redirects=True)
+        try:
+            response = direct_client.get(
+                f"https://{SOURCIFY}/contracts/full_match/{chain_id}/{contract_address}/metadata.json"
+            )
+            response.raise_for_status()
+            
+            # Parse the response
+            data = response.json()
+            
+            # Sourcify returns metadata with ABI in the 'output' field
+            if 'output' in data and 'abi' in data['output']:
+                return TypeAdapter(list[ABI]).validate_python(data['output']['abi'])
+            else:
+                raise Exception("Contract source is not available on Sourcify")
+        finally:
+            direct_client.close()
     except Exception as e:
-        if "Contract source code not verified" in str(e):
-            raise Exception("contract source is not available on Etherscan") from e
-        if "Max calls per sec rate limit reached" in str(e):
-            raise Exception("Etherscan rate limit exceeded, please retry") from e
+        if "rate limit" in str(e).lower():
+            raise Exception("Sourcify rate limit exceeded, please retry") from e
         raise e
 
 
@@ -90,7 +100,7 @@ def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
 
     This method implements some automated adaptations to handle user provided URLs:
      - GitHub: adaptation to "raw.githubusercontent.com"
-     - Etherscan: rate limiting, API key parameter injection, "result" field unwrapping
+     - Sourcify: rate limiting, API key parameter injection
 
     :param url: URL to get data from
     :param model: Pydantic model to deserialize the data
@@ -107,18 +117,18 @@ def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
 
 def _client() -> Client:
     """
-    Create a new HTTP client with GitHub and Etherscan specific transports.
+    Create a new HTTP client with GitHub and Sourcify specific transports.
     :return:
     """
     cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=7 * 24 * 3600, check_ttl_every=24 * 3600)
     http_transport = HTTPTransport()
     http_transport = GithubTransport(http_transport)
-    http_transport = EtherscanTransport(http_transport)
+    http_transport = SourcifyTransport(http_transport)
     http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
     file_transport = FileTransport()
     # TODO file storage: authorize relative paths only
     transports = {"https://": http_transport, "file://": file_transport}
-    return Client(mounts=transports, timeout=10)
+    return Client(mounts=transports, timeout=10, follow_redirects=True)
 
 
 class DelegateTransport(ABC, BaseTransport):
@@ -155,40 +165,33 @@ class GithubTransport(DelegateTransport):
 
 
 @final
-class EtherscanTransport(DelegateTransport):
-    """Etherscan specific transport for handling rate limiting, API key parameter injection, response unwrapping."""
+class SourcifyTransport(DelegateTransport):
+    """Sourcify specific transport for handling rate limiting and API key parameter injection."""
 
-    ETHERSCAN_API_HOST = "ETHERSCAN_API_HOST"
-    ETHERSCAN_API_KEY = "ETHERSCAN_API_KEY"
+    SOURCIFY_API_HOST = "SOURCIFY_API_HOST"
+    SOURCIFY_API_KEY = "SOURCIFY_API_KEY"
 
-    @Limiter(rate=5, capacity=5, consume=1)
+    @Limiter(rate=10, capacity=10, consume=1)
     @override
     def handle_request(self, request: Request) -> Response:
-        if request.url.host != ETHERSCAN:
+        if request.url.host != SOURCIFY:
             return super().handle_request(request)
 
         # substitute base URL if provided
-        if (api_host := os.environ.get(self.ETHERSCAN_API_HOST)) is not None:
+        if (api_host := os.environ.get(self.SOURCIFY_API_HOST)) is not None:
             request.url = request.url.copy_with(host=api_host)
             request.headers.update({"Host": api_host})
 
-        # add API key if provided
-        if (api_key := os.environ.get(self.ETHERSCAN_API_KEY)) is not None or (
-            api_key := os.environ.get(f"SCAN_{self.ETHERSCAN_API_KEY}")
-        ) is not None:
+        # add API key if provided (Sourcify doesn't require API key but supports it for rate limiting)
+        if (api_key := os.environ.get(self.SOURCIFY_API_KEY)) is not None:
             request.url = request.url.copy_add_param("apikey", api_key)
 
-        # read response
-        response = super().handle_request(request)
-        response.read()
-        response.close()
-
-        # unwrap result, sometimes containing JSON directly, sometimes JSON in a string
+        # For Sourcify requests, we need to handle redirects manually to avoid cache issues
+        # Create a direct client without cache for this request
+        direct_client = Client(timeout=10, follow_redirects=True)
         try:
-            if (result := response.json().get("result")) is not None:
-                data = result if isinstance(result, str) else json.dumps(result)
-                return Response(status_code=response.status_code, stream=IteratorByteStream([data.encode()]))
-        except Exception:
-            pass  # nosec B110 - intentional try/except/pass
-
-        raise Exception(f"Unexpected response from Etherscan: {response.content.decode(errors='replace')}")
+            response = direct_client.get(request.url)
+            response.raise_for_status()
+            return response
+        finally:
+            direct_client.close()

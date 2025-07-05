@@ -56,7 +56,7 @@ def generate_descriptor(
     Generate an ERC-7730 descriptor.
 
     If an EIP-712 schema is provided, an EIP-712 descriptor is generated for this schema, otherwise a calldata
-    descriptor. If no ABI is supplied, the ABIs are fetched from Etherscan using the chain id / contract address.
+    descriptor. If no ABI is supplied, the ABIs are fetched from Sourcify using the chain id / contract address.
 
     :param chain_id: contract chain id
     :param contract_address: contract address
@@ -109,7 +109,7 @@ def _generate_context_calldata(
         abis = TypeAdapter(list[ABI]).validate_json(abi)
 
     elif (abis := get_contract_abis(chain_id, contract_address)) is None:
-        raise Exception("Failed to fetch contract ABIs")
+        raise Exception("Failed to fetch contract ABIs from Sourcify")
 
     functions = list(get_functions(abis).functions.values())
 
