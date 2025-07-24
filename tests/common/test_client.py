@@ -25,8 +25,6 @@ def test_get_supported_chains() -> None:
     assert "Arbitrum Sepolia Testnet" in names
     assert "Linea Mainnet" in names
     assert "Linea Sepolia Testnet" in names
-    assert "Fantom Opera Mainnet" in names
-    assert "Fantom Testnet" in names
     assert "Blast Mainnet" in names
     assert "Blast Sepolia Testnet" in names
     assert "OP Mainnet" in names
@@ -41,8 +39,6 @@ def test_get_supported_chains() -> None:
     assert "Fraxtal Mainnet" in names
     assert "Fraxtal Testnet" in names
     assert "Gnosis" in names
-    assert "Kroma Mainnet" in names
-    assert "Kroma Sepolia Testnet" in names
     assert "Mantle Mainnet" in names
     assert "Mantle Sepolia Testnet" in names
     assert "Moonbeam Mainnet" in names

@@ -1,3 +1,4 @@
+import re
 from typing import assert_never, final, override
 
 from eip712.model.schema import EIP712Type
@@ -187,6 +188,16 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         match abis:
             case HttpUrl() as url:
                 try:
+                    # TODO: move to utility function
+                    if match := re.match(
+                        r"^https://api.etherscan.io/api\?module=contract&action=getabi&address=(0x[a-fA-F0-9]{40})$",
+                        url,
+                    ):
+                        # Convert Etherscan v1 to v2 URL
+                        address = match.group(1)
+                        url = HttpUrl(
+                            f"https://api.etherscan.io/v2/api?module=contract&action=getabi&address={address}&chainid=1"
+                        )
                     return client.get(url=url, model=list[ABI])
                 except Exception as e:
                     return out.error(

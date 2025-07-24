@@ -208,3 +208,13 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "poa"
         case _:
             return None
+
+
+# From https://github.com/LedgerHQ/app-ethereum/blob/d12016b11676d80da1e0eab17703fd61bf0ce3d5/src_features/generic_tx_parser/gtp_tx_info.h#L17-L21
+OPERATION_TYPE_MAX_LENGTH: int = 30
+CREATOR_NAME_MAX_LENGTH: int = 22
+CREATOR_LEGAL_NAME_MAX_LENGTH: int = 30
+CREATOR_URL_MAX_LENGTH: int = 26
+CONTRACT_NAME_MAX_LENGTH: int = 30
+FIELD_NAME_MAX_LENGTH: int = 20
+ENUM_MAX_LENGTH: int = 20
