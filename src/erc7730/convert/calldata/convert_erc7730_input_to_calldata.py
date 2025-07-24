@@ -35,7 +35,7 @@ def erc7730_descriptor_to_calldata_descriptors(
 
         return convert_descriptor(input_descriptor=input_descriptor, source=source, chain_id=chain_id, out=out)
 
-    except Exception:
-        out.warning(f"Error processing ERC-7730 file {source}, skipping it")
+    except Exception as e:
+        out.warning(f"Error processing ERC-7730 file {source}, skipping it. Error: {e}")
 
     return []
