@@ -83,7 +83,7 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         title="Operation type",
         description="Displayed in review first screens",
         min_length=1,
-        max_length=32,  # TODO to be refined
+        # No max_length, may be truncated by Ethereum app
     )
 
     creator_name: str | None = Field(
@@ -91,7 +91,7 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         title="Creator name",
         description="Displayed in review first screens",
         min_length=1,
-        max_length=32,  # TODO to be refined
+        # No max_length, may be truncated by Ethereum app
     )
 
     creator_legal_name: str | None = Field(
@@ -99,7 +99,7 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         title="Creator legal name",
         description="Displayed in review first screens",
         min_length=1,
-        max_length=32,  # TODO to be refined
+        # No max_length, may be truncated by Ethereum app
     )
 
     creator_url: HttpUrl | None = Field(
@@ -107,7 +107,7 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         title="Creator URL",
         description="Displayed in review first screens",
         min_length=1,
-        max_length=256,  # TODO to be refined
+        # No max_length, may be truncated by Ethereum app
     )
 
     contract_name: str | None = Field(
@@ -115,7 +115,7 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         title="Contract name",
         description="Displayed in review first screens",
         min_length=1,
-        max_length=32,  # TODO to be refined
+        # No max_length, may be truncated by Ethereum app
     )
 
     deploy_date: str | None = Field(
@@ -181,7 +181,7 @@ class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBase
         title="Enum entry name",
         description="Enum display name (ASCII)",
         min_length=1,
-        max_length=32,  # TODO to be refined
+        # No max_length, may be truncated by Ethereum app
     )
 
     @computed_field(title="Descriptor", description="Hex encoded ENUM TLV struct")  # type: ignore[misc]
@@ -205,7 +205,7 @@ class CalldataDescriptorInstructionFieldV1(CalldataDescriptorInstructionBaseV1):
         title="Field name",
         description="Field display name (ASCII)",
         min_length=1,
-        max_length=32,  # TODO to be refined
+        # No max_length, may be truncated by Ethereum app
     )
 
     param: CalldataDescriptorParamV1 = Field(
