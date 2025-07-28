@@ -18,6 +18,7 @@ from erc7730.model.calldata.v1.instruction import (
 )
 from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamAmountV1,
+    CalldataDescriptorParamCalldataV1,
     CalldataDescriptorParamDatetimeV1,
     CalldataDescriptorParamDurationV1,
     CalldataDescriptorParamEnumV1,
@@ -142,6 +143,17 @@ class CalldataDescriptorParamTrustedNameTag(IntEnum):
     VALUE = 0x01
     TYPES = 0x02
     SOURCES = 0x03
+
+
+@pydantic_enum_by_name
+class CalldataDescriptorParamCalldataTag(IntEnum):
+    VERSION = 0x00
+    VALUE = 0x01
+    CALLEE = 0x02
+    CHAIN_ID = 0x03
+    SELECTOR = 0x04
+    AMOUNT = 0x05
+    SPENDER = 0x06
 
 
 @pydantic_enum_by_name
@@ -270,6 +282,9 @@ def tlv_field(obj: CalldataDescriptorInstructionFieldV1) -> bytes:
         case CalldataDescriptorParamTrustedNameV1():
             param_type = CalldataDescriptorParamType.TRUSTED_NAME
             param_value = tlv_param_trusted_name(obj.param)
+        case CalldataDescriptorParamCalldataV1():
+            param_type = CalldataDescriptorParamType.CALLDATA
+            param_value = tlv_param_calldata(obj.param)
         case _:
             assert_never(obj.param)
 
@@ -428,6 +443,32 @@ def tlv_param_trusted_name(obj: CalldataDescriptorParamTrustedNameV1) -> bytes:
     for name_source in obj.sources:
         out_sources += TrustedNameSource(name_source).int_value.to_bytes(1)
     out += tlv(CalldataDescriptorParamTrustedNameTag.SOURCES, out_sources)
+
+    return out
+
+
+def tlv_param_calldata(obj: CalldataDescriptorParamCalldataV1) -> bytes:
+    """
+    Encode a struct of type PARAM_CALL_DATA.
+
+    @param obj: object representation of struct
+    @return: encoded struct TLV
+    """
+    out = bytearray()
+    out += tlv(CalldataDescriptorParamCalldataTag.VERSION, obj.version.to_bytes(1))
+    out += tlv(CalldataDescriptorParamCalldataTag.VALUE, tlv_value(obj.value))
+    out += tlv(CalldataDescriptorParamCalldataTag.CALLEE, tlv_value(obj.callee))
+
+    if (chain_id := obj.chain_id) is not None:
+        out += tlv(CalldataDescriptorParamCalldataTag.CHAIN_ID, tlv_value(chain_id))
+
+    if (selector := obj.selector) is not None:
+        out += tlv(CalldataDescriptorParamCalldataTag.SELECTOR, tlv_value(selector))
+
+    if (amount := obj.amount) is not None:
+        out += tlv(CalldataDescriptorParamCalldataTag.AMOUNT, tlv_value(amount))
+    if (spender := obj.spender) is not None:
+        out += tlv(CalldataDescriptorParamCalldataTag.SPENDER, tlv_value(spender))
 
     return out
 
