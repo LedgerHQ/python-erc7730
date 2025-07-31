@@ -266,6 +266,42 @@ class CalldataDescriptorParamTrustedNameV1(CalldataDescriptorParamBaseV1):
     )
 
 
+class CalldataDescriptorParamCalldataV1(CalldataDescriptorParamBaseV1):
+    """Descriptor for the PARAM_CALLDATA struct."""
+
+    type: Literal["CALLDATA"] = Field(
+        default="CALLDATA",
+        title="Parameter type",
+        description="Type of the parameter",
+    )
+
+    version: Literal[1] = Field(
+        default=1,
+        title="Struct version",
+        description="Version of the PARAM_CALLDATA struct",
+    )
+
+    callee: CalldataDescriptorValueV1 = Field(
+        title="Contract address", description="Reference to the contract address (as a path in serialized data)"
+    )
+
+    selector: CalldataDescriptorValueV1 | None = Field(
+        title="Selector", description="Optional reference to the selector (as a path in serialized data)"
+    )
+
+    chain_id: CalldataDescriptorValueV1 | None = Field(
+        title="Chain ID", description="Optional reference to the chain ID (as a path in serialized data)"
+    )
+
+    amount: CalldataDescriptorValueV1 | None = Field(
+        title="Amount", description="Optional reference to the amount (as a path in serialized data)"
+    )
+
+    spender: CalldataDescriptorValueV1 | None = Field(
+        title="Spender", description="Optional reference to the spender address (as a path in serialized data)"
+    )
+
+
 CalldataDescriptorParamV1 = Annotated[
     CalldataDescriptorParamRawV1
     | CalldataDescriptorParamAmountV1
@@ -275,7 +311,8 @@ CalldataDescriptorParamV1 = Annotated[
     | CalldataDescriptorParamDurationV1
     | CalldataDescriptorParamUnitV1
     | CalldataDescriptorParamEnumV1
-    | CalldataDescriptorParamTrustedNameV1,
+    | CalldataDescriptorParamTrustedNameV1
+    | CalldataDescriptorParamCalldataV1,
     Field(
         title="Field parameter",
         description="Format specific parameters for a calldata descriptor field.",

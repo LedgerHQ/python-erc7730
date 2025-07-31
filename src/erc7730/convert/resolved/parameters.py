@@ -83,8 +83,39 @@ def resolve_calldata_parameters(
         return None
 
     return ResolvedCallDataParameters(
-        selector=constants.resolve_or_none(params.selector, out),
         callee=callee,
+        selector=resolve_path_or_constant_value(
+            prefix=prefix,
+            input_path=params.selectorPath,
+            input_value=params.selector,
+            abi_type=ABIDataType.STRING,
+            constants=constants,
+            out=out,
+        ),
+        chainId=resolve_path_or_constant_value(
+            prefix=prefix,
+            input_path=params.chainIdPath,
+            input_value=params.chainId,
+            abi_type=ABIDataType.UINT,
+            constants=constants,
+            out=out,
+        ),
+        amount=resolve_path_or_constant_value(
+            prefix=prefix,
+            input_path=params.amountPath,
+            input_value=params.amount,
+            abi_type=ABIDataType.UINT,
+            constants=constants,
+            out=out,
+        ),
+        spender=resolve_path_or_constant_value(
+            prefix=prefix,
+            input_path=params.spenderPath,
+            input_value=params.spender,
+            abi_type=ABIDataType.ADDRESS,
+            constants=constants,
+            out=out,
+        ),
     )
 
 

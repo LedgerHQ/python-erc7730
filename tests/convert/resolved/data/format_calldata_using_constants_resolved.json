@@ -35,7 +35,7 @@
             "label": "With all parameters specified",
             "format": "calldata",
             "params": {
-              "selector": "0x00000000",
+              "selector": {"type": "constant", "type_family": "string", "type_size": 4, "value": "0x00000000", "raw": "0x00000000" },
               "callee": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "param1" }] } }
             }
           }
