@@ -14,6 +14,7 @@ from erc7730.model.calldata.v1.instruction import (
 from erc7730.model.calldata.v1.param import (
     CalldataDescriptorDateType,
     CalldataDescriptorParamAmountV1,
+    CalldataDescriptorParamCalldataV1,
     CalldataDescriptorParamDatetimeV1,
     CalldataDescriptorParamDurationV1,
     CalldataDescriptorParamEnumV1,
@@ -30,6 +31,7 @@ from erc7730.model.calldata.v1.value import (
 from erc7730.model.display import AddressNameType, DateEncoding, FieldFormat
 from erc7730.model.resolved.display import (
     ResolvedAddressNameParameters,
+    ResolvedCallDataParameters,
     ResolvedDateParameters,
     ResolvedEnumParameters,
     ResolvedField,
@@ -173,8 +175,31 @@ def convert_param(
             return CalldataDescriptorParamNFTV1(value=value, collection=collection_path)
 
         case FieldFormat.CALL_DATA:
-            # not supported in v1
-            return CalldataDescriptorParamRawV1(value=value)
+            calldata_params = cast(ResolvedCallDataParameters, field.params)
+            # Mandatory value
+            if (callee := convert_value(value=calldata_params.callee, abi=abi, out=out)) is None:
+                return None
+
+            # Optional values
+            selector = (
+                convert_value(value=calldata_params.selector, abi=abi, out=out) if calldata_params.selector else None
+            )
+            chain_id = (
+                convert_value(value=calldata_params.chainId, abi=abi, out=out) if calldata_params.chainId else None
+            )
+            amount = convert_value(value=calldata_params.amount, abi=abi, out=out) if calldata_params.amount else None
+            spender = (
+                convert_value(value=calldata_params.spender, abi=abi, out=out) if calldata_params.spender else None
+            )
+
+            return CalldataDescriptorParamCalldataV1(
+                value=value,
+                callee=callee,
+                selector=selector,
+                chain_id=chain_id,
+                amount=amount,
+                spender=spender,
+            )
 
         case FieldFormat.DATE:
             date_params = cast(ResolvedDateParameters, field.params)
