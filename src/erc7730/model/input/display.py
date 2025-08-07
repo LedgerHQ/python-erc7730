@@ -150,12 +150,6 @@ class InputCallDataParameters(Model):
     Embedded Calldata Formatting Parameters.
     """
 
-    selector: DescriptorPathStr | str | None = Field(
-        default=None,
-        title="Called Selector",
-        description="The selector being called, if not contained in the calldata. Hex string representation.",
-    )
-
     calleePath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
         default=None,
         title="Callee Path",
@@ -170,12 +164,80 @@ class InputCallDataParameters(Model):
         'one of "calleePath" or "callee" must be set.',
     )
 
+    selectorPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Called Selector path",
+        description="The path to selector being called, if not contained in the calldata. Only "
+        'one of "selectorPath" or "selector" must be set.',
+    )
+
+    selector: DescriptorPathStr | str | None = Field(
+        default=None,
+        title="Called Selector",
+        description="The selector being called, if not contained in the calldata. Hex string representation. Only "
+        'one of "selectorPath" or "selector" must be set.',
+    )
+
+    chainIdPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Chain ID path",
+        description="The path to the chain ID of the blockchain being called, if not contained in the calldata. Only "
+        'one of "chainIdPath" or "chainId" must be set.',
+    )
+
+    chainId: int | DescriptorPathStr | None = Field(
+        default=None,
+        title="Chain ID",
+        description="The chain ID of the blockchain being called, if not contained in the calldata. Only "
+        'one of "chainIdPath" or "chainId" must be set.',
+    )
+
+    amountPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Amount path",
+        description="The path to the amount being transferred, if not contained in the calldata. Only "
+        'one of "amountPath" or "amount" must be set.',
+    )
+
+    amount: int | DescriptorPathStr | None = Field(
+        default=None,
+        title="Amount",
+        description="The amount being transferred, if not contained in the calldata. Only "
+        'one of "amountPath" or "amount" must be set.',
+    )
+
+    spenderPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Spender Path",
+        description="The path to the spender, if not contained in the calldata. Only "
+        'one of "spenderPath" or "spender" must be set.',
+    )
+
+    spender: DescriptorPathStr | MixedCaseAddress | None = Field(
+        default=None,
+        title="Spender",
+        description="the spender, if not contained in the calldata. Only "
+        'one of "spenderPath" or "spender" must be set.',
+    )
+
+    @model_validator(mode="after")
+    def _validate_mutually_exclusive_path_or_value(self) -> Self:
+        if self.calleePath is not None and self.callee is not None:
+            raise ValueError('"calleePath" and "callee" are mutually exclusive.')
+        if self.selectorPath is not None and self.selector is not None:
+            raise ValueError('"selectorPath" and "selector" are mutually exclusive.')
+        if self.chainIdPath is not None and self.chainId is not None:
+            raise ValueError('"chainIdPath" and "chainId" are mutually exclusive.')
+        if self.amountPath is not None and self.amount is not None:
+            raise ValueError('"amountPath" and "amount" are mutually exclusive.')
+        if self.spenderPath is not None and self.spender is not None:
+            raise ValueError('"spenderPath" and "spender" are mutually exclusive.')
+        return self
+
     @model_validator(mode="after")
     def _validate_one_of_callee_path_or_value(self) -> Self:
         if self.calleePath is None and self.callee is None:
             raise ValueError('Either "calleePath" or "callee" must be set.')
-        if self.calleePath is not None and self.callee is not None:
-            raise ValueError('"calleePath" and "callee" are mutually exclusive.')
         return self
 
 

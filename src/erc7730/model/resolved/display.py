@@ -136,16 +136,38 @@ class ResolvedCallDataParameters(Model):
     Embedded Calldata Formatting Parameters.
     """
 
-    selector: str | None = Field(
-        default=None,
-        title="Called Selector",
-        description="The selector being called, if not contained in the calldata. Hex string representation.",
-    )
-
     callee: ResolvedValue = Field(
         title="Callee",
         description="The address of the contract being called by this embedded calldata, either as path to a field in "
         "the structured data or a constant value.",
+    )
+
+    selector: ResolvedValue | None = Field(
+        default=None,
+        title="Called Selector",
+        description="The selector being called, if not contained in the calldata, either as path to a field in "
+        "the structured data or a constant value.",
+    )
+
+    chainId: ResolvedValue | None = Field(
+        default=None,
+        title="Chain ID",
+        description="The chain ID of the contract being called, if not contained in the calldata, either as"
+        " path to a field in the structured data or a constant value.",
+    )
+
+    amount: ResolvedValue | None = Field(
+        default=None,
+        title="Amount",
+        description="The amount of native currency being sent with the call if not contained in the calldata, "
+        "either as path to a field in the structured data or a constant value.",
+    )
+
+    spender: ResolvedValue | None = Field(
+        default=None,
+        title="Spender",
+        description="The address of the spender if not contained in the calldata, either as path to a field"
+        " in the structured data or a constant value.",
     )
 
 
