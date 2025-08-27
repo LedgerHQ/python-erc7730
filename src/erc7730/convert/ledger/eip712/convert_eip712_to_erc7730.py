@@ -19,6 +19,7 @@ from erc7730.model.input.context import InputDeployment, InputDomain, InputEIP71
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.input.display import (
     InputAddressNameParameters,
+    InputCallDataParameters,
     InputDateParameters,
     InputDisplay,
     InputFieldDescription,
@@ -131,6 +132,19 @@ class EIP712toERC7730Converter(ERC7730Converter[ResolvedEIP712DAppDescriptor, In
                     params=InputAddressNameParameters(
                         types=cls.convert_trusted_names_types(field.nameTypes, out),
                         sources=cls.convert_trusted_names_sources(field.nameSources),
+                    ),
+                )
+            case EIP712Format.CALLDATA:
+                return InputFieldDescription(
+                    path=field.path,
+                    label=field.label,
+                    format=FieldFormat.CALL_DATA,
+                    params=InputCallDataParameters(
+                        calleePath=field.calleePath,
+                        chainIdPath=field.chainIdPath,
+                        selectorPath=field.selectorPath,
+                        amountPath=field.amountPath,
+                        spenderPath=field.spenderPath,
                     ),
                 )
             case _:
