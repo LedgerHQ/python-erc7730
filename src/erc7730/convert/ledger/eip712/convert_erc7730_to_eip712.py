@@ -17,10 +17,12 @@ from erc7730.model.resolved.context import ResolvedDeployment, ResolvedEIP712Con
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.display import (
     ResolvedAddressNameParameters,
+    ResolvedCallDataParameters,
     ResolvedField,
     ResolvedFieldDescription,
     ResolvedNestedFields,
     ResolvedTokenAmountParameters,
+    ResolvedValue,
     ResolvedValueConstant,
     ResolvedValuePath,
 )
@@ -70,9 +72,12 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
 
             descriptors: dict[str, InputEIP712DAppDescriptor] = {}
             for deployment in context.eip712.deployments:
-                output_descriptor = self._build_network_descriptor(deployment, dapp_name, contract_name, messages, out)
+                chain_id = str(deployment.chainId)
+                output_descriptor = self._build_network_descriptor(
+                    deployment, dapp_name, contract_name, messages, descriptors.get(chain_id), out
+                )
                 if output_descriptor is not None:
-                    descriptors[str(deployment.chainId)] = output_descriptor
+                    descriptors[chain_id] = output_descriptor
 
         return descriptors
 
@@ -83,18 +88,24 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
         dapp_name: str,
         contract_name: str,
         messages: list[InputEIP712Message],
+        descriptor: InputEIP712DAppDescriptor | None,
         out: OutputAdder,
     ) -> InputEIP712DAppDescriptor | None:
         if (network := ledger_network_id(deployment.chainId)) is None:
-            return out.error(f"network id {deployment.chainId} not supported")
+            out.error(f"network id {deployment.chainId} not supported")
+            return descriptor
+
+        contracts = descriptor.contracts if descriptor is not None else []
+
+        contracts.append(
+            InputEIP712Contract(address=deployment.address.lower(), contractName=contract_name, messages=messages)
+        )
 
         return InputEIP712DAppDescriptor(
             blockchainName=network,
             chainId=deployment.chainId,
             name=dapp_name,
-            contracts=[
-                InputEIP712Contract(address=deployment.address.lower(), contractName=contract_name, messages=messages)
-            ],
+            contracts=contracts,
         )
 
     @classmethod
@@ -177,7 +188,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             case FieldFormat.NFT_NAME:
                 field_format = EIP712Format.TRUSTED_NAME
             case FieldFormat.CALL_DATA:
-                field_format = EIP712Format.RAW
+                field_format = EIP712Format.CALLDATA
             case FieldFormat.DATE:
                 field_format = EIP712Format.DATETIME
             case FieldFormat.AMOUNT:
@@ -215,6 +226,7 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             case _:
                 assert_never(field.format)
 
+        # Trusted names
         name_types: list[EIP712NameType] | None = None
         name_sources: list[EIP712NameSource] | None = None
 
@@ -226,6 +238,27 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             name_types = cls.convert_trusted_names_types(field.params.types)
             name_sources = cls.convert_trusted_names_sources(field.params.sources, name_types)
 
+        # Calldata
+        callee_path: str | None = None
+        chainid_path: str | None = None
+        selector_path: str | None = None
+        amount_path: str | None = None
+        spender_path: str | None = None
+
+        if (
+            (field_format == EIP712Format.CALLDATA)
+            and field.params is not None
+            and isinstance(field.params, ResolvedCallDataParameters)
+        ):
+            try:
+                callee_path = cls.convert_calldata_param_path(prefix, field.params.callee)
+                chainid_path = cls.convert_calldata_param_path(prefix, field.params.chainId)
+                selector_path = cls.convert_calldata_param_path(prefix, field.params.selector)
+                amount_path = cls.convert_calldata_param_path(prefix, field.params.amount)
+                spender_path = cls.convert_calldata_param_path(prefix, field.params.spender)
+            except ValueError as e:
+                return out.error(str(e))
+
         return InputEIP712MapperField(
             path=str(to_relative(field_path)),
             label=field.label,
@@ -233,6 +266,11 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
             format=field_format,
             nameTypes=name_types,
             nameSources=name_sources,
+            calleePath=callee_path,
+            chainIdPath=chainid_path,
+            selectorPath=selector_path,
+            amountPath=amount_path,
+            spenderPath=spender_path,
         )
 
     @classmethod
@@ -290,3 +328,25 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
         if not name_sources:  # default to all sources
             name_sources = list(EIP712NameSource)
         return name_sources
+
+    @classmethod
+    def convert_calldata_param_path(cls, prefix: DataPath | None, input_path: ResolvedValue | None) -> str | None:
+        match input_path:
+            case None:
+                return None
+
+            case ResolvedValueConstant():
+                raise ValueError("Constant values are not supported")
+
+            case ResolvedValuePath(path=path):
+                match path:
+                    case DataPath() as token_path:
+                        return str(to_relative(data_path_concat(prefix, token_path)))
+                    case ContainerPath() as container_path if container_path.field == ContainerField.TO:
+                        return "@.to"
+                    case ContainerPath() as container_path:
+                        raise ValueError(f"Path {container_path} is not supported")
+                    case _:
+                        assert_never(path)
+            case _:
+                assert_never(input_path)
