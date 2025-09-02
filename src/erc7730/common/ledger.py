@@ -28,6 +28,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "ethereum_sepolia"
         case 11155420:
             return "optimism_sepolia"
+        case 1116:
+            return "core"
         case 1284:
             return "moonbeam"
         case 1285:
