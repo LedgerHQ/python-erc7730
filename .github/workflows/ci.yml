@@ -34,7 +34,7 @@ jobs:
       - name: Pull request | Add labels
         timeout-minutes: 30
         if: github.event_name == 'pull_request'
-        uses: actions/labeler@v5
+        uses: actions/labeler@v6
 
       - name: Pull request | Enforce labels
         timeout-minutes: 5
