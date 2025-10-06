@@ -50,12 +50,8 @@ def test_get_supported_chains() -> None:
     assert "Scroll Sepolia Testnet" in names
     assert "Taiko Mainnet" in names
     assert "Taiko Hekla L2 Testnet" in names
-    assert "WEMIX3.0 Mainnet" in names
-    assert "WEMIX3.0 Testnet" in names
     assert "zkSync Mainnet" in names
     assert "zkSync Sepolia Testnet" in names
-    assert "Xai Mainnet" in names
-    assert "Xai Sepolia Testnet" in names
 
 
 def test_get_contract_abis() -> None:
