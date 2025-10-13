@@ -33,6 +33,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "telos_evm"
         case 42:
             return "lukso"
+        case 50:
+            return "xdc"
         case 51:
             return "apothem_network"
         case 56:
@@ -73,6 +75,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "dexon"
         case 246:
             return "energy_web"
+        case 250:
+            return "fantom"
         case 269:
             return "hpb"
         case 288:
@@ -87,14 +91,22 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "shiden_evm"
         case 338:
             return "cronos_testnet"
+        case 360:
+            return "shape"
         case 369:
             return "pulsechain"
+        case 420:
+            return "optimism_goerli"
         case 592:
             return "astar"
         case 820:
             return "callisto"
         case 888:
             return "wanchain"
+        case 943:
+            return "pulsechain_testnet"
+        case 999:
+            return "hyperevm"
         case 1001:
             return "klaytn_baobab"
         case 1088:
@@ -103,6 +115,10 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "polygon_zk_evm"
         case 1116:
             return "core"
+        case 1284:
+            return "moonbeam"
+        case 1285:
+            return "moonriver"
         case 1329:
             return "sei_evm"
         case 1442:
@@ -139,12 +155,16 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "evmos_evm"
         case 9008:
             return "shido"
-        case 20625:
-            return "akroma"
+        case 10001:
+            return "ethereum_pow"
+        case 17000:
+            return "ethereum_holesky"
         case 24484:
             return "webchain"
         case 31102:
             return "ethersocial"
+        case 39797:
+            return "energi"
         case 42161:
             return "arbitrum"
         case 42220:
@@ -175,6 +195,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "base_sepolia"
         case 98866:
             return "plume"
+        case 200625:
+            return "akroma"
         case 200901:
             return "bitlayer"
         case 246529:
@@ -189,10 +211,14 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "scroll_sepolia"
         case 534352:
             return "scroll"
+        case 560048:
+            return "ethereum_hoodi"
         case 747474:
             return "katana"
         case 846000:
             return "id4good"
+        case 1313114:
+            return "ether1"
         case 7762959:
             return "musicoin"
         case 11155111:
