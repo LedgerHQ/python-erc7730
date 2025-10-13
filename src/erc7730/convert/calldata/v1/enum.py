@@ -2,8 +2,6 @@
 Conversion of ERC-7730 enum definitions to calldata descriptor instructions.
 """
 
-from eth_typing import ChainId as EthChainId
-
 from erc7730.model.calldata.v1.instruction import (
     CalldataDescriptorInstructionEnumValueV1,
 )
@@ -26,7 +24,7 @@ def convert_enums(
 
     return [
         CalldataDescriptorInstructionEnumValueV1(
-            chain_id=EthChainId(deployment.chainId),
+            chain_id=deployment.chainId,
             address=deployment.address,
             selector=selector,
             id=i,

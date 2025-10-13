@@ -5,7 +5,6 @@ Conversion of an ERC-7730 descriptor to a calldata descriptor (for a single chai
 import hashlib
 from typing import cast
 
-from eth_typing import ChainId as EthChainId
 from pydantic_string_url import HttpUrl
 
 from erc7730.common.binary import from_hex
@@ -78,7 +77,7 @@ def convert_selector(
         hash.update(from_hex(field.descriptor))
 
     transaction_info = CalldataDescriptorInstructionTransactionInfoV1(
-        chain_id=EthChainId(deployment.chainId),
+        chain_id=deployment.chainId,
         address=deployment.address,
         selector=selector,
         hash=hash.digest().hex(),
@@ -93,7 +92,7 @@ def convert_selector(
     return CalldataDescriptorV1(
         source=source,
         network=cast(str, ledger_network_id(deployment.chainId)),
-        chain_id=EthChainId(deployment.chainId),
+        chain_id=deployment.chainId,
         address=deployment.address,
         selector=selector,
         transaction_info=transaction_info,
