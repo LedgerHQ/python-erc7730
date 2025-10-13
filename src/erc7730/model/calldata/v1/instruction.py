@@ -9,7 +9,6 @@ from abc import ABC
 from functools import cached_property
 from typing import Annotated, Literal
 
-from eth_typing import ChainId as EthChainId
 from pydantic import Field, computed_field
 from pydantic_string_url import HttpUrl
 
@@ -56,9 +55,10 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         description="Version of the TRANSACTION_INFO struct",
     )
 
-    chain_id: EthChainId = Field(
+    chain_id: int = Field(
         title="Chain ID",
         description="The contract deployment EIP-155 chain id.",
+        ge=1,
     )
 
     address: Address = Field(
@@ -143,9 +143,10 @@ class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBase
         description="Version of the ENUM struct",
     )
 
-    chain_id: EthChainId = Field(
+    chain_id: int = Field(
         title="Chain ID",
         description="The contract deployment EIP-155 chain id.",
+        ge=1,
     )
 
     address: Address = Field(
