@@ -1,4 +1,3 @@
-import re
 import threading
 from builtins import print as builtin_print
 from contextlib import AbstractContextManager
@@ -316,21 +315,30 @@ def pydantic_error_to_output(e: ValidationError, out: OutputAdder) -> None:
     :param out: output handler
     """
 
-    def filter_location(loc: int | str) -> bool:
+    def format_location(loc: int | str) -> str:
         if isinstance(loc, int):
-            return True
-        return bool(re.match(r"(list|set)\[.*", loc))
+            return f"[{loc}]"
+        if "[" in loc or "(" in loc:
+            return f".`{loc}`"
+        return f".{loc}"
 
     def get_location(ex: ErrorDetails) -> str:
         if not (loc := ex.get("loc")):
             return "unknown location"
-        return ".".join(map(str, filter(filter_location, loc[:-1])))
+        return "$" + "".join(map(format_location, loc))
 
     def get_value(ex: ErrorDetails) -> str:
         return str(ex.get("input", "unknown value"))
 
+    def format_details(details: str) -> str:
+        match details:
+            case "Unable to extract tag using discriminator field_parameters_discriminator()":
+                return "Parameter type cannot be deduced from attributes"
+            case _:
+                return details
+
     def get_details(ex: ErrorDetails) -> str:
-        return ex.get("msg", "unknown error")
+        return format_details(ex.get("msg", "unknown error"))
 
     def get_message(ex: ErrorDetails) -> str:
         return f"""Value "{get_value(ex)}" is not valid: {get_details(ex)}"""
