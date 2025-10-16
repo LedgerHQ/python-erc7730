@@ -3,109 +3,86 @@
 
 def ledger_network_id(chain_id: int) -> str | None:
     """Get Ledger specific network id from chain id."""
+
     match chain_id:
         case 1:
             return "ethereum"
+        case 2:
+            return "expanse"
+        case 3:
+            return "ethereum_ropsten"
+        case 5:
+            return "ethereum_goerli"
+        case 8:
+            return "ubiq"
         case 10:
             return "optimism"
+        case 14:
+            return "flare"
+        case 16:
+            return "flare_coston"
+        case 19:
+            return "songbird"
+        case 24:
+            return "kardia_chain"
+        case 25:
+            return "cronos"
+        case 30:
+            return "rsk"
+        case 40:
+            return "telos_evm"
+        case 42:
+            return "lukso"
+        case 50:
+            return "xdc"
+        case 51:
+            return "apothem_network"
+        case 56:
+            return "bsc"
+        case 57:
+            return "syscoin"
+        case 60:
+            return "gochain"
+        case 61:
+            return "ethereum_classic"
+        case 64:
+            return "ellaism"
+        case 66:
+            return "okxchain"
+        case 76:
+            return "mix"
+        case 88:
+            return "tomo"
+        case 89:
+            return "tomo_testnet"
+        case 99:
+            return "poa"
         case 100:
             return "gnosis"
-        case 100:
-            return "palm_network"
-        case 10001:
-            return "ethereum_pow"
-        case 1001:
-            return "klaytn_baobab"
         case 106:
             return "velas_evm"
         case 108:
             return "thundercore"
-        case 1088:
-            return "metis"
-        case 1101:
-            return "polygon_zk_evm"
-        case 11155111:
-            return "ethereum_sepolia"
-        case 11155420:
-            return "optimism_sepolia"
-        case 1116:
-            return "core"
-        case 1284:
-            return "moonbeam"
-        case 1285:
-            return "moonriver"
-        case 1313114:
-            return "ether1"
         case 137:
             return "polygon"
-        case 14:
-            return "flare"
-        case 1442:
-            return "polygon_zk_evm_testnet"
-        case 16:
-            return "flare_coston"
-        case 1620:
-            return "atheios"
-        case 1666600000:
-            return "harmony_one"
-        case 168587773:
-            return "blast_sepolia"
-        case 17000:
-            return "ethereum_holesky"
-        case 19:
-            return "songbird"
+        case 146:
+            return "sonic"
         case 196:
             return "okbchain"
         case 199:
             return "bittorrent"
-        case 199:
-            return "bttc"
-        case 2:
-            return "expanse"
-        case 200625:
-            return "akroma"
-        case 20531812:
-            return "tecracoin"
-        case 2221:
-            return "kava_evm_testnet"
-        case 2222:
-            return "kava_evm"
         case 237:
             return "dexon"
-        case 24:
-            return "kardia_chain"
-        case 24484:
-            return "webchain"
-        case 245022934:
-            return "neon_evm"
         case 246:
             return "energy_web"
-        case 246529:
-            return "artis_sigma1"
-        case 25:
-            return "cronos"
         case 250:
             return "fantom"
         case 269:
             return "hpb"
         case 288:
             return "boba"
-        case 2894:
-            return "reosc"
-        case 3:
-            return "ethereum_ropsten"
-        case 30:
-            return "rsk"
-        case 31102:
-            return "ethergem"
-        case 31102:
-            return "ethersocial"
-        case 3125659152:
-            return "pirl"
         case 314:
             return "filecoin"
-        case 314159:
-            return "filecoin_calibration"
         case 321:
             return "kcc"
         case 324:
@@ -114,26 +91,82 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "shiden_evm"
         case 338:
             return "cronos_testnet"
+        case 360:
+            return "shape"
         case 369:
             return "pulsechain"
-        case 39797:
-            return "energi"
-        case 40:
-            return "telos_evm"
-        case 4002:
-            return "fantom_testnet"
-        case 42:
-            return "lukso"
-        case 42:
-            return "xdc"
         case 420:
             return "optimism_goerli"
+        case 592:
+            return "astar"
+        case 820:
+            return "callisto"
+        case 888:
+            return "wanchain"
+        case 943:
+            return "pulsechain_testnet"
+        case 999:
+            return "hyperevm"
+        case 1001:
+            return "klaytn_baobab"
+        case 1088:
+            return "metis"
+        case 1101:
+            return "polygon_zk_evm"
+        case 1116:
+            return "core"
+        case 1284:
+            return "moonbeam"
+        case 1285:
+            return "moonriver"
+        case 1329:
+            return "sei_evm"
+        case 1442:
+            return "polygon_zk_evm_testnet"
+        case 1514:
+            return "story"
+        case 1620:
+            return "atheios"
+        case 1987:
+            return "ethergem"
+        case 2221:
+            return "kava_evm_testnet"
+        case 2222:
+            return "kava_evm"
+        case 2894:
+            return "reosc"
+        case 4002:
+            return "fantom_testnet"
+        case 4919:
+            return "venidium"
+        case 5000:
+            return "mantle"
+        case 5003:
+            return "mantle_sepolia"
+        case 6342:
+            return "megaeth_testnet"
+        case 8217:
+            return "klaytn"
+        case 8453:
+            return "base"
+        case 8822:
+            return "iota_evm"
+        case 9001:
+            return "evmos_evm"
+        case 9008:
+            return "shido"
+        case 10001:
+            return "ethereum_pow"
+        case 17000:
+            return "ethereum_holesky"
+        case 24484:
+            return "webchain"
+        case 31102:
+            return "ethersocial"
+        case 39797:
+            return "energi"
         case 42161:
             return "arbitrum"
-        case 421613:
-            return "arbitrum_goerli"
-        case 421614:
-            return "arbitrum_sepolia"
         case 42220:
             return "celo"
         case 42793:
@@ -144,70 +177,66 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "avalanche_c_chain"
         case 44787:
             return "celo_alfajores"
-        case 4919:
-            return "venidium"
-        case 5:
-            return "ethereum_goerli"
-        case 5000:
-            return "mantle"
-        case 5003:
-            return "mantle_sepolia"
-        case 51:
-            return "apothem_network"
-        case 534351:
-            return "scroll_sepolia"
-        case 534352:
-            return "scroll"
-        case 56:
-            return "bsc"
-        case 57:
-            return "syscoin"
         case 59144:
             return "linea"
-        case 592:
-            return "astar"
-        case 60:
-            return "gochain"
-        case 61:
-            return "ethereum_classic"
         case 62621:
             return "multivac"
-        case 64:
-            return "ellaism"
-        case 66:
-            return "okxchain"
-        case 76:
-            return "mix"
-        case 7762959:
-            return "musicoin"
-        case 8:
-            return "ubiq"
         case 80001:
             return "polygon_mumbai"
+        case 80002:
+            return "polygon_amoy"
+        case 80094:
+            return "berachain"
         case 81457:
             return "blast"
-        case 820:
-            return "callisto"
-        case 8217:
-            return "klaytn"
-        case 8453:
-            return "base"
         case 84531:
             return "base_goerli"
         case 84532:
             return "base_sepolia"
+        case 98866:
+            return "plume"
+        case 200625:
+            return "akroma"
+        case 200901:
+            return "bitlayer"
+        case 246529:
+            return "artis_sigma1"
+        case 314159:
+            return "filecoin_calibration"
+        case 421613:
+            return "arbitrum_goerli"
+        case 421614:
+            return "arbitrum_sepolia"
+        case 534351:
+            return "scroll_sepolia"
+        case 534352:
+            return "scroll"
+        case 560048:
+            return "ethereum_hoodi"
+        case 747474:
+            return "katana"
         case 846000:
             return "id4good"
-        case 88:
-            return "tomo"
-        case 888:
-            return "wanchain"
-        case 89:
-            return "tomo_testnet"
-        case 9001:
-            return "evmos_evm"
-        case 99:
-            return "poa"
+        case 1313114:
+            return "ether1"
+        case 7762959:
+            return "musicoin"
+        case 11155111:
+            return "ethereum_sepolia"
+        case 11155420:
+            return "optimism_sepolia"
+        case 20531812:
+            return "tecracoin"
+        case 168587773:
+            return "blast_sepolia"
+        case 245022934:
+            return "neon_evm"
+        case 1666600000:
+            return "harmony_one"
+        case 3125659152:
+            return "pirl"
+        case 11297108109:
+            return "palm_network"
         case _:
             return None
 

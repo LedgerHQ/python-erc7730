@@ -11,7 +11,6 @@ from abc import ABC
 from enum import StrEnum, auto
 from typing import Literal
 
-from eth_typing import ChainId as EthChainId
 from pydantic import Field
 from pydantic_string_url import HttpUrl
 
@@ -51,9 +50,10 @@ class CalldataDescriptorBase(Model, ABC):
         description="The Ledger network this descriptor applies to.",
     )
 
-    chain_id: EthChainId = Field(
+    chain_id: int = Field(
         title="Chain ID",
         description="The contract deployment EIP-155 chain id.",
+        ge=1,
     )
 
     address: Address = Field(
