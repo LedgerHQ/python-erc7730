@@ -19,7 +19,7 @@ DATA = Path(__file__).resolve().parent / "data"
         ("POAP Bridge", 1, Address("0x0bb4d3e88243f4a057db77341e6916b0e449b158")),
         ("QuickSwap", 137, Address("0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff")),
         ("1inch Aggregation router v5", 10, Address("0x1111111254EEB25477B68fb85Ed929f73A960582")),
-        ("Paraswap v5 AugustusSwapper", 137, Address("0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57")),
+        ("Paraswap v5 AugustusSwapper", 10, Address("0xDEF171Fe48CF0115B1d80b88dc8eAB59176FEe57")),
         ("Uniswap v3 Router 2", 8453, Address("0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD")),
     ],
 )
