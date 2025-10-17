@@ -6,7 +6,9 @@ from rich import print
 
 from erc7730.generate.generate import generate_descriptor
 from erc7730.model.input.descriptor import InputERC7730Descriptor
+from erc7730.model.input.display import InputFieldDescription, InputNestedFields
 from erc7730.model.input.lenses import get_deployments
+from erc7730.model.paths import Array, DataPath, Field
 from erc7730.model.types import Address
 
 DATA = Path(__file__).resolve().parent / "data"
@@ -74,6 +76,35 @@ def test_generate_from_eip712_schemas_string(test_file: str) -> None:
             eip712_schema=schema,
         )
     )
+
+
+def test_generate_array_of_structs() -> None:
+    """Test that arrays of structs generate the expected nested fields"""
+    test_file = DATA / "abis_array_struct.json"
+    with open(test_file, "rb") as f:
+        descriptor = generate_descriptor(
+            chain_id=1, contract_address=Address("0x0000000000000000000000000000000000000000"), abi=f.read()
+        )
+
+    assert "processOrders((address,uint256,address)[])" in descriptor.display.formats
+    format = descriptor.display.formats["processOrders((address,uint256,address)[])"]
+
+    # First level is only 1 field, the array with path #.orders[]
+    assert len(format.fields) == 1
+    array_field = format.fields[0]
+    assert isinstance(array_field, InputNestedFields)
+    assert array_field.path == DataPath(absolute=True, elements=[Field(identifier="orders"), Array()])
+
+    # Second level is 3 fields, the struct components with relative path token, amount and recipient
+    assert len(array_field.fields) == 3
+    field_names = ["token", "amount", "recipient"]
+    for field, field_name in zip(array_field.fields, field_names, strict=False):
+        assert isinstance(field, InputFieldDescription)
+        assert isinstance(field.path, DataPath)
+        assert field.path.absolute is False
+        assert len(field.path.elements) == 1
+        assert isinstance(field.path.elements[0], Field)
+        assert field.path.elements[0].identifier == field_name
 
 
 def _assert_descriptor_valid(descriptor: InputERC7730Descriptor) -> None:

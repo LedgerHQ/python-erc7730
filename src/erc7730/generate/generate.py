@@ -152,7 +152,20 @@ def _generate_fields(schema: SchemaTree, path: DataPath) -> Generator[InputField
 
         case SchemaArray(component=component):
             match component:
-                case SchemaStruct() | SchemaArray():
+                case SchemaStruct(components=components):
+                    fields = [
+                        field
+                        for name, sub_component in components.items()
+                        for field in _generate_fields(
+                            sub_component, DataPath(absolute=False, elements=[Field(identifier=name)])
+                        )
+                        if name
+                    ]
+                    yield InputNestedFields(
+                        path=data_path_append(path, Array()),
+                        fields=fields,
+                    )
+                case SchemaArray():
                     yield InputNestedFields(
                         path=data_path_append(path, Array()),
                         fields=list(_generate_fields(component, DataPath(absolute=False, elements=[]))),

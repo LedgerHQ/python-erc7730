@@ -19,7 +19,7 @@ _SIGNATURE_PARSER = parser = Lark(
             ?tuple: "(" params ")"
                        
             named_param: type identifier?
-            named_tuple:  tuple identifier?
+            named_tuple:  tuple array? identifier?
 
             array: "[]"
             identifier: /[a-zA-Z$_][a-zA-Z0-9$_]*/
@@ -52,9 +52,20 @@ class FunctionTransformer(Transformer_InPlaceRecursive):
 
     def named_tuple(self, ast: Any) -> Component:
         if len(ast) == 1:
+            # Just components: (type1, type2)
             return Component(name="_", type="tuple", components=ast[0])
-        (components, name) = ast
-        return Component(name=name, type="tuple", components=components)
+        elif len(ast) == 2:
+            (components, array_or_name) = ast
+            if array_or_name == "[]":
+                # components + array: (type1, type2)[]
+                return Component(name="_", type="tuple[]", components=components)
+            else:
+                # components + name: (type1, type2) name
+                return Component(name=array_or_name, type="tuple", components=components)
+        else:
+            # components + array + name: (type1, type2)[] name
+            (components, array, name) = ast
+            return Component(name=name, type="tuple" + array, components=components)
 
     def array(self, ast: Any) -> str:
         return "[]"

@@ -37,6 +37,21 @@ from erc7730.model.abi import Component, Function, InputOutput
             "f3( uint256[] _a , ( uint256 v , ( bytes s , address a ) , uint256 d ) _p , address _o )",
             "f3(uint256[],(uint256,(bytes,address),uint256),address)",
         ),
+        # array of tuples without name
+        (
+            "batchExecute((address,uint256,bytes)[])",
+            "batchExecute((address,uint256,bytes)[])",
+        ),
+        # array of tuples with name
+        (
+            "batch((address _a,uint256 _b)[] txs)",
+            "batch((address,uint256)[])",
+        ),
+        # mixed params with array of tuples, spaces, and names
+        (
+            "complex(uint256,(address,bytes)[] , string _a, (uint256 _b,uint256 _c)[] _d)",
+            "complex(uint256,(address,bytes)[],string,(uint256,uint256)[])",
+        ),
     ],
 )
 def test_reduce_signature(signature: str, expected: str) -> None:
