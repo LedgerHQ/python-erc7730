@@ -1,0 +1,28 @@
+[
+  {
+    "type": "function",
+    "name": "processOrders",
+    "inputs": [
+      {
+        "name": "orders",
+        "type": "tuple[]",
+        "components": [
+          {
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "name": "recipient",
+            "type": "address"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]
