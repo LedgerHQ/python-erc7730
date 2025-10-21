@@ -175,7 +175,7 @@ class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBase
         title="Enum entry value",
         description="Identifier of this specific entry (ordinal of the entry, type agnostic)",
         ge=0,
-        le=32,
+        le=255,
     )
 
     name: str = Field(
