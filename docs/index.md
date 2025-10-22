@@ -15,4 +15,5 @@ This library implements:
 :maxdepth: 2
 pages/usage_cli.md
 pages/usage_library.md
+pages/lint.md
 ```
