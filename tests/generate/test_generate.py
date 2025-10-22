@@ -107,6 +107,55 @@ def test_generate_array_of_structs() -> None:
         assert field.path.elements[0].identifier == field_name
 
 
+def test_generate_multidimensional_arrays() -> None:
+    """Test that multidimensional arrays generate the expected field structure"""
+    test_file = DATA / "abis_multidim_arrays.json"
+    with open(test_file, "rb") as f:
+        descriptor = generate_descriptor(
+            chain_id=1, contract_address=Address("0x0000000000000000000000000000000000000000"), abi=f.read()
+        )
+
+    # Test 2D address array: address[][]
+    assert "process2DAddresses(address[][])" in descriptor.display.formats
+    format_2d = descriptor.display.formats["process2DAddresses(address[][])"]
+    assert len(format_2d.fields) == 1
+    field = format_2d.fields[0]
+    assert isinstance(field, InputFieldDescription)
+    assert field.path == DataPath(absolute=True, elements=[Field(identifier="addresses"), Array(), Array()])
+
+    # Test 3D uint array: uint256[][][]
+    # For basic types, all array dimensions are in the path, no nesting
+    assert "process3DUints(uint256[][][])" in descriptor.display.formats
+    format_3d = descriptor.display.formats["process3DUints(uint256[][][])"]
+
+    assert len(format_3d.fields) == 1
+    field = format_3d.fields[0]
+    assert isinstance(field, InputFieldDescription)
+    assert field.path == DataPath(absolute=True, elements=[Field(identifier="values"), Array(), Array(), Array()])
+
+    # Test 2D tuple array: (address,uint256)[][]
+    # For structs, there is a single NestedField with all array dimensions in path
+    assert "process2DTuples((address,uint256)[][])" in descriptor.display.formats
+    format_2d_tuple = descriptor.display.formats["process2DTuples((address,uint256)[][])"]
+
+    # NestedFields with path #.orders[][]
+    assert len(format_2d_tuple.fields) == 1
+    nested = format_2d_tuple.fields[0]
+    assert isinstance(nested, InputNestedFields)
+    assert nested.path == DataPath(absolute=True, elements=[Field(identifier="orders"), Array(), Array()])
+
+    # 2 FieldDescriptions for the tuple components
+    assert len(nested.fields) == 2
+    field_names = ["token", "amount"]
+    for field, field_name in zip(nested.fields, field_names, strict=False):
+        assert isinstance(field, InputFieldDescription)
+        assert isinstance(field.path, DataPath)
+        assert field.path.absolute is False
+        assert len(field.path.elements) == 1
+        assert isinstance(field.path.elements[0], Field)
+        assert field.path.elements[0].identifier == field_name
+
+
 def _assert_descriptor_valid(descriptor: InputERC7730Descriptor) -> None:
     print(descriptor.to_json_string())
     assert len(get_deployments(descriptor)) == 1

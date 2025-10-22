@@ -52,6 +52,21 @@ from erc7730.model.abi import Component, Function, InputOutput
             "complex(uint256,(address,bytes)[] , string _a, (uint256 _b,uint256 _c)[] _d)",
             "complex(uint256,(address,bytes)[],string,(uint256,uint256)[])",
         ),
+        # multidimensional arrays
+        (
+            "multiArray(address[][], uint256[][][])",
+            "multiArray(address[][],uint256[][][])",
+        ),
+        # multidimensional array of tuples
+        (
+            "tupleArray((uint256,address)[][])",
+            "tupleArray((uint256,address)[][])",
+        ),
+        # mixed with multidimensional arrays and names
+        (
+            "mixed(bytes32[][] data, (address a,uint256 b)[][] _tuples, string name)",
+            "mixed(bytes32[][],(address,uint256)[][],string)",
+        ),
     ],
 )
 def test_reduce_signature(signature: str, expected: str) -> None:

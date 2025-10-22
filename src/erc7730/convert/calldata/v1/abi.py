@@ -156,11 +156,8 @@ def _component_to_abi_tree(inp: InputOutput | Component) -> ABITree:
 
         case BasicType() as tp:
             if tp.is_array:
-                match tp.base:
-                    case "tuple" | "struct":
-                        component = _struct_component_to_abi_tree(inp)
-                    case _:
-                        component = _component_to_abi_tree(inp.model_copy(update={"type": tp.item_type.to_type_str()}))
+                # For arrays (including multi-dimensional arrays), recursively process the item type
+                component = _component_to_abi_tree(inp.model_copy(update={"type": tp.item_type.to_type_str()}))
 
                 if len(dimension := tp.arrlist[-1]) == 0:
                     return ABIDynamicArray(component=component)

@@ -287,7 +287,12 @@ def convert_data_path(
 
         # if current element is dynamic, we need to dereference it
         if current_abi_element.is_dynamic:
+            # First, emit any accumulated static offset before the REF
+            if is_static and static_offset > 0:
+                path_out.append(CalldataDescriptorPathElementTupleV1(offset=static_offset))
+                static_offset = 0
             path_out.append(CalldataDescriptorPathElementRefV1())
+            is_static = False
 
     # emit a last static offset to a static value
     if is_static:

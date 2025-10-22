@@ -157,17 +157,18 @@ def _abi_component_to_tree(inp: InputOutput | Component) -> SchemaTree:
     :return: Schema tree
     """
     match eth_abi.grammar.parse(inp.type):
-        case TupleType():
+        case TupleType() as tp:
+            if tp.is_array:
+                # Handle multidimensional tuple arrays (e.g., tuple[][], tuple[][][])
+                component = _abi_component_to_tree(inp.model_copy(update={"type": tp.item_type.to_type_str()}))
+                return SchemaArray(component=component)
             return _abi_struct_component_to_tree(inp)
 
         case BasicType() as tp:
             if tp.is_array:
-                match tp.base:
-                    case "tuple" | "struct":
-                        component = _abi_struct_component_to_tree(inp)
-                    case _:
-                        component = _abi_component_to_tree(inp.model_copy(update={"type": tp.item_type.to_type_str()}))
-
+                # For all array types (including tuple/struct arrays), recursively process the inner type
+                # to handle multidimensional arrays like address[][], tuple[][][], etc.
+                component = _abi_component_to_tree(inp.model_copy(update={"type": tp.item_type.to_type_str()}))
                 return SchemaArray(component=component)
 
             match tp.base:

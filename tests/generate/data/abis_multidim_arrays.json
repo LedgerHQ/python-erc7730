@@ -1,0 +1,48 @@
+[
+  {
+    "type": "function",
+    "name": "process2DAddresses",
+    "inputs": [
+      {
+        "name": "addresses",
+        "type": "address[][]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "process3DUints",
+    "inputs": [
+      {
+        "name": "values",
+        "type": "uint256[][][]"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "process2DTuples",
+    "inputs": [
+      {
+        "name": "orders",
+        "type": "tuple[][]",
+        "components": [
+          {
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "name": "amount",
+            "type": "uint256"
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  }
+]

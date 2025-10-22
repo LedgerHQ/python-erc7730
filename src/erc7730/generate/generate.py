@@ -151,8 +151,21 @@ def _generate_fields(schema: SchemaTree, path: DataPath) -> Generator[InputField
             yield InputNestedFields(path=path, fields=fields)
 
         case SchemaArray(component=component):
-            match component:
+            # Accumulate all consecutive array dimensions
+            array_dims = 1
+            inner_component = component
+            while isinstance(inner_component, SchemaArray):
+                array_dims += 1
+                inner_component = inner_component.component
+
+            # Build path with all array dimensions
+            path_with_arrays = path
+            for _ in range(array_dims):
+                path_with_arrays = data_path_append(path_with_arrays, Array())
+
+            match inner_component:
                 case SchemaStruct(components=components):
+                    # For structs, create nested fields with all arrays in the path
                     fields = [
                         field
                         for name, sub_component in components.items()
@@ -161,17 +174,10 @@ def _generate_fields(schema: SchemaTree, path: DataPath) -> Generator[InputField
                         )
                         if name
                     ]
-                    yield InputNestedFields(
-                        path=data_path_append(path, Array()),
-                        fields=fields,
-                    )
-                case SchemaArray():
-                    yield InputNestedFields(
-                        path=data_path_append(path, Array()),
-                        fields=list(_generate_fields(component, DataPath(absolute=False, elements=[]))),
-                    )
+                    yield InputNestedFields(path=path_with_arrays, fields=fields)
                 case SchemaLeaf():
-                    yield from _generate_fields(component, data_path_append(path, Array()))
+                    # For basic types, directly yield with all arrays in the path
+                    yield from _generate_fields(inner_component, path_with_arrays)
                 case _:
                     assert_never(schema)
 
