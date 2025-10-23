@@ -19,11 +19,11 @@ _SIGNATURE_PARSER = parser = Lark(
             ?tuple: "(" params ")"
                        
             named_param: type identifier?
-            named_tuple:  tuple array? identifier?
+            named_tuple:  tuple array* identifier?
 
             array: "[]"
             identifier: /[a-zA-Z$_][a-zA-Z0-9$_]*/
-            type: identifier array?
+            type: identifier array*
 
             %ignore " "
             """,
@@ -51,21 +51,25 @@ class FunctionTransformer(Transformer_InPlaceRecursive):
         return Component(name=name, type=type_)
 
     def named_tuple(self, ast: Any) -> Component:
-        if len(ast) == 1:
-            # Just components: (type1, type2)
-            return Component(name="_", type="tuple", components=ast[0])
-        elif len(ast) == 2:
-            (components, array_or_name) = ast
-            if array_or_name == "[]":
-                # components + array: (type1, type2)[]
-                return Component(name="_", type="tuple[]", components=components)
-            else:
-                # components + name: (type1, type2) name
-                return Component(name=array_or_name, type="tuple", components=components)
-        else:
-            # components + array + name: (type1, type2)[] name
-            (components, array, name) = ast
-            return Component(name=name, type="tuple" + array, components=components)
+        if len(ast) == 0:
+            # Should not happen, but handle gracefully
+            return Component(name="_", type="tuple", components=[])
+
+        # First element is always components
+        components = ast[0]
+
+        # Separate arrays from name
+        # Arrays are "[]", name is anything else
+        arrays = [elem for elem in ast[1:] if elem == "[]"]
+        names = [elem for elem in ast[1:] if elem != "[]"]
+
+        # Build type with array suffixes
+        type_str = "tuple" + "".join(arrays)
+
+        # Use name if provided, otherwise use default
+        name = names[0] if names else "_"
+
+        return Component(name=name, type=type_str, components=components)
 
     def array(self, ast: Any) -> str:
         return "[]"
@@ -75,11 +79,18 @@ class FunctionTransformer(Transformer_InPlaceRecursive):
         return value
 
     def type(self, ast: Any) -> str:
-        if len(ast) == 1:
-            return ast[0]
+        if len(ast) == 0:
+            # Should not happen, but handle gracefully
+            return ""
 
-        (value, array) = ast
-        return value + array
+        # First element is the base type identifier
+        base_type = ast[0]
+
+        # Remaining elements are array suffixes "[]"
+        arrays = ast[1:]
+
+        # Concatenate base type with all array suffixes
+        return base_type + "".join(arrays)
 
 
 def compute_signature(abi: Function) -> str:
