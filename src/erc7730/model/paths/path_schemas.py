@@ -98,19 +98,32 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
 
             sub_path = data_path_append(path, Field(identifier=param.name))
 
-            param_base_type = param.type.rstrip("[]")
+            # Determine base type and array dimensions
+            full_type = param.type
+            dims = 0
+            while full_type.endswith("[]"):
+                dims += 1
+                full_type = full_type[:-2]
 
-            if param_base_type in {"bytes"}:
+            param_base_type = full_type
+
+            # If the (non-array) base type is bytes, allow indexing into the byte sequence
+            if param_base_type == "bytes":
                 paths.add(data_path_append(sub_path, Array()))
 
-            if param_base_type != param.type:
-                sub_path = data_path_append(sub_path, Array())
-                paths.add(sub_path)
+            # Add an Array() for each array dimension
+            if dims > 0:
+                for _ in range(dims):
+                    sub_path = data_path_append(sub_path, Array())
+                    paths.add(sub_path)
 
+            # Recurse into tuple/components if present, otherwise add the final path
             if param.components:
                 append_paths(sub_path, param.components)  # type: ignore
             else:
                 paths.add(sub_path)
+
+            
 
     append_paths(ROOT_DATA_PATH, abi.inputs)
 
