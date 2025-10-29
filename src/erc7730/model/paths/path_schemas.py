@@ -111,19 +111,18 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
             if param_base_type == "bytes":
                 paths.add(data_path_append(sub_path, Array()))
 
-            # Add an Array() for each array dimension
+            # TODO: For now there is no use case that requires paths for intermediate array levels
+            # So we only add the final array level if any
             if dims > 0:
                 for _ in range(dims):
                     sub_path = data_path_append(sub_path, Array())
-                    paths.add(sub_path)
+                paths.add(sub_path)
 
             # Recurse into tuple/components if present, otherwise add the final path
             if param.components:
                 append_paths(sub_path, param.components)  # type: ignore
             else:
                 paths.add(sub_path)
-
-            
 
     append_paths(ROOT_DATA_PATH, abi.inputs)
 
