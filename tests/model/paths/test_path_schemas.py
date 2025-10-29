@@ -68,6 +68,30 @@ def test_compute_abi_paths_with_multiple_nested_params() -> None:
     assert compute_abi_schema_paths(abi) == expected
 
 
+def test_compute_abi_paths_multidimensional_tuple() -> None:
+    abi = Function(
+        name="smartSwapByInvestWithRefund",
+        inputs=[
+            InputOutput(
+                name="foo",
+                type="tuple[][]",
+                components=[
+                    Component(name="bar", type="uint256"),
+                    Component(name="baz", type="uint256"),
+                ],
+                indexed=None,
+                unit=None,
+            )
+        ],
+    )
+    expected = {
+        to_path("#.foo.[].[]"),
+        to_path("#.foo.[].[].bar"),
+        to_path("#.foo.[].[].baz"),
+    }
+    assert compute_abi_schema_paths(abi) == expected
+
+
 def test_compute_eip712_paths_with_slicable_params() -> None:
     schema = EIP712Schema(
         primaryType="Foo",
