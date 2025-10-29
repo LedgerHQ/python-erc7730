@@ -18,8 +18,6 @@ from erc7730.model.resolved.context import ResolvedContractContext, ResolvedEIP7
 from erc7730.model.resolved.display import ResolvedDisplay
 from erc7730.model.resolved.metadata import ResolvedMetadata
 
-# ruff: noqa: N815 - camel case field names are tolerated to match schema
-
 
 class ResolvedERC7730Descriptor(Model):
     """

@@ -18,8 +18,6 @@ from erc7730.model.input.context import InputContractContext, InputEIP712Context
 from erc7730.model.input.display import InputDisplay
 from erc7730.model.input.metadata import InputMetadata
 
-# ruff: noqa: N815 - camel case field names are tolerated to match schema
-
 
 class InputERC7730Descriptor(Model):
     """

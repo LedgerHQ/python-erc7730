@@ -5,6 +5,8 @@ from pydantic import BaseModel
 
 from erc7730.common.output import OutputAdder
 
+# ruff: noqa: UP046
+
 InputType = TypeVar("InputType", bound=BaseModel)
 OutputType = TypeVar("OutputType", bound=BaseModel)
 

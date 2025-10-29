@@ -11,6 +11,8 @@ from pydantic_core.core_schema import WrapValidatorFunctionSchema
 
 from erc7730.common.json import dict_to_json_file, dict_to_json_str, read_json_with_includes
 
+# ruff: noqa: UP047
+
 _BaseModel = TypeVar("_BaseModel", bound=BaseModel)
 
 

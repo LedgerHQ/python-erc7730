@@ -12,8 +12,6 @@ from erc7730.model.metadata import Metadata
 from erc7730.model.resolved.metadata import EnumDefinition
 from erc7730.model.types import Id, ScalarType
 
-# ruff: noqa: N815 - camel case field names are tolerated to match schema
-
 
 class InputMetadata(Metadata):
     """

@@ -6,8 +6,6 @@ from pydantic import Field, RootModel
 from erc7730.model.base import Model
 from erc7730.model.types import Id
 
-# ruff: noqa: N815 - camel case field names are tolerated to match schema
-
 
 class FieldFormat(str, Enum):
     """
