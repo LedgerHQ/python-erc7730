@@ -1,5 +1,7 @@
 from typing_extensions import TypeVar
 
+# ruff: noqa: UP047
+
 _T = TypeVar("_T")
 
 

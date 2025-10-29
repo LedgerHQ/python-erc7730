@@ -10,8 +10,6 @@ from pydantic import Field
 from erc7730.model.metadata import EnumDefinition, Metadata
 from erc7730.model.types import Id
 
-# ruff: noqa: N815 - camel case field names are tolerated to match schema
-
 
 class ResolvedMetadata(Metadata):
     """

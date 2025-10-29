@@ -17,6 +17,8 @@ from erc7730.model.abi import ABI
 from erc7730.model.base import Model
 from erc7730.model.types import Address
 
+# ruff: noqa: UP047
+
 ETHERSCAN = "api.etherscan.io"
 
 _T = TypeVar("_T")

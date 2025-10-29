@@ -5,6 +5,8 @@ from typing import Generic, TypeVar
 from erc7730.model.abi import ABI
 from erc7730.model.context import EIP712Schema
 
+# ruff: noqa: UP046
+
 
 class TxClass(StrEnum):
     STAKE = auto()
