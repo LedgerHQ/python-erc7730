@@ -1,0 +1,22 @@
+configVersion: 1
+name: python-erc7730
+id: ari:cloud:compass:5576c6af-2aa6-451e-b92d-9c02363b46fa:component/4640d974-47c0-4323-b441-637e6eb4f752/875ec76b-b29c-4187-862a-3d3f09fd8603
+description: ERC-7730 descriptors validation and utilities.
+typeId: METADATA
+ownerId: null
+fields:
+  lifecycle: production
+  tier: 4
+  isMonorepoProject: false
+links:
+- name: Repository
+  type: REPOSITORY
+  url: https://github.com/LedgerHQ/python-erc7730
+- name: Documentation
+  type: DOCUMENTATION
+  url: https://github.com/LedgerHQ/python-erc7730
+relationships: {}
+labels:
+  ledger.com/contains_pii: 'no'
+  ledger.com/donjon_review: on-demand
+customFields: null
