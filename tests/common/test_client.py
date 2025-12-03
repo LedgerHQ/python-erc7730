@@ -32,9 +32,8 @@ def test_get_supported_chains() -> None:
     assert "BitTorrent Chain Mainnet" in names
     assert "BitTorrent Chain Testnet" in names
     assert "Celo Mainnet" in names
-    assert "Cronos Mainnet" in names
     assert "Fraxtal Mainnet" in names
-    assert "Fraxtal Testnet" in names
+    assert "Fraxtal Hoodi Testnet" in names
     assert "Gnosis" in names
     assert "Mantle Mainnet" in names
     assert "Mantle Sepolia Testnet" in names

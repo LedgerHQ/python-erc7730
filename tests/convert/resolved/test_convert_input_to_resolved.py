@@ -49,6 +49,23 @@ def test_registry_files(input_file: Path) -> None:
             description="using address name format, with parameter variants, resolved form is identical to input form",
         ),
         TestCase(
+            id="format_address_name_with_sender",
+            label="field format - using address name format with senderAddress",
+            description="using address name format with senderAddress parameter, resolved form is identical to input "
+            "form",
+        ),
+        TestCase(
+            id="format_address_name_with_sender_array",
+            label="field format - using address name format with senderAddress array",
+            description="using address name format with senderAddress as array, resolved form is identical to input "
+            "form",
+        ),
+        TestCase(
+            id="format_address_name_with_sender_constant",
+            label="field format - using address name format with senderAddress from constant",
+            description="using address name format with senderAddress resolved from $.metadata constant",
+        ),
+        TestCase(
             id="format_calldata",
             label="field format - using calldata format",
             description="using calldata format, with parameter variants, resolved form is identical to input form",
