@@ -13,7 +13,7 @@ from erc7730.model.display import (
 )
 from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.resolved.path import ResolvedPath
-from erc7730.model.types import Address, HexStr, Id, ScalarType, Selector
+from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress, ScalarType, Selector
 from erc7730.model.unions import field_discriminator, field_parameters_discriminator
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -127,6 +127,13 @@ class ResolvedAddressNameParameters(Model):
         title="Trusted Sources",
         description="An array of acceptable sources for names. If set, the wallet SHOULD restrict name lookup to "
         "relevant sources.",
+        min_length=1,
+    )
+
+    senderAddress: list[MixedCaseAddress] | None = Field(
+        default=None,
+        title="Sender Addresses",
+        description="List of addresses to be interpreted as the sender referenced by @.from",
         min_length=1,
     )
 

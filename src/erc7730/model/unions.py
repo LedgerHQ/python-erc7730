@@ -38,6 +38,6 @@ def field_parameters_discriminator(v: Any) -> str | None:
         return "enum"
     if has_any_property(v, "calleePath", "callee", "selector"):
         return "call_data"
-    if has_any_property(v, "sources", "types"):
+    if has_any_property(v, "sources", "types", "senderAddress"):
         return "address_name"
     return None
