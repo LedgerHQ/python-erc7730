@@ -62,8 +62,22 @@ def resolve_field_parameters(
 def resolve_address_name_parameters(
     prefix: DataPath, params: InputAddressNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedAddressNameParameters | None:
+    sender_address: list[MixedCaseAddress] | None = None
+    if (sender_addr_input := params.senderAddress) is not None:
+        resolved_sender = constants.resolve_or_none(sender_addr_input, out)
+        if resolved_sender is None:
+            sender_address = None
+        if isinstance(resolved_sender, str):
+            sender_address = [resolved_sender]
+        elif isinstance(resolved_sender, list):
+            sender_address = resolved_sender
+        else:
+            raise Exception("Invalid senderAddress type")
+
     return ResolvedAddressNameParameters(
-        types=constants.resolve_or_none(params.types, out), sources=constants.resolve_or_none(params.sources, out)
+        types=constants.resolve_or_none(params.types, out),
+        sources=constants.resolve_or_none(params.sources, out),
+        senderAddress=sender_address,
     )
 
 

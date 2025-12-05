@@ -144,6 +144,13 @@ class InputAddressNameParameters(Model):
         min_length=1,
     )
 
+    senderAddress: MixedCaseAddress | list[MixedCaseAddress] | DescriptorPathStr | None = Field(
+        default=None,
+        title="Sender Address",
+        description="Either a string or an array of strings. If the address pointed to by addressName is equal to one "
+        "of the addresses in senderAddress, the addressName is interpreted as the sender referenced by @.from",
+    )
+
 
 class InputCallDataParameters(Model):
     """
