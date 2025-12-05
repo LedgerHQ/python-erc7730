@@ -265,6 +265,13 @@ class CalldataDescriptorParamTrustedNameV1(CalldataDescriptorParamBaseV1):
         title="Allowed sources", description="Allowed sources for trusted names display", min_length=1
     )
 
+    sender_addresses: list[Address] | None = Field(
+        default=None,
+        title="Sender addresses",
+        description="List of addresses to be interpreted as the sender referenced by @.from",
+        min_length=1,
+    )
+
 
 class CalldataDescriptorParamCalldataV1(CalldataDescriptorParamBaseV1):
     """Descriptor for the PARAM_CALLDATA struct."""

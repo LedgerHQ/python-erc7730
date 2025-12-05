@@ -107,6 +107,7 @@ def convert_param(
 
             types: list[TrustedNameType] = []
             sources: list[TrustedNameSource] = []
+            sender_addresses: list[Address] | None = None
 
             if address_params is not None:
                 if (input_types := address_params.types) is not None:
@@ -139,11 +140,15 @@ def convert_param(
                         if input_source.lower() in set(TrustedNameSource):
                             sources.append(TrustedNameSource(input_source.lower()))
 
+                sender_addresses = address_params.senderAddress
+
             # default to all types / sources allowed, else deduplicate
             types = list(TrustedNameType) if not types else list(dict.fromkeys(types))
             sources = list(TrustedNameSource) if not sources else list(dict.fromkeys(sources))
 
-            return CalldataDescriptorParamTrustedNameV1(value=value, types=types, sources=sources)
+            return CalldataDescriptorParamTrustedNameV1(
+                value=value, types=types, sources=sources, sender_addresses=sender_addresses
+            )
 
         case FieldFormat.ENUM:
             enum_params = cast(ResolvedEnumParameters, field.params)

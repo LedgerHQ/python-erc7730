@@ -143,6 +143,7 @@ class CalldataDescriptorParamTrustedNameTag(IntEnum):
     VALUE = 0x01
     TYPES = 0x02
     SOURCES = 0x03
+    SENDER_ADDRESS = 0x04
 
 
 @pydantic_enum_by_name
@@ -443,6 +444,10 @@ def tlv_param_trusted_name(obj: CalldataDescriptorParamTrustedNameV1) -> bytes:
     for name_source in obj.sources:
         out_sources += TrustedNameSource(name_source).int_value.to_bytes(1)
     out += tlv(CalldataDescriptorParamTrustedNameTag.SOURCES, out_sources)
+
+    if (sender_addresses := obj.sender_addresses) is not None:
+        for address in sender_addresses:
+            out += tlv(CalldataDescriptorParamTrustedNameTag.SENDER_ADDRESS, from_hex(address))
 
     return out
 
