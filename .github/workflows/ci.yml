@@ -61,7 +61,7 @@ jobs:
 
       - name: Setup pre-commit cache
         timeout-minutes: 10
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -98,7 +98,7 @@ jobs:
       - name: Setup docs cache
         timeout-minutes: 10
         if: ${{ !cancelled() }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: docs/build
           key: docs-cache-${{ hashFiles('docs') }}
