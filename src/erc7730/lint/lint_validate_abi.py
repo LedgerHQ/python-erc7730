@@ -49,7 +49,10 @@ class ValidateABILinter(ERC7730Linter):
 
             reference_abis = get_functions(abis)
             descriptor_abis = get_functions(context.contract.abi)
-            url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
+            try:
+                url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
+            except NotImplementedError:
+                url = f"<chain id {deployment.chainId} address {deployment.address}>"
 
             if reference_abis.proxy:
                 return out.info(
