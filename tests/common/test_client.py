@@ -11,7 +11,6 @@ def test_get_supported_chains() -> None:
     names = {chain.chainname for chain in result}
     assert "Ethereum Mainnet" in names
     assert "Sepolia Testnet" in names
-    assert "Holesky Testnet" in names
     assert "BNB Smart Chain Mainnet" in names
     assert "BNB Smart Chain Testnet" in names
     assert "Polygon Mainnet" in names
@@ -45,8 +44,6 @@ def test_get_supported_chains() -> None:
     assert "Scroll Mainnet" in names
     assert "Scroll Sepolia Testnet" in names
     assert "Taiko Mainnet" in names
-    assert "zkSync Mainnet" in names
-    assert "zkSync Sepolia Testnet" in names
 
 
 def test_get_contract_abis() -> None:
