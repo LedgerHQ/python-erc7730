@@ -136,17 +136,25 @@ def encode_value(value: ScalarType, abi_type: ABIDataType, out: OutputAdder) -> 
             case ABIDataType.UINT:
                 if not isinstance(value, int) or value < 0:
                     return out.error(title="Invalid constant", message=f"""Value "{value}" is not an unsigned int""")
-                encoded = value.to_bytes(length=(max(value.bit_length(), 1) + 7) // 8, signed=False)
+                encoded = value.to_bytes(
+                    length=(max(value.bit_length(), 1) + 7) // 8,
+                    byteorder="big",
+                    signed=False,
+                )
 
             case ABIDataType.INT:
                 if not isinstance(value, int):
                     return out.error(title="Invalid constant", message=f"""Value "{value}" is not an integer""")
-                encoded = value.to_bytes(length=(max(value.bit_length(), 1) + 7) // 8, signed=True)
+                encoded = value.to_bytes(
+                    length=(max(value.bit_length(), 1) + 7) // 8,
+                    byteorder="big",
+                    signed=True,
+                )
 
             case ABIDataType.BOOL:
                 if not isinstance(value, bool):
                     return out.error(title="Invalid constant", message=f"""Value "{value}" is not a boolean""")
-                encoded = value.to_bytes()
+                encoded = int(value).to_bytes(length=1, byteorder="big", signed=False)
 
             case ABIDataType.STRING:
                 if not isinstance(value, str):
