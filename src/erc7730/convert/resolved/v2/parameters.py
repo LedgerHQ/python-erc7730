@@ -331,9 +331,16 @@ def resolve_token_ticker_parameters(
             if isinstance(resolved_value, int):
                 resolved_chain_id = resolved_value
 
+    # Resolve and normalize chainIdPath using constants and the current prefix
+    resolved_chain_id_path: DataPath | None = None
+    if params.chainIdPath is not None:
+        relative_chain_id_path = constants.resolve_path(params.chainIdPath, out)
+        if relative_chain_id_path is not None:
+            resolved_chain_id_path = prefix + relative_chain_id_path
+
     return ResolvedTokenTickerParameters(
         chainId=resolved_chain_id,
-        chainIdPath=params.chainIdPath,
+        chainIdPath=resolved_chain_id_path,
     )
 
 
