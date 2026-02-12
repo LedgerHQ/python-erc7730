@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "field-group-label-test",
+    "eip712": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "Orders": {
+        "intent": "Submit orders",
+        "fields": [
+          {
+            "path": "#.orders.[]",
+            "label": "Order",
+            "fields": [
+              {
+                "path": "amount",
+                "label": "Amount"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

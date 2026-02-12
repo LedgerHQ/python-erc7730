@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "calldata-extended-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "0x09c5eabe": {
+        "intent": "Execute calldata",
+        "fields": [
+          {
+            "label": "Calldata",
+            "format": "calldata",
+            "params": {
+              "callee": "0x0000000000000000000000000000000000000002",
+              "amount": 1000000,
+              "spender": "0x0000000000000000000000000000000000000003"
+            },
+            "path": "#.data"
+          }
+        ]
+      }
+    }
+  }
+}

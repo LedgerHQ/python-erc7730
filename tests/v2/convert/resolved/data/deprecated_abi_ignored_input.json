@@ -1,0 +1,46 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "contract-deprecated-abi",
+    "contract": {
+      "abi": [
+        {
+          "type": "function",
+          "name": "transfer",
+          "inputs": [
+            {
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "name": "amount",
+              "type": "uint256"
+            }
+          ]
+        }
+      ],
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "transfer(address,uint256)": {
+        "intent": "Transfer tokens",
+        "fields": [
+          {
+            "path": "to",
+            "label": "To"
+          }
+        ]
+      }
+    }
+  }
+}

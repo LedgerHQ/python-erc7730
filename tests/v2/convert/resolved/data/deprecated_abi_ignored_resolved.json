@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "contract-deprecated-abi",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "0xa9059cbb": {
+        "intent": "Transfer tokens",
+        "fields": [
+          {
+            "label": "To",
+            "path": "#.to"
+          }
+        ]
+      }
+    }
+  }
+}

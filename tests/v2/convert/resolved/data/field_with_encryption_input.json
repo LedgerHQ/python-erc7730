@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "encryption-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "withdraw(bytes32)": {
+        "intent": "Withdraw encrypted amount",
+        "fields": [
+          {
+            "path": "encryptedAmount",
+            "label": "Amount",
+            "encryption": {
+              "scheme": "fhevm",
+              "plaintextType": "uint256",
+              "fallbackLabel": "[Encrypted Value]"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
