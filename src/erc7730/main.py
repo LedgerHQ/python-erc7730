@@ -1,3 +1,4 @@
+import builtins
 import json
 import logging
 import os
@@ -87,7 +88,7 @@ def command_schema(
         case _:
             assert_never(model_type)
 
-    print(json.dumps(descriptor_type.model_json_schema(by_alias=True), indent=4))
+    builtins.print(json.dumps(descriptor_type.model_json_schema(by_alias=True), indent=4))
 
 
 @app.command(
@@ -160,7 +161,7 @@ def command_resolve(
     input_descriptor = InputERC7730Descriptor.load(input_path)
     if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
         raise Exit(1)
-    print(resolved_descriptor.to_json_string())
+    builtins.print(resolved_descriptor.to_json_string())
 
 
 @app.command(
@@ -223,7 +224,7 @@ def command_calldata(
             input_descriptor, source=HttpUrl(source) if source is not None else None, chain_id=chain_id
         )
     )
-    print(model.model_dump_json(indent=2, exclude_none=True))
+    builtins.print(model.model_dump_json(indent=2, exclude_none=True))
 
 
 if __name__ == "__main__":
