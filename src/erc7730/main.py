@@ -287,15 +287,28 @@ def command_convert_erc7730_to_eip712(
     output_eip712_path: Annotated[Path, Argument(help="The output EIP-712 file path")],
 ) -> None:
     if _any_v2_descriptor([input_erc7730_path]):
-        print("[red]v2 descriptors do not embed EIP-712 schemas; conversion to legacy EIP-712 format is not "
-              "supported. Please use a v1 descriptor.[/red]")
-        raise Exit(1)
+        from erc7730.common.pydantic import model_to_json_file
+        from erc7730.convert.ledger.eip712.convert_erc7730_v2_to_eip712 import ERC7730V2toEIP712Converter
+        from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
 
-    input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
-    resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())
-    if resolved_descriptor is None or not convert_to_file_and_print_errors(
-        input_descriptor=resolved_descriptor,
-        output_file=output_eip712_path,
-        converter=ERC7730toEIP712Converter(),
-    ):
-        raise Exit(1)
+        input_descriptor_v2 = InputERC7730DescriptorV2.load(input_erc7730_path)
+        out = ConsoleOutputAdder()
+        result = ERC7730V2toEIP712Converter().convert(input_descriptor_v2, out)
+        if result is None:
+            print("[red]conversion failed ❌[/red]")
+            raise Exit(1)
+
+        # Write output files using the same pattern as v1 (chain id suffix)
+        for identifier, descriptor in result.items():
+            descriptor_file = output_eip712_path.with_suffix(f".{identifier}{output_eip712_path.suffix}")
+            model_to_json_file(descriptor_file, descriptor)
+            print(f"[green]generated {descriptor_file} ✅[/green]")
+    else:
+        input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
+        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())
+        if resolved_descriptor is None or not convert_to_file_and_print_errors(
+            input_descriptor=resolved_descriptor,
+            output_file=output_eip712_path,
+            converter=ERC7730toEIP712Converter(),
+        ):
+            raise Exit(1)

@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from enum import StrEnum, auto
 from typing import Any, cast
@@ -147,6 +148,41 @@ def get_functions(abis: list[ABI], *, include_read_only: bool = False) -> Functi
             if abi.name in ("proxyType", "getImplementation", "implementation", "proxy__getImplementation"):
                 functions.proxy = True
     return functions
+
+
+_ENCODE_TYPE_RE = re.compile(r"(\w+)\(([^)]*)\)")
+
+
+def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, str]]]]:
+    """Parse an EIP-712 encodeType string into primaryType and types dict.
+
+    The encodeType format is: ``PrimaryType(type1 name1,type2 name2,...)DependentType(...)``
+
+    This is the inverse of the ``generateEncodeType`` function in the migration script.
+
+    :param encode_type: an EIP-712 encodeType string
+    :return: a tuple of (primaryType, types) where types is a dict mapping type names to lists of (type, name) tuples
+    :raises ValueError: if the string cannot be parsed
+    """
+    matches = _ENCODE_TYPE_RE.findall(encode_type)
+    if not matches:
+        raise ValueError(f"Invalid encodeType string: {encode_type}")
+
+    primary_type = matches[0][0]
+    types: dict[str, list[tuple[str, str]]] = {}
+
+    for type_name, fields_str in matches:
+        fields: list[tuple[str, str]] = []
+        if fields_str.strip():
+            for field in fields_str.split(","):
+                parts = field.strip().split(" ", 1)
+                if len(parts) == 2:
+                    fields.append((parts[0], parts[1]))
+                else:
+                    raise ValueError(f"Invalid field in encodeType '{type_name}': '{field.strip()}'")
+        types[type_name] = fields
+
+    return primary_type, types
 
 
 class ABIDataType(StrEnum):
