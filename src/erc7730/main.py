@@ -14,6 +14,7 @@ from typer import Argument, Exit, Option, Typer
 
 from erc7730.common.output import ConsoleOutputAdder
 from erc7730.convert.calldata.convert_erc7730_input_to_calldata import erc7730_descriptor_to_calldata_descriptors
+from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import erc7730_v2_descriptor_to_calldata_descriptors
 from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
@@ -216,14 +217,24 @@ def command_calldata(
     input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
     source: Annotated[str | None, Option(help="Source URL of the descriptor file")] = None,
     chain_id: Annotated[int | None, Option(help="Only emit calldata descriptors for given chain ID")] = None,
+    v2: Annotated[bool, Option("--v2", help="Force v2 mode")] = False,
 ) -> None:
-    input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
+    source_url = HttpUrl(source) if source is not None else None
 
-    model = RootModel[list[CalldataDescriptor]](
-        erc7730_descriptor_to_calldata_descriptors(
-            input_descriptor, source=HttpUrl(source) if source is not None else None, chain_id=chain_id
+    if v2 or _any_v2_descriptor([input_erc7730_path]):
+        from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
+
+        input_descriptor_v2 = InputERC7730DescriptorV2.load(input_erc7730_path)
+        calldata_descriptors = erc7730_v2_descriptor_to_calldata_descriptors(
+            input_descriptor_v2, source=source_url, chain_id=chain_id
         )
-    )
+    else:
+        input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
+        calldata_descriptors = erc7730_descriptor_to_calldata_descriptors(
+            input_descriptor, source=source_url, chain_id=chain_id
+        )
+
+    model = RootModel[list[CalldataDescriptor]](calldata_descriptors)
     builtins.print(model.model_dump_json(indent=2, exclude_none=True))
 
 
