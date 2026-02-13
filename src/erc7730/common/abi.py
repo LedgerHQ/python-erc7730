@@ -7,7 +7,7 @@ from eth_utils.abi import abi_to_signature, function_signature_to_4byte_selector
 from lark import Lark, UnexpectedInput
 from lark.visitors import Transformer_InPlaceRecursive
 
-from erc7730.model.abi import ABI, Component, Function, InputOutput
+from erc7730.model.abi import ABI, Component, Function, InputOutput, StateMutability
 
 _SIGNATURE_PARSER = parser = Lark(
     grammar=r"""
@@ -128,11 +128,21 @@ class Functions:
     proxy: bool
 
 
-def get_functions(abis: list[ABI]) -> Functions:
-    """Get the functions from a list of ABIs."""
+_READ_ONLY_MUTABILITIES = frozenset({StateMutability.pure, StateMutability.view})
+
+
+def get_functions(abis: list[ABI], *, include_read_only: bool = False) -> Functions:
+    """Get the functions from a list of ABIs.
+
+    :param abis: list of ABI entries
+    :param include_read_only: if False (default), filter out pure/view functions that cannot produce transactions
+    :return: Functions dataclass with selector->Function mapping
+    """
     functions = Functions(functions={}, proxy=False)
     for abi in abis:
         if abi.type == "function":
+            if not include_read_only and abi.stateMutability in _READ_ONLY_MUTABILITIES:
+                continue
             functions.functions[function_to_selector(abi)] = abi
             if abi.name in ("proxyType", "getImplementation", "implementation", "proxy__getImplementation"):
                 functions.proxy = True
