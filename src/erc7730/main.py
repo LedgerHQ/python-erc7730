@@ -19,7 +19,8 @@ from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP
 from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.format.format import format_all_and_print_errors
 from erc7730.generate.generate import generate_descriptor
-from erc7730.lint.lint import lint_all_and_print_errors
+from erc7730.lint.lint import lint_all_and_print_errors as lint_all_and_print_errors_v1
+from erc7730.lint.v2.lint import lint_all_and_print_errors as lint_all_and_print_errors_v2
 from erc7730.list.list import list_all
 from erc7730.model import ERC7730ModelType
 from erc7730.model.base import Model
@@ -32,6 +33,21 @@ if os.environ.get("DEBUG") is not None:
     logging.basicConfig(
         format="%(levelname)s [%(asctime)s] %(name)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG
     )
+
+
+def _any_v2_descriptor(paths: list[Path]) -> bool:
+    """Check if any descriptor file in paths references the v2 schema."""
+    for path in paths:
+        files = [path] if path.is_file() else path.rglob("*.json")
+        for file in files:
+            try:
+                with open(file) as f:
+                    content = json.load(f)
+                if isinstance(content, dict) and "v2" in content.get("$schema", ""):
+                    return True
+            except Exception:
+                continue
+    return False
 
 
 app = Typer(
@@ -84,9 +100,14 @@ def command_schema(
 def command_lint(
     paths: Annotated[list[Path], Argument(help="The files or directory paths to lint")],
     gha: Annotated[bool, Option(help="Enable Github annotations output")] = False,
+    v2: Annotated[bool, Option("--v2", help="Use v2 model for validation (auto-detected from $schema if not set)")] = False,
 ) -> None:
-    if not lint_all_and_print_errors(paths, gha):
-        raise Exit(1)
+    if v2 or _any_v2_descriptor(paths):
+        if not lint_all_and_print_errors_v2(paths, gha):
+            raise Exit(1)
+    else:
+        if not lint_all_and_print_errors_v1(paths, gha):
+            raise Exit(1)
 
 
 @app.command(
