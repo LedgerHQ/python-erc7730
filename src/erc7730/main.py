@@ -158,11 +158,23 @@ def command_format(
 )
 def command_resolve(
     input_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
+    v2: Annotated[bool, Option("--v2", help="Force v2 mode")] = False,
 ) -> None:
-    input_descriptor = InputERC7730Descriptor.load(input_path)
-    if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
-        raise Exit(1)
-    builtins.print(resolved_descriptor.to_json_string())
+    if v2 or _any_v2_descriptor([input_path]):
+        from erc7730.convert.resolved.v2.convert_erc7730_input_to_resolved import (
+            ERC7730InputToResolved as ERC7730InputToResolvedV2,
+        )
+        from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
+
+        input_descriptor_v2 = InputERC7730DescriptorV2.load(input_path)
+        if (resolved := ERC7730InputToResolvedV2().convert(input_descriptor_v2, ConsoleOutputAdder())) is None:
+            raise Exit(1)
+        builtins.print(resolved.to_json_string())
+    else:
+        input_descriptor = InputERC7730Descriptor.load(input_path)
+        if (resolved := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
+            raise Exit(1)
+        builtins.print(resolved.to_json_string())
 
 
 @app.command(
@@ -274,6 +286,11 @@ def command_convert_erc7730_to_eip712(
     input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
     output_eip712_path: Annotated[Path, Argument(help="The output EIP-712 file path")],
 ) -> None:
+    if _any_v2_descriptor([input_erc7730_path]):
+        print("[red]v2 descriptors do not embed EIP-712 schemas; conversion to legacy EIP-712 format is not "
+              "supported. Please use a v1 descriptor.[/red]")
+        raise Exit(1)
+
     input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
     resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())
     if resolved_descriptor is None or not convert_to_file_and_print_errors(
