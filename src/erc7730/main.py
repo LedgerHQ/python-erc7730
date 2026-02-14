@@ -47,7 +47,7 @@ def _any_v2_descriptor(paths: list[Path]) -> bool:
                     content = json.load(f)
                 if isinstance(content, dict) and "v2" in content.get("$schema", ""):
                     return True
-            except Exception:
+            except Exception:  # nosec B112
                 continue
     return False
 
@@ -102,7 +102,9 @@ def command_schema(
 def command_lint(
     paths: Annotated[list[Path], Argument(help="The files or directory paths to lint")],
     gha: Annotated[bool, Option(help="Enable Github annotations output")] = False,
-    v2: Annotated[bool, Option("--v2", help="Use v2 model for validation (auto-detected from $schema if not set)")] = False,
+    v2: Annotated[
+        bool, Option("--v2", help="Use v2 model for validation (auto-detected from $schema if not set)")
+    ] = False,
 ) -> None:
     if v2 or _any_v2_descriptor(paths):
         if not lint_all_and_print_errors_v2(paths, gha):

@@ -14,7 +14,6 @@ from pydantic_string_url import HttpUrl
 
 from erc7730.common.abi import (
     ABIDataType,
-    function_to_selector,
     parse_signature,
     reduce_signature,
     signature_to_selector,
@@ -68,7 +67,6 @@ from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.input.v2.format import DateEncoding, FieldFormat
 from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.paths.path_parser import to_path
-from erc7730.model.resolved.display import ResolvedValueConstant
 from erc7730.model.resolved.v2.context import (
     ResolvedContractContext,
     ResolvedDeployment,
