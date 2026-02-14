@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "interpolated-intent-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "0xd004f0f7": {
+        "intent": "Swap tokens",
+        "interpolatedIntent": "Swap {amount} of token {token}",
+        "fields": [
+          {
+            "label": "Token",
+            "path": "#.token"
+          },
+          {
+            "label": "Amount",
+            "path": "#.amount"
+          }
+        ]
+      }
+    }
+  }
+}

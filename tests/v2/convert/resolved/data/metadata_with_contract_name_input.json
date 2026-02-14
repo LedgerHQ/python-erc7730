@@ -1,0 +1,26 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "contract-name-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner",
+    "contractName": "TestContract"
+  },
+  "display": {
+    "formats": {
+      "execute()": {
+        "intent": "Execute",
+        "fields": []
+      }
+    }
+  }
+}
