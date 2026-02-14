@@ -61,9 +61,9 @@ def _reconstruct_eip712_domain(
     Fields are emitted in the canonical EIP-712 order:
     ``name``, ``version``, ``chainId``, ``verifyingContract``, ``salt``.
 
-    Rules (as specified):
-    * Always add ``name`` (string) and ``version`` (string); warn if absent in domain.
-    * If deployments exist, always add ``chainId`` (uint256) and ``verifyingContract`` (address).
+    Rules:
+    * Emit ``name`` (string), ``version`` (string) and ``salt`` (bytes32) if present in the domain.
+    * If deployments exist, emit ``chainId`` (uint256) and ``verifyingContract`` (address).
 
     :param domain: the resolved domain, or ``None``
     :param has_deployments: whether the descriptor has a ``deployments`` array
@@ -72,26 +72,22 @@ def _reconstruct_eip712_domain(
     """
     fields: list[EIP712SchemaField] = []
 
-    # 1. name (always present)
-    if domain is None or domain.name is None:
-        out.warning(
-            title="Missing domain name",
-            message="EIP-712 domain 'name' is not set in the descriptor; adding to schema with type 'string' anyway.",
-        )
-    fields.append(EIP712SchemaField(name="name", type="string"))
+    # 1. name (if present in domain)
+    if domain is not None and domain.name is not None:
+        fields.append(EIP712SchemaField(name="name", type="string"))
 
-    # 2. version (always present)
-    if domain is None or domain.version is None:
-        out.warning(
-            title="Missing domain version",
-            message="EIP-712 domain 'version' is not set in the descriptor; adding to schema with type 'string' anyway.",
-        )
-    fields.append(EIP712SchemaField(name="version", type="string"))
+    # 2. version (if present in domain)
+    if domain is not None and domain.version is not None:
+        fields.append(EIP712SchemaField(name="version", type="string"))
 
-    # 3. chainId + 4. verifyingContract (only if deployments are present)
+    # 3. chainId + 4. verifyingContract (if deployments exist)
     if has_deployments:
         fields.append(EIP712SchemaField(name="chainId", type="uint256"))
         fields.append(EIP712SchemaField(name="verifyingContract", type="address"))
+
+    # 5. salt (if present in domain)
+    if domain is not None and domain.salt is not None:
+        fields.append(EIP712SchemaField(name="salt", type="bytes32"))
 
     return fields
 

@@ -244,6 +244,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             version=domain.version,
             chainId=domain.chainId,
             verifyingContract=None if domain.verifyingContract is None else Address(domain.verifyingContract),
+            salt=domain.salt,
         )
 
     @classmethod

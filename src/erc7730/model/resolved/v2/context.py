@@ -32,6 +32,8 @@ class ResolvedDomain(Model):
         description="The EIP-712 verifying contract address (normalized to lowercase).",
     )
 
+    salt: str | None = Field(default=None, title="Salt", description="The EIP-712 domain salt (bytes32 hex string).")
+
 
 class ResolvedDeployment(Model):
     """
