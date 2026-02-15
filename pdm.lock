@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:c1e05196057de41005accc9928facdc25694a44aa1bc8e1992f7a66715d0af14"
+content_hash = "sha256:e715ca48898f2d207da01d1dab56fd742fbebd9a0e7da44900e0cda6d95d7254"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -1006,7 +1006,7 @@ files = [
 
 [[package]]
 name = "pydantic-settings"
-version = "2.12.0"
+version = "2.13.0"
 requires_python = ">=3.10"
 summary = "Settings management using Pydantic"
 groups = ["dev"]
@@ -1016,8 +1016,8 @@ dependencies = [
     "typing-inspection>=0.4.0",
 ]
 files = [
-    {file = "pydantic_settings-2.12.0-py3-none-any.whl", hash = "sha256:fddb9fd99a5b18da837b29710391e945b1e30c135477f484084ee513adb93809"},
-    {file = "pydantic_settings-2.12.0.tar.gz", hash = "sha256:005538ef951e3c2a68e1c08b292b5f2e71490def8589d4221b95dab00dafcfd0"},
+    {file = "pydantic_settings-2.13.0-py3-none-any.whl", hash = "sha256:d67b576fff39cd086b595441bf9c75d4193ca9c0ed643b90360694d0f1240246"},
+    {file = "pydantic_settings-2.13.0.tar.gz", hash = "sha256:95d875514610e8595672800a5c40b073e99e4aae467fa7c8f9c263061ea2e1fe"},
 ]
 
 [[package]]
@@ -1290,31 +1290,6 @@ files = [
 ]
 
 [[package]]
-name = "roman-numerals"
-version = "4.1.0"
-requires_python = ">=3.10"
-summary = "Manipulate well-formed Roman numerals"
-groups = ["dev"]
-files = [
-    {file = "roman_numerals-4.1.0-py3-none-any.whl", hash = "sha256:647ba99caddc2cc1e55a51e4360689115551bf4476d90e8162cf8c345fe233c7"},
-    {file = "roman_numerals-4.1.0.tar.gz", hash = "sha256:1af8b147eb1405d5839e78aeb93131690495fe9da5c91856cb33ad55a7f1e5b2"},
-]
-
-[[package]]
-name = "roman-numerals-py"
-version = "4.1.0"
-requires_python = ">=3.10"
-summary = "This package is deprecated, switch to roman-numerals."
-groups = ["dev"]
-dependencies = [
-    "roman-numerals==4.1.0",
-]
-files = [
-    {file = "roman_numerals_py-4.1.0-py3-none-any.whl", hash = "sha256:553114c1167141c1283a51743759723ecd05604a1b6b507225e91dc1a6df0780"},
-    {file = "roman_numerals_py-4.1.0.tar.gz", hash = "sha256:f5d7b2b4ca52dd855ef7ab8eb3590f428c0b1ea480736ce32b01fef2a5f8daf9"},
-]
-
-[[package]]
 name = "rpds-py"
 version = "0.30.0"
 requires_python = ">=3.10"
@@ -1441,8 +1416,8 @@ files = [
 
 [[package]]
 name = "sphinx"
-version = "8.2.3"
-requires_python = ">=3.11"
+version = "8.1.3"
+requires_python = ">=3.10"
 summary = "Python documentation generator"
 groups = ["dev"]
 dependencies = [
@@ -1455,7 +1430,6 @@ dependencies = [
     "imagesize>=1.3",
     "packaging>=23.0",
     "requests>=2.30.0",
-    "roman-numerals-py>=1.0.0",
     "snowballstemmer>=2.2",
     "sphinxcontrib-applehelp>=1.0.7",
     "sphinxcontrib-devhelp>=1.0.6",
@@ -1463,10 +1437,11 @@ dependencies = [
     "sphinxcontrib-jsmath>=1.0.1",
     "sphinxcontrib-qthelp>=1.0.6",
     "sphinxcontrib-serializinghtml>=1.1.9",
+    "tomli>=2; python_version < \"3.11\"",
 ]
 files = [
-    {file = "sphinx-8.2.3-py3-none-any.whl", hash = "sha256:4405915165f13521d875a8c29c8970800a0141c14cc5416a38feca4ea5d9b9c3"},
-    {file = "sphinx-8.2.3.tar.gz", hash = "sha256:398ad29dee7f63a75888314e9424d40f52ce5a6a87ae88e7071e80af296ec348"},
+    {file = "sphinx-8.1.3-py3-none-any.whl", hash = "sha256:09719015511837b76bf6e03e42eb7595ac8c2e41eeb9c29c5b755c6b677992a2"},
+    {file = "sphinx-8.1.3.tar.gz", hash = "sha256:43c1911eecb0d3e161ad78611bc905d1ad0e523e4ddc202a58a821773dc4c927"},
 ]
 
 [[package]]
