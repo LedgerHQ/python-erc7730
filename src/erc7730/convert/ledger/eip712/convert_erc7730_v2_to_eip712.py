@@ -314,9 +314,8 @@ def _convert_v2_field_description(
         and isinstance(field.params, ResolvedCallDataParameters)
     ):
         try:
-            callee_path = _resolve_calldata_param_path(field.params.calleePath)
-            chainid_path = _resolve_calldata_param_path(
-                str(field.params.chainId) if field.params.chainId is not None else None  # type: ignore[arg-type]
+            callee_path = _resolve_calldata_param_path(
+                str(field.params.calleePath) if field.params.calleePath is not None else None
             )
             selector_path = _resolve_calldata_param_path(
                 str(field.params.selectorPath) if field.params.selectorPath is not None else None

@@ -77,7 +77,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldGroup,
     ResolvedFormat,
 )
-from erc7730.model.types import Address, HexStr, Selector
+from erc7730.model.types import Address, HexStr, ScalarType, Selector
 
 
 def erc7730_v2_descriptor_to_calldata_descriptors(
@@ -294,7 +294,7 @@ def _convert_v2_field(
 
 def _convert_v2_value(
     path_str: str | None,
-    value: object | None,
+    value: ScalarType | None,
     format_type: FieldFormat | None,
     abi: ABITree,
     out: OutputAdder,
@@ -394,7 +394,8 @@ def _convert_v2_param(
     :param out: error handler
     :return: calldata protocol field parameter or None on error
     """
-    if (value := _convert_v2_value(field.path, field.value, field.format, abi, out)) is None:
+    path_str = str(field.path) if field.path is not None else None
+    if (value := _convert_v2_value(path_str, field.value, field.format, abi, out)) is None:
         return None
 
     match field.format:

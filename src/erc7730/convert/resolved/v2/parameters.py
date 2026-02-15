@@ -6,6 +6,7 @@ from erc7730.convert.resolved.v2.constants import ConstantProvider
 from erc7730.convert.resolved.v2.enums import get_enum, get_enum_id
 from erc7730.convert.resolved.v2.values import resolve_path_or_constant_value
 from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
+from erc7730.model.paths.path_ops import data_or_container_path_concat
 from erc7730.model.input.v2.display import (
     InputAddressNameParameters,
     InputCallDataParameters,
@@ -20,7 +21,7 @@ from erc7730.model.input.v2.display import (
     InputTokenTickerParameters,
     InputUnitParameters,
 )
-from erc7730.model.paths import DataPath
+from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.metadata import EnumDefinition
 from erc7730.model.resolved.v2.display import (
@@ -332,11 +333,11 @@ def resolve_token_ticker_parameters(
                 resolved_chain_id = resolved_value
 
     # Resolve and normalize chainIdPath using constants and the current prefix
-    resolved_chain_id_path: DataPath | None = None
+    resolved_chain_id_path: DataPath | ContainerPath | None = None
     if params.chainIdPath is not None:
         relative_chain_id_path = constants.resolve_path(params.chainIdPath, out)
         if relative_chain_id_path is not None:
-            resolved_chain_id_path = prefix + relative_chain_id_path
+            resolved_chain_id_path = data_or_container_path_concat(prefix, relative_chain_id_path)
 
     return ResolvedTokenTickerParameters(
         chainId=resolved_chain_id,

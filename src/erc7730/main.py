@@ -174,9 +174,9 @@ def command_resolve(
         builtins.print(resolved.to_json_string())
     else:
         input_descriptor = InputERC7730Descriptor.load(input_path)
-        if (resolved := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
+        if (resolved_v1 := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
             raise Exit(1)
-        builtins.print(resolved.to_json_string())
+        builtins.print(resolved_v1.to_json_string())
 
 
 @app.command(
