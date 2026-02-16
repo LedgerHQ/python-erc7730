@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "visibility-conditions-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "0xdf791e50": {
+        "intent": "Swap tokens",
+        "fields": [
+          {
+            "label": "From Token",
+            "path": "#.from",
+            "visible": {
+              "ifNotIn": [
+                "0x0000000000000000000000000000000000000000"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

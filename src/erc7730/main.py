@@ -1,3 +1,4 @@
+import builtins
 import json
 import logging
 import os
@@ -13,13 +14,15 @@ from typer import Argument, Exit, Option, Typer
 
 from erc7730.common.output import ConsoleOutputAdder
 from erc7730.convert.calldata.convert_erc7730_input_to_calldata import erc7730_descriptor_to_calldata_descriptors
+from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import erc7730_v2_descriptor_to_calldata_descriptors
 from erc7730.convert.convert import convert_to_file_and_print_errors
 from erc7730.convert.ledger.eip712.convert_eip712_to_erc7730 import EIP712toERC7730Converter
 from erc7730.convert.ledger.eip712.convert_erc7730_to_eip712 import ERC7730toEIP712Converter
 from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.format.format import format_all_and_print_errors
 from erc7730.generate.generate import generate_descriptor
-from erc7730.lint.lint import lint_all_and_print_errors
+from erc7730.lint.lint import lint_all_and_print_errors as lint_all_and_print_errors_v1
+from erc7730.lint.v2.lint import lint_all_and_print_errors as lint_all_and_print_errors_v2
 from erc7730.list.list import list_all
 from erc7730.model import ERC7730ModelType
 from erc7730.model.base import Model
@@ -32,6 +35,21 @@ if os.environ.get("DEBUG") is not None:
     logging.basicConfig(
         format="%(levelname)s [%(asctime)s] %(name)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.DEBUG
     )
+
+
+def _any_v2_descriptor(paths: list[Path]) -> bool:
+    """Check if any descriptor file in paths references the v2 schema."""
+    for path in paths:
+        files = [path] if path.is_file() else path.rglob("*.json")
+        for file in files:
+            try:
+                with open(file) as f:
+                    content = json.load(f)
+                if isinstance(content, dict) and "v2" in content.get("$schema", ""):
+                    return True
+            except Exception:  # nosec B112
+                continue
+    return False
 
 
 app = Typer(
@@ -71,7 +89,7 @@ def command_schema(
         case _:
             assert_never(model_type)
 
-    print(json.dumps(descriptor_type.model_json_schema(by_alias=True), indent=4))
+    builtins.print(json.dumps(descriptor_type.model_json_schema(by_alias=True), indent=4))
 
 
 @app.command(
@@ -84,9 +102,16 @@ def command_schema(
 def command_lint(
     paths: Annotated[list[Path], Argument(help="The files or directory paths to lint")],
     gha: Annotated[bool, Option(help="Enable Github annotations output")] = False,
+    v2: Annotated[
+        bool, Option("--v2", help="Use v2 model for validation (auto-detected from $schema if not set)")
+    ] = False,
 ) -> None:
-    if not lint_all_and_print_errors(paths, gha):
-        raise Exit(1)
+    if v2 or _any_v2_descriptor(paths):
+        if not lint_all_and_print_errors_v2(paths, gha):
+            raise Exit(1)
+    else:
+        if not lint_all_and_print_errors_v1(paths, gha):
+            raise Exit(1)
 
 
 @app.command(
@@ -135,11 +160,23 @@ def command_format(
 )
 def command_resolve(
     input_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
+    v2: Annotated[bool, Option("--v2", help="Force v2 mode")] = False,
 ) -> None:
-    input_descriptor = InputERC7730Descriptor.load(input_path)
-    if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
-        raise Exit(1)
-    print(resolved_descriptor.to_json_string())
+    if v2 or _any_v2_descriptor([input_path]):
+        from erc7730.convert.resolved.v2.convert_erc7730_input_to_resolved import (
+            ERC7730InputToResolved as ERC7730InputToResolvedV2,
+        )
+        from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
+
+        input_descriptor_v2 = InputERC7730DescriptorV2.load(input_path)
+        if (resolved := ERC7730InputToResolvedV2().convert(input_descriptor_v2, ConsoleOutputAdder())) is None:
+            raise Exit(1)
+        builtins.print(resolved.to_json_string())
+    else:
+        input_descriptor = InputERC7730Descriptor.load(input_path)
+        if (resolved_v1 := ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())) is None:
+            raise Exit(1)
+        builtins.print(resolved_v1.to_json_string())
 
 
 @app.command(
@@ -194,15 +231,25 @@ def command_calldata(
     input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
     source: Annotated[str | None, Option(help="Source URL of the descriptor file")] = None,
     chain_id: Annotated[int | None, Option(help="Only emit calldata descriptors for given chain ID")] = None,
+    v2: Annotated[bool, Option("--v2", help="Force v2 mode")] = False,
 ) -> None:
-    input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
+    source_url = HttpUrl(source) if source is not None else None
 
-    model = RootModel[list[CalldataDescriptor]](
-        erc7730_descriptor_to_calldata_descriptors(
-            input_descriptor, source=HttpUrl(source) if source is not None else None, chain_id=chain_id
+    if v2 or _any_v2_descriptor([input_erc7730_path]):
+        from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
+
+        input_descriptor_v2 = InputERC7730DescriptorV2.load(input_erc7730_path)
+        calldata_descriptors = erc7730_v2_descriptor_to_calldata_descriptors(
+            input_descriptor_v2, source=source_url, chain_id=chain_id
         )
-    )
-    print(model.model_dump_json(indent=2, exclude_none=True))
+    else:
+        input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
+        calldata_descriptors = erc7730_descriptor_to_calldata_descriptors(
+            input_descriptor, source=source_url, chain_id=chain_id
+        )
+
+    model = RootModel[list[CalldataDescriptor]](calldata_descriptors)
+    builtins.print(model.model_dump_json(indent=2, exclude_none=True))
 
 
 if __name__ == "__main__":
@@ -241,11 +288,29 @@ def command_convert_erc7730_to_eip712(
     input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
     output_eip712_path: Annotated[Path, Argument(help="The output EIP-712 file path")],
 ) -> None:
-    input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
-    resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())
-    if resolved_descriptor is None or not convert_to_file_and_print_errors(
-        input_descriptor=resolved_descriptor,
-        output_file=output_eip712_path,
-        converter=ERC7730toEIP712Converter(),
-    ):
-        raise Exit(1)
+    if _any_v2_descriptor([input_erc7730_path]):
+        from erc7730.common.pydantic import model_to_json_file
+        from erc7730.convert.ledger.eip712.convert_erc7730_v2_to_eip712 import ERC7730V2toEIP712Converter
+        from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
+
+        input_descriptor_v2 = InputERC7730DescriptorV2.load(input_erc7730_path)
+        out = ConsoleOutputAdder()
+        result = ERC7730V2toEIP712Converter().convert(input_descriptor_v2, out)
+        if result is None:
+            print("[red]conversion failed ❌[/red]")
+            raise Exit(1)
+
+        # Write output files using the same pattern as v1 (chain id suffix)
+        for identifier, descriptor in result.items():
+            descriptor_file = output_eip712_path.with_suffix(f".{identifier}{output_eip712_path.suffix}")
+            model_to_json_file(descriptor_file, descriptor)
+            print(f"[green]generated {descriptor_file} ✅[/green]")
+    else:
+        input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
+        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, ConsoleOutputAdder())
+        if resolved_descriptor is None or not convert_to_file_and_print_errors(
+            input_descriptor=resolved_descriptor,
+            output_file=output_eip712_path,
+            converter=ERC7730toEIP712Converter(),
+        ):
+            raise Exit(1)

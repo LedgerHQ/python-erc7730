@@ -1,0 +1,35 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "token-amount-chainid-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "0x0ef55e91": {
+        "intent": "Cross-chain swap",
+        "fields": [
+          {
+            "label": "Amount",
+            "format": "tokenAmount",
+            "params": {
+              "tokenPath": "token",
+              "chainIdPath": "targetChainId"
+            },
+            "path": "#.amount"
+          }
+        ]
+      }
+    }
+  }
+}
