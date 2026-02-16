@@ -21,7 +21,7 @@ from erc7730.model.input.v2.unions import (
     field_parameters_discriminator,
     visibility_rules_discriminator,
 )
-from erc7730.model.types import Address, HexStr, Id, ScalarType
+from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress, ScalarType
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 
@@ -99,7 +99,7 @@ class ResolvedTokenAmountParameters(Model):
         '"Unknown token" warning. Exactly one of "tokenPath" or "token" must be set.',
     )
 
-    token: Address | None = Field(
+    token: MixedCaseAddress | None = Field(
         default=None,
         title="Token",
         description="The resolved address of the token contract. Used to associate correct ticker. If ticker "
