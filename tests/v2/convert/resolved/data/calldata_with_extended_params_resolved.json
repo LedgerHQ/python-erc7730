@@ -2,18 +2,9 @@
   "$schema": "../../../../../specs/erc7730-v2.schema.json",
   "context": {
     "$id": "calldata-extended-test",
-    "contract": {
-      "deployments": [
-        {
-          "chainId": 1,
-          "address": "0x0000000000000000000000000000000000000001"
-        }
-      ]
-    }
+    "contract": { "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000001" }] }
   },
-  "metadata": {
-    "owner": "Test Owner"
-  },
+  "metadata": { "owner": "Test Owner" },
   "display": {
     "formats": {
       "0x09c5eabe": {
@@ -23,9 +14,21 @@
             "label": "Calldata",
             "format": "calldata",
             "params": {
-              "callee": "0x0000000000000000000000000000000000000002",
-              "amount": 1000000,
-              "spender": "0x0000000000000000000000000000000000000003"
+              "callee": {
+                "type": "constant",
+                "type_family": "address",
+                "type_size": 20,
+                "value": "0x0000000000000000000000000000000000000002",
+                "raw": "0x0000000000000000000000000000000000000002"
+              },
+              "amount": { "type": "constant", "type_family": "uint", "type_size": 3, "value": 1000000, "raw": "0x0f4240" },
+              "spender": {
+                "type": "constant",
+                "type_family": "address",
+                "type_size": 20,
+                "value": "0x0000000000000000000000000000000000000003",
+                "raw": "0x0000000000000000000000000000000000000003"
+              }
             },
             "path": "#.data"
           }

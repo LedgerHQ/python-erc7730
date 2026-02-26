@@ -61,6 +61,11 @@ UPDATE_REFERENCES = False
             description="using encryption parameters for encrypted value display",
         ),
         TestCase(
+            id="field_definition_with_encryption",
+            label="field definition with encryption parameters",
+            description="using encryption parameters in display definitions and resolving via $ref",
+        ),
+        TestCase(
             id="field_with_visibility_simple",
             label="field with simple visibility rule",
             description="using simple string visibility rule",
@@ -114,6 +119,11 @@ UPDATE_REFERENCES = False
             id="calldata_with_extended_params",
             label="calldata with extended parameters",
             description="using calldata format with chainId, amount, and spender parameters",
+        ),
+        TestCase(
+            id="nft_name_with_collection_path",
+            label="nft name with collection path",
+            description="using nft name format with collectionPath resolved as ResolvedValue path",
         ),
     ],
     ids=case_id,

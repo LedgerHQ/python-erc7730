@@ -21,6 +21,7 @@ from erc7730.model.input.v2.unions import (
     field_parameters_discriminator,
     visibility_rules_discriminator,
 )
+from erc7730.model.resolved.display import ResolvedValue
 from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress, ScalarType
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -91,20 +92,12 @@ class ResolvedTokenAmountParameters(Model):
     Token Amount Formatting Parameters (resolved).
     """
 
-    tokenPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
-        default=None,
-        title="Token Path",
-        description="Path reference to the address of the token contract. Used to associate correct ticker. If ticker "
-        "is not found or tokenPath is not set, the wallet SHOULD display the raw value instead with an"
-        '"Unknown token" warning. Exactly one of "tokenPath" or "token" must be set.',
-    )
-
-    token: MixedCaseAddress | None = Field(
+    token: ResolvedValue | None = Field(
         default=None,
         title="Token",
-        description="The resolved address of the token contract. Used to associate correct ticker. If ticker "
-        "is not found or value is not set, the wallet SHOULD display the raw value instead with an "
-        '"Unknown token" warning. Exactly one of "tokenPath" or "token" must be set.',
+        description="The resolved address of the token contract, either as path or constant value. Used to "
+        "associate correct ticker. If ticker is not found or value is not set, the wallet SHOULD display the "
+        'raw value instead with an "Unknown token" warning.',
     )
 
     nativeCurrencyAddress: list[Address] | Address | None = Field(
@@ -150,9 +143,7 @@ class ResolvedTokenAmountParameters(Model):
     )
 
     @model_validator(mode="after")
-    def _validate_one_of_token_path_or_value(self) -> Self:
-        if self.tokenPath is not None and self.token is not None:
-            raise ValueError('"tokenPath" and "token" are mutually exclusive.')
+    def _validate_token_amount_parameters(self) -> Self:
         if self.chainId is not None and self.chainIdPath is not None:
             raise ValueError('"chainId" and "chainIdPath" are mutually exclusive.')
         return self
@@ -218,81 +209,31 @@ class ResolvedCallDataParameters(Model):
     Embedded Calldata Formatting Parameters (resolved).
     """
 
-    calleePath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
-        default=None,
-        title="Callee Path",
-        description="The path to the address of the contract being called by this embedded calldata. Exactly one of "
-        '"calleePath" or "callee" must be set.',
-    )
-
-    callee: Address | None = Field(
-        default=None,
+    callee: ResolvedValue = Field(
         title="Callee",
-        description="The resolved address of the contract being called by this embedded calldata. Exactly "
-        'one of "calleePath" or "callee" must be set.',
+        description="The resolved address of the contract being called by this embedded calldata, either as path "
+        "or constant value.",
     )
 
-    selectorPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
-        default=None,
-        title="Called Selector path",
-        description="The path to selector being called, if not contained in the calldata. Only "
-        'one of "selectorPath" or "selector" must be set.',
-    )
-
-    selector: str | None = Field(
+    selector: ResolvedValue | None = Field(
         default=None,
         title="Called Selector",
-        description=(
-            "The resolved selector being called, if not contained in the calldata. "
-            'Hex string representation. Only one of "selectorPath" or "selector" must be set.'
-        ),
+        description="The resolved selector being called, if not contained in the calldata, either as path or "
+        "constant value.",
     )
 
-    amountPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
-        default=None,
-        title="Amount path",
-        description="The path to the amount being transferred, if not contained in the calldata. Only "
-        'one of "amountPath" or "amount" must be set.',
-    )
-
-    amount: int | None = Field(
+    amount: ResolvedValue | None = Field(
         default=None,
         title="Amount",
-        description="The resolved amount being transferred, if not contained in the calldata. Only "
-        'one of "amountPath" or "amount" must be set.',
+        description="The resolved amount being transferred, if not contained in the calldata, either as path or "
+        "constant value.",
     )
 
-    spenderPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
-        default=None,
-        title="Spender Path",
-        description="The path to the spender, if not contained in the calldata. Only "
-        'one of "spenderPath" or "spender" must be set.',
-    )
-
-    spender: Address | None = Field(
+    spender: ResolvedValue | None = Field(
         default=None,
         title="Spender",
-        description="the resolved spender, if not contained in the calldata. Only "
-        'one of "spenderPath" or "spender" must be set.',
+        description="The resolved spender, if not contained in the calldata, either as path or constant value.",
     )
-
-    @model_validator(mode="after")
-    def _validate_mutually_exclusive_path_or_value(self) -> Self:
-        if self.calleePath is not None and self.callee is not None:
-            raise ValueError('"calleePath" and "callee" are mutually exclusive.')
-        if self.selectorPath is not None and self.selector is not None:
-            raise ValueError('"selectorPath" and "selector" are mutually exclusive.')
-        if self.amountPath is not None and self.amount is not None:
-            raise ValueError('"amountPath" and "amount" are mutually exclusive.')
-        if self.spenderPath is not None and self.spender is not None:
-            raise ValueError('"spenderPath" and "spender" are mutually exclusive.')
-        return self
-
-    @model_validator(mode="after")
-    def _validate_one_of_callee_path_or_value(self) -> Self:
-        if self.calleePath is None and self.callee is None:
-            raise ValueError('Either "calleePath" or "callee" must be set.')
-        return self
 
 
 class ResolvedNftNameParameters(Model):
@@ -300,27 +241,10 @@ class ResolvedNftNameParameters(Model):
     NFT Names Formatting Parameters (resolved).
     """
 
-    collectionPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
-        default=None,
-        title="Collection Path",
-        description="The path to the collection in the structured data. Exactly one of "
-        '"collectionPath" or "collection" must be set.',
-    )
-
-    collection: Address | None = Field(
-        default=None,
+    collection: ResolvedValue = Field(
         title="Collection",
-        description="The resolved address of the collection contract. Exactly one of "
-        '"collectionPath" or "collection" must be set.',
+        description="The resolved address of the collection contract, either as path or constant value.",
     )
-
-    @model_validator(mode="after")
-    def _validate_one_of_collection_path_or_value(self) -> Self:
-        if self.collectionPath is None and self.collection is None:
-            raise ValueError('Either "collectionPath" or "collection" must be set.')
-        if self.collectionPath is not None and self.collection is not None:
-            raise ValueError('"collectionPath" and "collection" are mutually exclusive.')
-        return self
 
 
 class ResolvedDateParameters(Model):

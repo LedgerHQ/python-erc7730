@@ -44,6 +44,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldGroup,
     ResolvedTokenAmountParameters,
 )
+from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 
 
 # ---------------------------------------------------------------------------
@@ -253,9 +254,8 @@ def _convert_v2_field_description(
         case FieldFormat.TOKEN_AMOUNT:
             field_format = EIP712Format.AMOUNT
             if field.params is not None and isinstance(field.params, ResolvedTokenAmountParameters):
-                if field.params.tokenPath is not None:
-                    token_path_str = str(field.params.tokenPath)
-                    token_parsed = to_path(token_path_str)
+                if isinstance(field.params.token, ResolvedValuePath):
+                    token_parsed = field.params.token.path
                     if isinstance(token_parsed, ContainerPath) and str(token_parsed) == "@.to":
                         # In EIP-712 protocol, format=token with no token path => refers to verifyingContract
                         asset_path = None
@@ -264,9 +264,9 @@ def _convert_v2_field_description(
                     else:
                         return out.error(
                             title="Unsupported token path",
-                            message=f'Token path "{token_path_str}" is not supported.',
+                            message=f'Token path "{token_parsed}" is not supported.',
                         )
-                elif field.params.token is not None:
+                elif isinstance(field.params.token, ResolvedValueConstant):
                     # token is a resolved constant address -- cannot be represented in legacy format
                     return out.error(
                         title="Constant token not supported",
@@ -313,19 +313,25 @@ def _convert_v2_field_description(
         and field.params is not None
         and isinstance(field.params, ResolvedCallDataParameters)
     ):
+        def _resolve_calldata_resolved_value(
+            value: ResolvedValuePath | ResolvedValueConstant | None,
+            field_name: str,
+        ) -> str | None:
+            if value is None:
+                return None
+            if isinstance(value, ResolvedValuePath):
+                return _resolve_calldata_param_path(str(value.path))
+            if isinstance(value, ResolvedValueConstant):
+                raise ValueError(
+                    f'Constant "{field_name}" is not supported for calldata parameter conversion.'
+                )
+            return None
+
         try:
-            callee_path = _resolve_calldata_param_path(
-                str(field.params.calleePath) if field.params.calleePath is not None else None
-            )
-            selector_path = _resolve_calldata_param_path(
-                str(field.params.selectorPath) if field.params.selectorPath is not None else None
-            )
-            amount_path = _resolve_calldata_param_path(
-                str(field.params.amountPath) if field.params.amountPath is not None else None
-            )
-            spender_path = _resolve_calldata_param_path(
-                str(field.params.spenderPath) if field.params.spenderPath is not None else None
-            )
+            callee_path = _resolve_calldata_resolved_value(field.params.callee, "callee")
+            selector_path = _resolve_calldata_resolved_value(field.params.selector, "selector")
+            amount_path = _resolve_calldata_resolved_value(field.params.amount, "amount")
+            spender_path = _resolve_calldata_resolved_value(field.params.spender, "spender")
         except ValueError as e:
             return out.error(
                 title="Calldata param error",

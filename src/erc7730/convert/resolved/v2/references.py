@@ -19,6 +19,7 @@ from erc7730.model.paths.path_ops import descriptor_path_strip_prefix
 from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.metadata import EnumDefinition
 from erc7730.model.resolved.v2.display import (
+    ResolvedEncryptionParameters,
     ResolvedField,
     ResolvedFieldDescription,
     ResolvedFieldParameters,
@@ -69,6 +70,14 @@ def resolve_reference(
 
     if resolved_params is not None:
         field_dict["params"] = resolved_params.model_dump(by_alias=True, exclude_none=True)
+
+    if definition.encryption is not None:
+        resolved_encryption = ResolvedEncryptionParameters(
+            scheme=definition.encryption.scheme,
+            plaintextType=definition.encryption.plaintextType,
+            fallbackLabel=definition.encryption.fallbackLabel,
+        )
+        field_dict["encryption"] = resolved_encryption.model_dump(by_alias=True, exclude_none=True)
 
     # Set either path or value based on the ResolvedValue type
     if isinstance(value_or_path, ResolvedValuePath):

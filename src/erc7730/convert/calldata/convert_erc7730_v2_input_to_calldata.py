@@ -73,10 +73,13 @@ from erc7730.model.resolved.v2.context import (
 )
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import (
+    ResolvedCallDataParameters,
     ResolvedFieldDescription,
     ResolvedFieldGroup,
     ResolvedFormat,
+    ResolvedNftNameParameters,
 )
+from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.types import Address, HexStr, ScalarType, Selector
 
 
@@ -398,6 +401,26 @@ def _convert_v2_param(
     if (value := _convert_v2_value(path_str, field.value, field.format, abi, out)) is None:
         return None
 
+    def _convert_resolved_value(
+        resolved_value: ResolvedValuePath | ResolvedValueConstant | None,
+        abi_type: ABIDataType,
+    ) -> CalldataDescriptorValueV1 | None:
+        if resolved_value is None:
+            return None
+        if isinstance(resolved_value, ResolvedValuePath):
+            return _convert_v2_value(str(resolved_value.path), None, None, abi, out)
+        if isinstance(resolved_value, ResolvedValueConstant):
+            raw = encode_value(resolved_value.value, abi_type, out)
+            if raw is None:
+                return None
+            return CalldataDescriptorValueConstantV1(
+                type_family=CalldataDescriptorTypeFamily[abi_type.name],
+                type_size=len(raw) // 2 - 1,
+                value=resolved_value.value,
+                raw=raw,
+            )
+        return None
+
     match field.format:
         case None | FieldFormat.RAW:
             return CalldataDescriptorParamRawV1(value=value)
@@ -489,15 +512,12 @@ def _convert_v2_param(
                     title="Missing NFT parameters",
                     message="NFT name format requires parameters.",
                 )
-            collection_path_str = getattr(field.params, "collection", None) or getattr(
-                field.params, "collectionPath", None
-            )
-            if collection_path_str is None:
+            if not isinstance(field.params, ResolvedNftNameParameters):
                 return out.error(
                     title="Missing collection",
-                    message="NFT name parameters must include a collection or collectionPath.",
+                    message="NFT name parameters must include a resolved collection value.",
                 )
-            if (collection_value := _convert_v2_value(str(collection_path_str), None, None, abi, out)) is None:
+            if (collection_value := _convert_resolved_value(field.params.collection, ABIDataType.ADDRESS)) is None:
                 return None
             return CalldataDescriptorParamNFTV1(value=value, collection=collection_value)
 
@@ -507,28 +527,23 @@ def _convert_v2_param(
                     title="Missing calldata parameters",
                     message="Calldata format requires parameters.",
                 )
-            callee_str = getattr(field.params, "callee", None) or getattr(field.params, "calleePath", None)
-            if callee_str is None:
+            if not isinstance(field.params, ResolvedCallDataParameters):
                 return out.error(
                     title="Missing callee",
-                    message="Calldata parameters must include a callee or calleePath.",
+                    message="Calldata parameters must include a resolved callee value.",
                 )
-            if (callee := _convert_v2_value(str(callee_str), None, None, abi, out)) is None:
+
+            if (callee := _convert_resolved_value(field.params.callee, ABIDataType.ADDRESS)) is None:
                 return None
 
-            selector_str = getattr(field.params, "selector", None) or getattr(field.params, "selectorPath", None)
-            selector_val = _convert_v2_value(str(selector_str), None, None, abi, out) if selector_str else None
+            selector_val = _convert_resolved_value(field.params.selector, ABIDataType.STRING)
 
-            chain_id_val = None
-            chain_id_attr = getattr(field.params, "chainId", None) or getattr(field.params, "chainIdPath", None)
-            if chain_id_attr:
-                chain_id_val = _convert_v2_value(str(chain_id_attr), None, None, abi, out)
+            # v2 calldata params may not define chainId; keep compatibility with both models.
+            chain_id_val = _convert_resolved_value(getattr(field.params, "chainId", None), ABIDataType.UINT)
 
-            amount_str = getattr(field.params, "amount", None) or getattr(field.params, "amountPath", None)
-            amount_val = _convert_v2_value(str(amount_str), None, None, abi, out) if amount_str else None
+            amount_val = _convert_resolved_value(field.params.amount, ABIDataType.UINT)
 
-            spender_str = getattr(field.params, "spender", None) or getattr(field.params, "spenderPath", None)
-            spender_val = _convert_v2_value(str(spender_str), None, None, abi, out) if spender_str else None
+            spender_val = _convert_resolved_value(field.params.spender, ABIDataType.ADDRESS)
 
             return CalldataDescriptorParamCalldataV1(
                 value=value,
@@ -568,25 +583,7 @@ def _convert_v2_param(
 
             if field.params is not None:
                 token = getattr(field.params, "token", None)
-                token_path_str = getattr(field.params, "tokenPath", None)
-
-                if token is not None:
-                    token_value_str = str(token)
-                    # Token is an address, convert as path if it's a path, otherwise as constant
-                    if token_value_str.startswith("#.") or token_value_str.startswith("@."):
-                        token_path = _convert_v2_value(token_value_str, None, None, abi, out)
-                    else:
-                        # It's a resolved address constant — encode as constant value
-                        raw = encode_value(token_value_str, ABIDataType.ADDRESS, out)
-                        if raw is not None:
-                            token_path = CalldataDescriptorValueConstantV1(
-                                type_family=CalldataDescriptorTypeFamily.ADDRESS,
-                                type_size=20,
-                                value=token_value_str,
-                                raw=raw,
-                            )
-                elif token_path_str is not None:
-                    token_path = _convert_v2_value(str(token_path_str), None, None, abi, out)
+                token_path = _convert_resolved_value(token, ABIDataType.ADDRESS)
 
                 threshold = getattr(field.params, "threshold", None)
                 native_currencies = getattr(field.params, "nativeCurrencyAddress", None)

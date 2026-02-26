@@ -24,6 +24,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedTokenTickerParameters,
     ResolvedUnitParameters,
 )
+from erc7730.model.resolved.display import ResolvedValue, ResolvedValuePath
 
 
 def compute_format_schema_paths(fmt: ResolvedFormat) -> FormatPaths:
@@ -47,6 +48,10 @@ def compute_format_schema_paths(fmt: ResolvedFormat) -> FormatPaths:
             case DescriptorPath():
                 pass  # descriptor paths are not schema paths
 
+    def add_value(value: ResolvedValue | None) -> None:
+        if isinstance(value, ResolvedValuePath):
+            add_path(value.path)
+
     def append_field(field: ResolvedField) -> None:
         match field:
             case ResolvedFieldDescription():
@@ -63,15 +68,18 @@ def compute_format_schema_paths(fmt: ResolvedFormat) -> FormatPaths:
                     case ResolvedInteroperableAddressNameParameters():
                         pass
                     case ResolvedCallDataParameters():
-                        pass
+                        add_value(field.params.callee)
+                        add_value(field.params.selector)
+                        add_value(field.params.amount)
+                        add_value(field.params.spender)
                     case ResolvedTokenAmountParameters():
-                        if field.params.tokenPath is not None:
-                            add_path(field.params.tokenPath)
+                        if isinstance(field.params.token, ResolvedValuePath):
+                            add_path(field.params.token.path)
+                        add_path(field.params.chainIdPath)
                     case ResolvedTokenTickerParameters():
-                        pass
+                        add_path(field.params.chainIdPath)
                     case ResolvedNftNameParameters():
-                        if field.params.collectionPath is not None:
-                            add_path(field.params.collectionPath)
+                        add_value(field.params.collection)
                     case ResolvedDateParameters():
                         pass
                     case ResolvedUnitParameters():

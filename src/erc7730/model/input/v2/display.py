@@ -506,6 +506,14 @@ class InputFieldDefinition(Model):
         description="Format specific parameters that are used to format the field value in a human readable way.",
     )
 
+    encryption: InputEncryptionParameters | None = Field(
+        default=None,
+        title="Encryption Parameters",
+        description=(
+            "If present, the field value is encrypted. The format specifies how to display the decrypted value."
+        ),
+    )
+
 
 class InputFieldDescription(InputFieldBase, InputFieldDefinition):
     """

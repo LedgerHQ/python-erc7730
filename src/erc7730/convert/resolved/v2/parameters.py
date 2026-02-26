@@ -5,7 +5,7 @@ from erc7730.common.output import OutputAdder
 from erc7730.convert.resolved.v2.constants import ConstantProvider
 from erc7730.convert.resolved.v2.enums import get_enum, get_enum_id
 from erc7730.convert.resolved.v2.values import resolve_path_or_constant_value
-from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
+from erc7730.model.input.path import DescriptorPathStr
 from erc7730.model.paths.path_ops import data_or_container_path_concat
 from erc7730.model.input.v2.display import (
     InputAddressNameParameters,
@@ -22,7 +22,6 @@ from erc7730.model.input.v2.display import (
     InputUnitParameters,
 )
 from erc7730.model.paths import ContainerPath, DataPath
-from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.metadata import EnumDefinition
 from erc7730.model.resolved.v2.display import (
     ResolvedAddressNameParameters,
@@ -136,28 +135,16 @@ def resolve_interoperable_address_name_parameters(
 def resolve_calldata_parameters(
     prefix: DataPath, params: InputCallDataParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedCallDataParameters | None:
-    # Helper to split a ResolvedValue into (path, value) for the calldata model
-    def _split_resolved(
-        resolved: ResolvedValuePath | ResolvedValueConstant | None,
-    ) -> tuple[str | None, Any]:
-        if resolved is None:
-            return None, None
-        if isinstance(resolved, ResolvedValuePath):
-            return str(resolved.path), None
-        if isinstance(resolved, ResolvedValueConstant):
-            return None, resolved.value
-        return None, None
-
     # Resolve callee - can be path, constant, or map reference
-    callee_path: DescriptorPathStr | DataPathStr | ContainerPathStr | None = params.calleePath
-    callee_value: Address | None = None
+    callee_resolved = None
     if params.callee is not None and isinstance(params.callee, InputMapReference):
         out.warning(
             title="Unresolved map reference",
             message="Map reference in callee cannot be resolved at conversion time and will be dropped.",
         )
+        return None
     elif params.callee is not None or params.calleePath is not None:
-        resolved = resolve_path_or_constant_value(
+        callee_resolved = resolve_path_or_constant_value(
             prefix=prefix,
             input_path=params.calleePath,
             input_value=params.callee,
@@ -165,20 +152,18 @@ def resolve_calldata_parameters(
             constants=constants,
             out=out,
         )
-        if resolved is None:
+        if callee_resolved is None:
             return None
-        callee_path, callee_value = _split_resolved(resolved)  # type: ignore[assignment]
 
     # Resolve selector
-    selector_path: DescriptorPathStr | DataPathStr | ContainerPathStr | None = params.selectorPath
-    selector_value: str | None = None
+    selector_resolved = None
     if params.selector is not None and isinstance(params.selector, InputMapReference):
         out.warning(
             title="Unresolved map reference",
             message="Map reference in selector cannot be resolved at conversion time and will be dropped.",
         )
     elif params.selector is not None or params.selectorPath is not None:
-        resolved = resolve_path_or_constant_value(
+        selector_resolved = resolve_path_or_constant_value(
             prefix=prefix,
             input_path=params.selectorPath,
             input_value=params.selector,
@@ -186,19 +171,16 @@ def resolve_calldata_parameters(
             constants=constants,
             out=out,
         )
-        if resolved is not None:
-            selector_path, selector_value = _split_resolved(resolved)  # type: ignore[assignment]
 
     # Resolve amount
-    amount_path: DescriptorPathStr | DataPathStr | ContainerPathStr | None = params.amountPath
-    amount_value: int | None = None
+    amount_resolved = None
     if params.amount is not None and isinstance(params.amount, InputMapReference):
         out.warning(
             title="Unresolved map reference",
             message="Map reference in amount cannot be resolved at conversion time and will be dropped.",
         )
     elif params.amount is not None or params.amountPath is not None:
-        resolved = resolve_path_or_constant_value(
+        amount_resolved = resolve_path_or_constant_value(
             prefix=prefix,
             input_path=params.amountPath,
             input_value=params.amount,
@@ -206,19 +188,16 @@ def resolve_calldata_parameters(
             constants=constants,
             out=out,
         )
-        if resolved is not None:
-            amount_path, amount_value = _split_resolved(resolved)  # type: ignore[assignment]
 
     # Resolve spender
-    spender_path: DescriptorPathStr | DataPathStr | ContainerPathStr | None = params.spenderPath
-    spender_value: Address | None = None
+    spender_resolved = None
     if params.spender is not None and isinstance(params.spender, InputMapReference):
         out.warning(
             title="Unresolved map reference",
             message="Map reference in spender cannot be resolved at conversion time and will be dropped.",
         )
     elif params.spender is not None or params.spenderPath is not None:
-        resolved = resolve_path_or_constant_value(
+        spender_resolved = resolve_path_or_constant_value(
             prefix=prefix,
             input_path=params.spenderPath,
             input_value=params.spender,
@@ -226,30 +205,23 @@ def resolve_calldata_parameters(
             constants=constants,
             out=out,
         )
-        if resolved is not None:
-            spender_path, spender_value = _split_resolved(resolved)  # type: ignore[assignment]
 
     return ResolvedCallDataParameters(
-        calleePath=callee_path,
-        callee=callee_value,
-        selectorPath=selector_path,
-        selector=selector_value,
-        amountPath=amount_path,
-        amount=amount_value,
-        spenderPath=spender_path,
-        spender=spender_value,
+        callee=callee_resolved,
+        selector=selector_resolved,
+        amount=amount_resolved,
+        spender=spender_resolved,
     )
 
 
 def resolve_token_amount_parameters(
     prefix: DataPath, params: InputTokenAmountParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedTokenAmountParameters | None:
-    # Resolve token - can be path, constant, or map reference
+    # Resolve token into a ResolvedValue (path or constant), like v1.
     token_value = params.token
-    resolved_token: Address | None = None
+    token_resolved = None
     if token_value is not None and isinstance(token_value, InputMapReference):
-        # Map reference - store as-is for runtime resolution
-        # For now, we set to None since resolved model expects Address
+        # Map reference needs runtime resolution and is dropped in resolved model
         out.warning(
             title="Unresolved map reference",
             message="Map reference in token cannot be resolved at conversion time and will be dropped.",
@@ -263,8 +235,6 @@ def resolve_token_amount_parameters(
             constants=constants,
             out=out,
         )
-        if isinstance(token_resolved, ResolvedValueConstant):
-            resolved_token = Address(str(token_resolved.value))
 
     input_addresses = cast(
         list[DescriptorPathStr | MixedCaseAddress] | MixedCaseAddress | None,
@@ -307,8 +277,7 @@ def resolve_token_amount_parameters(
                 resolved_chain_id = resolved_value
 
     return ResolvedTokenAmountParameters(
-        tokenPath=params.tokenPath,
-        token=resolved_token,
+        token=token_resolved,
         nativeCurrencyAddress=resolved_addresses,
         threshold=resolved_threshold,
         message=constants.resolve_or_none(params.message, out),
@@ -350,13 +319,13 @@ def resolve_nft_parameters(
 ) -> ResolvedNftNameParameters | None:
     # Resolve collection - can be path, constant, or map reference
     collection_value = params.collection
-    resolved_collection: Address | None = None
     if collection_value is not None and isinstance(collection_value, InputMapReference):
         # Map reference - needs runtime resolution
         out.warning(
             title="Unresolved map reference",
             message="Map reference in collection cannot be resolved at conversion time and will be dropped.",
         )
+        return None
     else:
         collection_resolved = resolve_path_or_constant_value(
             prefix=prefix,
@@ -368,13 +337,7 @@ def resolve_nft_parameters(
         )
         if collection_resolved is None:
             return None
-        if isinstance(collection_resolved, ResolvedValueConstant):
-            resolved_collection = Address(str(collection_resolved.value))
-
-    return ResolvedNftNameParameters(
-        collectionPath=params.collectionPath,
-        collection=resolved_collection,
-    )
+        return ResolvedNftNameParameters(collection=collection_resolved)
 
 
 def resolve_date_parameters(
