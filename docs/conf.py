@@ -7,6 +7,35 @@ from sphinxawesome_theme.postprocess import Icons
 
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
+# --- Monkey-patch sphinx_github_style lexer (upstream bug: IndexError on last token) -----------
+import sphinx_github_style.lexer as _lexer  # noqa: E402
+from pygments.token import Name, Keyword  # noqa: E402
+from pygments.lexers.python import PythonLexer as _PythonLexer  # noqa: E402
+
+
+def _patched_get_tokens_unprocessed(self, text):  # type: ignore[no-untyped-def]
+    tokens = list(_PythonLexer.get_tokens_unprocessed(self, text))
+    last = len(tokens) - 1
+    for token_idx, (index, token, value) in enumerate(tokens):
+        if token is Name.Builtin and value in _lexer.BUILTINS["classes"]:
+            if token_idx < last and tokens[token_idx + 1][-1] == "(":
+                yield index, Name.Builtin, value
+            else:
+                yield index, Name.Builtin.Pseudo, value
+        elif token is Name:
+            if value[0].isupper():
+                yield index, Name.Class, value
+            elif token_idx < last and tokens[token_idx + 1][-1] == "(":
+                yield index, Keyword.Pseudo, value
+            else:
+                yield index, Name, value
+        else:
+            yield index, token, value
+
+
+_lexer.GitHubLexer.get_tokens_unprocessed = _patched_get_tokens_unprocessed
+# --- End monkey-patch --------------------------------------------------------------------------
+
 nitpicky = True
 project = "python-erc7730"
 copyright = "2024, Ledger"

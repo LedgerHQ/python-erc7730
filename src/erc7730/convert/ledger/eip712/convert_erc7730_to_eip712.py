@@ -9,6 +9,7 @@ from eip712.model.types import EIP712Format, EIP712NameSource, EIP712NameType
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.output import ExceptionsToOutput, OutputAdder
 from erc7730.convert import ERC7730Converter
+from erc7730.lint.lint_validate_eip712_domain import validate_eip712_domain_fields
 from erc7730.model.context import EIP712Schema
 from erc7730.model.display import AddressNameType, FieldFormat
 from erc7730.model.paths import ContainerField, ContainerPath, DataPath
@@ -114,6 +115,9 @@ class ERC7730toEIP712Converter(ERC7730Converter[ResolvedERC7730Descriptor, Input
     ) -> dict[str, list[EIP712SchemaField]] | None:
         for schema in schemas:
             if schema.primaryType == primary_type:
+                # Validate EIP712Domain field ordering and names
+                if "EIP712Domain" in schema.types:
+                    validate_eip712_domain_fields(schema.types["EIP712Domain"], out)
                 return schema.types
         return out.error(f"schema for type {primary_type} not found")
 

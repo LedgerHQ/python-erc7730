@@ -1,0 +1,528 @@
+"""
+Object model for ERC-7730 v2 resolved descriptors `display` section.
+
+Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs
+JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/master/specs/erc7730-v2.schema.json
+"""
+
+from typing import Annotated, ForwardRef, Self
+
+from pydantic import Discriminator, Field, Tag, model_validator
+
+from erc7730.model.base import Model
+from erc7730.model.display import (
+    AddressNameType,
+    FormatBase,
+)
+from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
+from erc7730.model.input.v2.format import DateEncoding, FieldFormat
+from erc7730.model.input.v2.unions import (
+    field_discriminator,
+    field_parameters_discriminator,
+    visibility_rules_discriminator,
+)
+from erc7730.model.resolved.display import ResolvedValue
+from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress, ScalarType
+
+# ruff: noqa: N815 - camel case field names are tolerated to match schema
+
+
+class ResolvedVisibilityConditions(Model):
+    """
+    Complex visibility conditions for field display rules (resolved).
+    """
+
+    ifNotIn: list[str] | None = Field(
+        None,
+        title="If Not In",
+        description="Display this field only if its value is NOT in this list.",
+    )
+
+    mustBe: list[str] | None = Field(
+        None,
+        title="Must Be",
+        description="Skip displaying this field but its value MUST match one of these values.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_at_least_one_condition(self) -> Self:
+        if self.ifNotIn is None and self.mustBe is None:
+            raise ValueError('At least one of "ifNotIn" or "mustBe" must be set.')
+        return self
+
+
+ResolvedVisibilityRules = Annotated[
+    Annotated[str, Tag("simple")] | Annotated[ResolvedVisibilityConditions, Tag("conditions")],
+    Discriminator(visibility_rules_discriminator),
+]
+
+
+class ResolvedFieldBase(Model):
+    """
+    A resolved field formatter, containing formatting information of a single field in a message.
+    """
+
+    path: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Path",
+        description="A path to the field in the structured data. The path is a JSON path expression that can be used "
+        """to extract the field value from the structured data. Exactly one of "path" or "value" must be set.""",
+    )
+
+    value: ScalarType | None = Field(
+        default=None,
+        title="Value",
+        description=(
+            "A resolved literal value on which the format should be applied instead of looking up a field in the "
+            'structured data. Exactly one of "path" or "value" must be set.'
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _validate_one_of_path_or_value(self) -> Self:
+        if self.path is None and self.value is None:
+            raise ValueError('Either "path" or "value" must be set.')
+        if self.path is not None and self.value is not None:
+            raise ValueError('"path" and "value" are mutually exclusive.')
+        return self
+
+
+class ResolvedTokenAmountParameters(Model):
+    """
+    Token Amount Formatting Parameters (resolved).
+    """
+
+    token: ResolvedValue | None = Field(
+        default=None,
+        title="Token",
+        description="The resolved address of the token contract, either as path or constant value. Used to "
+        "associate correct ticker. If ticker is not found or value is not set, the wallet SHOULD display the "
+        'raw value instead with an "Unknown token" warning.',
+    )
+
+    nativeCurrencyAddress: list[Address] | Address | None = Field(
+        default=None,
+        title="Native Currency Address",
+        description="An address or array of resolved addresses, any of which are interpreted as an amount in native "
+        "currency rather than a token.",
+    )
+
+    threshold: HexStr | int | None = Field(
+        default=None,
+        title="Unlimited Threshold",
+        description=(
+            "The resolved threshold above which the amount should be displayed using the message parameter "
+            "rather than the real amount (encoded as an int or byte array)."
+        ),
+    )
+
+    message: str | None = Field(
+        default=None,
+        title="Unlimited Message",
+        description="The resolved message to display when the amount is above the threshold.",
+    )
+
+    chainId: int | None = Field(
+        default=None,
+        title="Chain ID",
+        description=(
+            "Optional. The resolved chain on which the token is deployed. "
+            "When present, the wallet SHOULD resolve token metadata (ticker, decimals) for this chain. "
+            "Useful for cross-chain swap clear signing where the same token address may refer to different chains."
+        ),
+    )
+
+    chainIdPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Chain ID Path",
+        description=(
+            "Optional. Path to the chain ID in the structured data. "
+            "When present, the wallet SHOULD resolve token metadata for the chain at this path. "
+            "Useful for cross-chain swap clear signing."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _validate_token_amount_parameters(self) -> Self:
+        if self.chainId is not None and self.chainIdPath is not None:
+            raise ValueError('"chainId" and "chainIdPath" are mutually exclusive.')
+        return self
+
+
+class ResolvedAddressNameParameters(Model):
+    """
+    Address Names Formatting Parameters (resolved).
+    """
+
+    types: list[AddressNameType] | None = Field(
+        default=None,
+        title="Address Type",
+        description="An array of expected types of the address. If set, the wallet SHOULD check that the address "
+        "matches one of the types provided.",
+        min_length=1,
+    )
+
+    sources: list[str] | None = Field(
+        default=None,
+        title="Trusted Sources",
+        description="An array of acceptable sources for names. If set, the wallet SHOULD restrict name lookup to "
+        "relevant sources.",
+        min_length=1,
+    )
+
+    senderAddress: Address | list[Address] | None = Field(
+        default=None,
+        title="Sender Address",
+        description="Either a string or an array of strings. If the address pointed to by addressName is equal to one "
+        "of the addresses in senderAddress, the addressName is interpreted as the sender referenced by @.from",
+    )
+
+
+class ResolvedInteroperableAddressNameParameters(Model):
+    """
+    Interoperable Address Names Formatting Parameters (resolved).
+    """
+
+    types: list[str] | None = Field(
+        default=None,
+        title="Address Type",
+        description="An array of expected types of the address (wallet, eoa, contract, token, collection).",
+        min_length=1,
+    )
+
+    sources: list[str] | None = Field(
+        default=None,
+        title="Trusted Sources",
+        description="An array of acceptable sources for names.",
+        min_length=1,
+    )
+
+    senderAddress: Address | list[Address] | None = Field(
+        default=None,
+        title="Sender Address",
+        description="Either a string or an array of strings for sender address matching.",
+    )
+
+
+class ResolvedCallDataParameters(Model):
+    """
+    Embedded Calldata Formatting Parameters (resolved).
+    """
+
+    callee: ResolvedValue = Field(
+        title="Callee",
+        description="The resolved address of the contract being called by this embedded calldata, either as path "
+        "or constant value.",
+    )
+
+    selector: ResolvedValue | None = Field(
+        default=None,
+        title="Called Selector",
+        description="The resolved selector being called, if not contained in the calldata, either as path or "
+        "constant value.",
+    )
+
+    amount: ResolvedValue | None = Field(
+        default=None,
+        title="Amount",
+        description="The resolved amount being transferred, if not contained in the calldata, either as path or "
+        "constant value.",
+    )
+
+    spender: ResolvedValue | None = Field(
+        default=None,
+        title="Spender",
+        description="The resolved spender, if not contained in the calldata, either as path or constant value.",
+    )
+
+
+class ResolvedNftNameParameters(Model):
+    """
+    NFT Names Formatting Parameters (resolved).
+    """
+
+    collection: ResolvedValue = Field(
+        title="Collection",
+        description="The resolved address of the collection contract, either as path or constant value.",
+    )
+
+
+class ResolvedDateParameters(Model):
+    """
+    Date Formatting Parameters (resolved)
+    """
+
+    encoding: DateEncoding = Field(title="Date Encoding", description="The resolved encoding of the date.")
+
+
+class ResolvedUnitParameters(Model):
+    """
+    Unit Formatting Parameters (resolved).
+    """
+
+    base: str = Field(
+        title="Unit base symbol",
+        description=(
+            "The resolved base symbol of the unit, displayed after the converted value. "
+            "It can be an SI unit symbol or acceptable dimensionless symbols like % or bps."
+        ),
+    )
+
+    decimals: int | None = Field(
+        default=None,
+        title="Decimals",
+        description="The resolved number of decimals of the value, used to convert to a float.",
+    )
+
+    prefix: bool | None = Field(
+        default=None,
+        title="Prefix",
+        description=(
+            "The resolved value indicating whether the value should be converted to a prefixed unit, like k, M, G, etc."
+        ),
+    )
+
+
+class ResolvedEnumParameters(Model):
+    """
+    Enum Formatting Parameters (resolved).
+    """
+
+    ref: DescriptorPathStr = Field(
+        alias="$ref",
+        title="Enum reference",
+        description="The resolved internal path to the enum definition used to convert this value.",
+    )
+
+
+class ResolvedTokenTickerParameters(Model):
+    """
+    Token Ticker Formatting Parameters (resolved).
+    """
+
+    chainId: int | None = Field(
+        default=None,
+        title="Chain ID",
+        description=(
+            "Optional. The resolved chain on which the token is deployed. "
+            "When present, the wallet SHOULD resolve the token ticker for this chain. "
+            "Useful for cross-chain swap clear signing."
+        ),
+    )
+
+    chainIdPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Chain ID Path",
+        description=(
+            "Optional. Path to the chain ID in the structured data. "
+            "When present, the wallet SHOULD resolve the token ticker for the chain at this path. "
+            "Useful for cross-chain swap clear signing."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _validate_chainid_mutually_exclusive(self) -> Self:
+        if self.chainId is not None and self.chainIdPath is not None:
+            raise ValueError('"chainId" and "chainIdPath" are mutually exclusive.')
+        return self
+
+
+class ResolvedEncryptionParameters(Model):
+    """
+    Encrypted Value Parameters (resolved).
+    """
+
+    scheme: str = Field(
+        title="Encryption Scheme",
+        description="The encryption scheme used to produce the handle.",
+    )
+
+    plaintextType: str | None = Field(
+        default=None,
+        title="Plaintext Type",
+        description="Solidity type of the decrypted value (the handle does not encode this).",
+    )
+
+    fallbackLabel: str | None = Field(
+        default=None,
+        title="Fallback Label",
+        description='Optional label to display when decryption is not possible. Defaults to "[Encrypted]".',
+    )
+
+
+ResolvedFieldParameters = Annotated[
+    Annotated[ResolvedAddressNameParameters, Tag("address_name")]
+    | Annotated[ResolvedInteroperableAddressNameParameters, Tag("interoperable_address_name")]
+    | Annotated[ResolvedCallDataParameters, Tag("call_data")]
+    | Annotated[ResolvedTokenAmountParameters, Tag("token_amount")]
+    | Annotated[ResolvedTokenTickerParameters, Tag("token_ticker")]
+    | Annotated[ResolvedNftNameParameters, Tag("nft_name")]
+    | Annotated[ResolvedDateParameters, Tag("date")]
+    | Annotated[ResolvedUnitParameters, Tag("unit")]
+    | Annotated[ResolvedEnumParameters, Tag("enum")],
+    Discriminator(field_parameters_discriminator),
+]
+
+
+class ResolvedFieldDefinition(Model):
+    """
+    A resolved field formatter, containing formatting information of a single field in a message.
+    """
+
+    id: Id | None = Field(
+        alias="$id",
+        default=None,
+        title="Id",
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a "
+        "reference in device specific sections.",
+    )
+
+    label: str = Field(
+        title="Field Label",
+        description=("The resolved label of the field, displayed to the user in front of the formatted field value."),
+    )
+
+    format: FieldFormat | None = Field(
+        default=None,
+        title="Field Format",
+        description="The format of the field, that will be used to format the field value in a human readable way.",
+    )
+
+    params: ResolvedFieldParameters | None = Field(
+        default=None,
+        title="Format Parameters",
+        description=(
+            "Resolved format specific parameters that are used to format the field value in a human readable way."
+        ),
+    )
+
+
+class ResolvedFieldDescription(ResolvedFieldBase, ResolvedFieldDefinition):
+    """
+    A resolved field formatter, containing formatting information of a single field in a message.
+    """
+
+    visible: ResolvedVisibilityRules | None = Field(
+        default=None,
+        title="Visibility Rules",
+        description=(
+            "Specifies when a field should be displayed based on its value or context. "
+            "Defaults to 'always' if not specified."
+        ),
+    )
+
+    separator: str | None = Field(
+        default=None,
+        title="Field Separator",
+        description="Optional separator for array values with {index} interpolation support.",
+    )
+
+    encryption: ResolvedEncryptionParameters | None = Field(
+        default=None,
+        title="Encryption Parameters",
+        description=(
+            "If present, the field value is encrypted. The format specifies how to display the decrypted value."
+        ),
+    )
+
+
+class ResolvedFieldGroup(Model):
+    """
+    A resolved group of field formats, allowing recursivity in the schema and control over grouping and iteration.
+
+    Used to group whole definitions for structures for instance. This allows nesting definitions of formats, but note
+    that support for deep nesting will be device dependent.
+
+    Unlike ResolvedFieldBase, field groups do not require path or value (per v2 schema). The path is optional and
+    there is no value field — field groups scope their children under the given path, or act as logical groupings
+    when no path is provided.
+    """
+
+    id: Id | None = Field(
+        alias="$id",
+        default=None,
+        title="Id",
+        description="An internal identifier that can be used either for clarity specifying what the element is or as a "
+        "reference in device specific sections.",
+    )
+
+    path: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Path",
+        description="An optional resolved path to scope the field group under.",
+    )
+
+    label: str | None = Field(
+        default=None,
+        title="Group Label",
+        description="An optional resolved label for the field group.",
+    )
+
+    iteration: str | None = Field(
+        default=None,
+        title="Iteration Strategy",
+        description="Specifies how iteration over arrays should be handled: 'sequential' or 'bundled'.",
+    )
+
+    fields: list[ForwardRef("ResolvedField")] = Field(  # type: ignore
+        title="Fields", description="Resolved group of field formats."
+    )
+
+
+ResolvedField = Annotated[
+    Annotated[ResolvedFieldDescription, Tag("field_description")] | Annotated[ResolvedFieldGroup, Tag("field_group")],
+    Discriminator(field_discriminator),
+]
+
+
+class ResolvedFormat(FormatBase):
+    """
+    A resolved structured data format specification containing formatting information of fields
+    in a single type of message (v2).
+    """
+
+    interpolatedIntent: str | None = Field(
+        default=None,
+        title="Interpolated Intent Message",
+        description=(
+            "An optional resolved intent string with embedded field values using {path} interpolation syntax. "
+            "This provides a dynamic, contextual description by embedding actual transaction or message "
+            "values directly in the intent string."
+        ),
+    )
+
+    fields: list[ResolvedField] = Field(
+        title="Field Formats set",
+        description="An array containing the ordered resolved definitions of fields formats.",
+    )
+
+
+class ResolvedDisplay(Model):
+    """
+    Display Formatting Info Section (v2, resolved).
+    """
+
+    definitions: dict[str, ResolvedFieldDefinition] | None = Field(
+        default=None,
+        title="Common Formatter Definitions",
+        description=(
+            "A set of resolved definitions that can be used to share formatting information "
+            "between multiple messages or functions. All references have been inlined."
+        ),
+    )
+
+    formats: dict[str, ResolvedFormat] = Field(
+        title="List of field formats",
+        description=(
+            "The resolved list includes formatting info for each field of a structure. "
+            "This list is indexed by a key uniquely identifying the message type in the ABI. "
+            "For smart contracts, it is the selector or function signature, and for EIP-712 messages "
+            "it is the primaryType of the message."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _validate_definitions_resolved(self) -> Self:
+        if self.definitions is not None:
+            raise ValueError("Definitions must be None after resolution: all references should have been inlined.")
+        return self
