@@ -8,7 +8,7 @@ from hishel import CacheTransport, FileStorage
 from httpx import URL, BaseTransport, Client, HTTPTransport, Request, Response
 from httpx._content import IteratorByteStream
 from httpx_file import FileTransport
-from httpx_retries import Retry, RetryTransport
+from httpx_retries import RetryTransport
 from limiter import Limiter
 from pydantic import ConfigDict, TypeAdapter, ValidationError
 from pydantic_string_url import FileUrl, HttpUrl
@@ -114,10 +114,10 @@ def _client() -> Client:
     :return:
     """
     cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=7 * 24 * 3600, check_ttl_every=24 * 3600)
-    http_transport = RetryTransport(transport=HTTPTransport(), retry=Retry(total=5, backoff_factor=0.5))
+    http_transport = HTTPTransport()
     http_transport = GithubTransport(http_transport)
     http_transport = EtherscanTransport(http_transport)
-    http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
+    http_transport = CacheTransport(transport=RetryTransport(http_transport), storage=cache_storage)
     file_transport = FileTransport()
     # TODO file storage: authorize relative paths only
     transports = {"https://": http_transport, "file://": file_transport}
@@ -190,6 +190,9 @@ class EtherscanTransport(DelegateTransport):
         try:
             if (result := response.json().get("result")) is not None:
                 data = result if isinstance(result, str) else json.dumps(result)
+                # Implement correct status code as Etherscan API returns 200 even in this case
+                if "Max calls per sec rate limit reached" in data:
+                    return Response(status_code=429, stream=IteratorByteStream([data.encode()]))
                 return Response(status_code=response.status_code, stream=IteratorByteStream([data.encode()]))
         except Exception:
             pass  # nosec B110 - intentional try/except/pass
