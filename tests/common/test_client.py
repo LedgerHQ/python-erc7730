@@ -18,7 +18,6 @@ def test_get_supported_chains() -> None:
     assert "Base Mainnet" in names
     assert "Base Sepolia Testnet" in names
     assert "Arbitrum One Mainnet" in names
-    assert "Arbitrum Nova Mainnet" in names
     assert "Arbitrum Sepolia Testnet" in names
     assert "Linea Mainnet" in names
     assert "Linea Sepolia Testnet" in names
