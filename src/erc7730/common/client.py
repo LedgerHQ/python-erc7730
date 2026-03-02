@@ -117,7 +117,8 @@ def _client() -> Client:
     http_transport = HTTPTransport()
     http_transport = GithubTransport(http_transport)
     http_transport = EtherscanTransport(http_transport)
-    http_transport = CacheTransport(transport=RetryTransport(http_transport), storage=cache_storage)
+    http_transport = RetryTransport(transport=http_transport)
+    http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
     file_transport = FileTransport()
     # TODO file storage: authorize relative paths only
     transports = {"https://": http_transport, "file://": file_transport}
