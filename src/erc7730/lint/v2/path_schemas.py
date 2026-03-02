@@ -9,6 +9,7 @@ from typing import assert_never
 
 from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
 from erc7730.model.paths.path_schemas import FormatPaths, data_path_to_schema_path
+from erc7730.model.resolved.display import ResolvedValue, ResolvedValuePath
 from erc7730.model.resolved.v2.display import (
     ResolvedAddressNameParameters,
     ResolvedCallDataParameters,
@@ -24,7 +25,6 @@ from erc7730.model.resolved.v2.display import (
     ResolvedTokenTickerParameters,
     ResolvedUnitParameters,
 )
-from erc7730.model.resolved.display import ResolvedValue, ResolvedValuePath
 
 
 def compute_format_schema_paths(fmt: ResolvedFormat) -> FormatPaths:

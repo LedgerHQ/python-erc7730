@@ -22,7 +22,7 @@ from erc7730.model.input.v2.unions import (
     visibility_rules_discriminator,
 )
 from erc7730.model.resolved.display import ResolvedValue
-from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress, ScalarType
+from erc7730.model.types import Address, HexStr, Id, ScalarType
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
 

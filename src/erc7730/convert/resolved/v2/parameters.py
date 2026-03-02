@@ -6,7 +6,6 @@ from erc7730.convert.resolved.v2.constants import ConstantProvider
 from erc7730.convert.resolved.v2.enums import get_enum, get_enum_id
 from erc7730.convert.resolved.v2.values import resolve_path_or_constant_value
 from erc7730.model.input.path import DescriptorPathStr
-from erc7730.model.paths.path_ops import data_or_container_path_concat
 from erc7730.model.input.v2.display import (
     InputAddressNameParameters,
     InputCallDataParameters,
@@ -22,6 +21,8 @@ from erc7730.model.input.v2.display import (
     InputUnitParameters,
 )
 from erc7730.model.paths import ContainerPath, DataPath
+from erc7730.model.paths.path_ops import data_or_container_path_concat
+from erc7730.model.resolved.display import ResolvedValue
 from erc7730.model.resolved.metadata import EnumDefinition
 from erc7730.model.resolved.v2.display import (
     ResolvedAddressNameParameters,
@@ -207,7 +208,7 @@ def resolve_calldata_parameters(
         )
 
     return ResolvedCallDataParameters(
-        callee=callee_resolved,
+        callee=cast(ResolvedValue, callee_resolved),
         selector=selector_resolved,
         amount=amount_resolved,
         spender=spender_resolved,

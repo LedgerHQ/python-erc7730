@@ -57,9 +57,9 @@ from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamV1,
 )
 from erc7730.model.calldata.v1.value import (
+    CalldataDescriptorTypeFamily,
     CalldataDescriptorValueConstantV1,
     CalldataDescriptorValueV1,
-    CalldataDescriptorTypeFamily,
 )
 from erc7730.model.display import AddressNameType
 from erc7730.model.input.v2.context import InputContractContext
@@ -67,6 +67,7 @@ from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.input.v2.format import DateEncoding, FieldFormat
 from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.paths.path_parser import to_path
+from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.v2.context import (
     ResolvedContractContext,
     ResolvedDeployment,
@@ -79,7 +80,6 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFormat,
     ResolvedNftNameParameters,
 )
-from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.types import Address, HexStr, ScalarType, Selector
 
 
@@ -282,9 +282,7 @@ def _convert_v2_field(
         # In v1 protocol, nested fields are flattened
         instructions: list[CalldataDescriptorInstructionFieldV1] = []
         for nested_field in field.fields:
-            if (
-                nested_instructions := _convert_v2_field(abi=abi, field=nested_field, enums=enums, out=out)
-            ) is None:
+            if (nested_instructions := _convert_v2_field(abi=abi, field=nested_field, enums=enums, out=out)) is None:
                 return None
             instructions.extend(nested_instructions)
         return instructions

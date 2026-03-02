@@ -8,9 +8,9 @@ from sphinxawesome_theme.postprocess import Icons
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # --- Monkey-patch sphinx_github_style lexer (upstream bug: IndexError on last token) -----------
-import sphinx_github_style.lexer as _lexer  # noqa: E402
-from pygments.token import Name, Keyword  # noqa: E402
-from pygments.lexers.python import PythonLexer as _PythonLexer  # noqa: E402
+import sphinx_github_style.lexer as _lexer
+from pygments.lexers.python import PythonLexer as _PythonLexer
+from pygments.token import Keyword, Name
 
 
 def _patched_get_tokens_unprocessed(self, text):  # type: ignore[no-untyped-def]

@@ -34,6 +34,7 @@ from erc7730.model.input.v2.format import FieldFormat
 from erc7730.model.paths import ContainerPath, DataPath
 from erc7730.model.paths.path_ops import to_relative
 from erc7730.model.paths.path_parser import to_path
+from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.v2.context import ResolvedDeployment, ResolvedDomain, ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import (
@@ -44,8 +45,6 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldGroup,
     ResolvedTokenAmountParameters,
 )
-from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
-
 
 # ---------------------------------------------------------------------------
 # Domain reconstruction
@@ -313,6 +312,7 @@ def _convert_v2_field_description(
         and field.params is not None
         and isinstance(field.params, ResolvedCallDataParameters)
     ):
+
         def _resolve_calldata_resolved_value(
             value: ResolvedValuePath | ResolvedValueConstant | None,
             field_name: str,
@@ -322,9 +322,7 @@ def _convert_v2_field_description(
             if isinstance(value, ResolvedValuePath):
                 return _resolve_calldata_param_path(str(value.path))
             if isinstance(value, ResolvedValueConstant):
-                raise ValueError(
-                    f'Constant "{field_name}" is not supported for calldata parameter conversion.'
-                )
+                raise ValueError(f'Constant "{field_name}" is not supported for calldata parameter conversion.')
             return None
 
         try:
