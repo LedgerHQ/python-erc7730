@@ -24,10 +24,10 @@ from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
-def lint_all_and_print_errors(paths: list[Path], gha: bool = False) -> bool:
+def lint_all_and_print_errors(paths: list[Path], gha: bool = False, skip_abi_validation: bool = False) -> bool:
     out = GithubAnnotationsAdder() if gha else DropFileOutputAdder(delegate=ConsoleOutputAdder())
 
-    count = lint_all(paths, out)
+    count = lint_all(paths, out, skip_abi_validation=skip_abi_validation)
 
     if out.has_errors:
         print(f"[bold][red]checked {count} descriptor files, some errors found ❌[/red][/bold]")
@@ -41,7 +41,7 @@ def lint_all_and_print_errors(paths: list[Path], gha: bool = False) -> bool:
     return True
 
 
-def lint_all(paths: list[Path], out: OutputAdder) -> int:
+def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = False) -> int:
     """
     Lint all ERC-7730 descriptor files at given paths.
 
@@ -51,9 +51,10 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
     :param out: output adder
     :return: number of files checked
     """
-    linter = MultiLinter(
-        [ValidateABILinter(), ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter(), ValidateMaxLengthLinter()]
-    )
+    linters = [ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter(), ValidateMaxLengthLinter()]
+    if not skip_abi_validation:
+        linters.insert(0, ValidateABILinter())
+    linter = MultiLinter(linters)
 
     files = list(get_erc7730_files(*paths, out=out))
 
