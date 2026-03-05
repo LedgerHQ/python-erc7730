@@ -28,7 +28,7 @@ def test_roundtrip_from_erc7730(input_file: Path) -> None:
     Note the test only applies to descriptors with a single contract and message.
     """
     if input_file.name in {
-        "eip712-network-fee-authorization-holesky.json",
+        "eip712-network-fee-authorization-sepolia.json",
         "eip712-network-fee-authorization-mainnet.json",
     }:
         pytest.skip("Lombard EIP-712 temporarily disabled")
