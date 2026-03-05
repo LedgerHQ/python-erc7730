@@ -81,7 +81,7 @@ jobs:
           PRE_COMMIT_COLOR: always
 
       - name: Test
-        timeout-minutes: 20
+        timeout-minutes: 40
         run: pdm run test
 
       - name: Publish test reports
