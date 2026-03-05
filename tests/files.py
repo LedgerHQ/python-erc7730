@@ -28,10 +28,18 @@ def _is_registry_descriptor(path: Path) -> bool:
 
 
 ERC7730_CALLDATA_DESCRIPTORS = sorted(
-    [path for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_CALLDATA_PREFIX}*.json") if _is_registry_descriptor(path)]
+    [
+        path
+        for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_CALLDATA_PREFIX}*.json")
+        if _is_registry_descriptor(path)
+    ]
 )
 ERC7730_EIP712_DESCRIPTORS = sorted(
-    [path for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_EIP712_PREFIX}*.json") if _is_registry_descriptor(path)]
+    [
+        path
+        for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_EIP712_PREFIX}*.json")
+        if _is_registry_descriptor(path)
+    ]
 )
 ERC7730_DESCRIPTORS = sorted(ERC7730_CALLDATA_DESCRIPTORS + ERC7730_EIP712_DESCRIPTORS)
 ERC7730_SCHEMA_PATH = ERC7730_REGISTRY_ROOT / "specs" / "erc7730-v1.schema.json"
