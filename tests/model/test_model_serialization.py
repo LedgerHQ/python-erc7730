@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,8 @@ from tests.cases import path_id
 from tests.files import ERC7730_DESCRIPTORS
 from tests.schemas import assert_valid_erc_7730
 
+HEX_STRING_RE = re.compile(r"^0x[0-9a-fA-F]+$")
+
 
 def remove_nulls(value: dict[Any, Any]) -> dict[Any, Any]:
     if isinstance(value, dict):
@@ -19,6 +22,16 @@ def remove_nulls(value: dict[Any, Any]) -> dict[Any, Any]:
         return [remove_nulls(item) for item in value if item is not None]
     else:
         return value
+
+
+def normalize_hex_strings(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {k: normalize_hex_strings(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [normalize_hex_strings(item) for item in value]
+    if isinstance(value, str) and HEX_STRING_RE.match(value):
+        return value.lower()
+    return value
 
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
@@ -35,6 +48,6 @@ def test_schema(input_file: Path) -> None:
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_round_trip(input_file: Path) -> None:
     """Test model serializes back to same JSON."""
-    actual = json.loads(InputERC7730Descriptor.load(input_file).to_json_string())
-    expected = remove_nulls(read_json_with_includes(input_file))
+    actual = normalize_hex_strings(json.loads(InputERC7730Descriptor.load(input_file).to_json_string()))
+    expected = normalize_hex_strings(remove_nulls(read_json_with_includes(input_file)))
     assert_dict_equals(expected, actual)

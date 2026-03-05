@@ -84,8 +84,11 @@ def command_schema(
 def command_lint(
     paths: Annotated[list[Path], Argument(help="The files or directory paths to lint")],
     gha: Annotated[bool, Option(help="Enable Github annotations output")] = False,
+    skip_abi_validation: Annotated[
+        bool, Option("--skip-abi-validation", help="Skip ABI comparison with Etherscan explorer data")
+    ] = False,
 ) -> None:
-    if not lint_all_and_print_errors(paths, gha):
+    if not lint_all_and_print_errors(paths, gha, skip_abi_validation=skip_abi_validation):
         raise Exit(1)
 
 

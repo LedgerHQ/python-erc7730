@@ -73,6 +73,8 @@ checked 61 descriptor files, some errors found ❌
 
 It can be called with single files or directories, in which case all descriptors will be checked.
 
+Use `--skip-abi-validation` to disable external ABI comparisons against Etherscan (useful for offline runs or faster local checks).
+
 ### `erc7730 generate`
 
 The `generate` command bootstraps a new descriptor file from ABIs or message schemas:
