@@ -13,38 +13,36 @@ from erc7730.common.output import (
     GithubAnnotationsAdder,
     OutputAdder,
 )
-from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730InputToResolved
-from erc7730.lint import ERC7730Linter
-from erc7730.lint.lint_base import MultiLinter
-from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
-from erc7730.lint.lint_validate_abi import ValidateABILinter
-from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinter
-from erc7730.lint.lint_validate_eip712_domain import ValidateEIP712DomainLinter
-from erc7730.lint.lint_validate_max_length import ValidateMaxLengthLinter
+from erc7730.convert.resolved.v2.convert_erc7730_input_to_resolved import ERC7730InputToResolved
+from erc7730.lint.v2 import ERC7730Linter, MultiLinter
+from erc7730.lint.v2.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
+from erc7730.lint.v2.lint_validate_display_fields import ValidateDisplayFieldsLinter
+from erc7730.lint.v2.lint_validate_max_length import ValidateMaxLengthLinter
 from erc7730.list.list import get_erc7730_files
-from erc7730.model.input.descriptor import InputERC7730Descriptor
+from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 
 
-def lint_all_and_print_errors(paths: list[Path], gha: bool = False, skip_abi_validation: bool = False) -> bool:
+def lint_all_and_print_errors(paths: list[Path], gha: bool = False) -> bool:
+    """Lint all ERC-7730 v2 descriptor files at given paths and print results."""
     out = GithubAnnotationsAdder() if gha else DropFileOutputAdder(delegate=ConsoleOutputAdder())
 
-    count = lint_all(paths, out, skip_abi_validation=skip_abi_validation)
+    count = lint_all(paths, out)
 
     if out.has_errors:
-        print(f"[bold][red]checked {count} descriptor files, some errors found ❌[/red][/bold]")
+        print(f"[bold][red]checked {count} v2 descriptor files, some errors found ❌[/red][/bold]")
         return False
 
     if out.has_warnings:
-        print(f"[bold][yellow]checked {count} descriptor files, some warnings found ⚠️[/yellow][/bold]")
+        print(f"[bold][yellow]checked {count} v2 descriptor files, some warnings found ⚠️[/yellow][/bold]")
         return True
 
-    print(f"[bold][green]checked {count} descriptor files, no errors found ✅[/green][/bold]")
+    print(f"[bold][green]checked {count} v2 descriptor files, no errors found ✅[/green][/bold]")
     return True
 
 
-def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = False) -> int:
+def lint_all(paths: list[Path], out: OutputAdder) -> int:
     """
-    Lint all ERC-7730 descriptor files at given paths.
+    Lint all ERC-7730 v2 descriptor files at given paths.
 
     Paths can be files or directories, in which case all JSON files in the directory are recursively linted.
 
@@ -52,15 +50,7 @@ def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = Fa
     :param out: output adder
     :return: number of files checked
     """
-    linters = [
-        ValidateDisplayFieldsLinter(),
-        ValidateEIP712DomainLinter(),
-        ClassifyTransactionTypeLinter(),
-        ValidateMaxLengthLinter(),
-    ]
-    if not skip_abi_validation:
-        linters.insert(0, ValidateABILinter())
-    linter = MultiLinter(linters)
+    linter = MultiLinter([ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter(), ValidateMaxLengthLinter()])
 
     files = list(get_erc7730_files(*paths, out=out))
 
@@ -71,7 +61,7 @@ def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = Fa
         return f.relative_to(root_path) if root_path is not None else None
 
     if len(files) > 1:
-        print(f"🔍 checking {len(files)} descriptor files…\n")
+        print(f"🔍 checking {len(files)} v2 descriptor files…\n")
 
     with ThreadPoolExecutor() as executor:
         for future in (executor.submit(lint_file, file, linter, out, label(file)) for file in files):
@@ -82,11 +72,11 @@ def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = Fa
 
 def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder, show_as: Path | None = None) -> None:
     """
-    Lint a single ERC-7730 descriptor file.
+    Lint a single ERC-7730 v2 descriptor file.
 
-    :param path: ERC-7730 descriptor file path
+    :param path: ERC-7730 v2 descriptor file path
     :param show_as: if provided, print this label instead of the file path
-    :param linter: linter instance
+    :param linter: v2 linter instance
     :param out: error handler
     """
 

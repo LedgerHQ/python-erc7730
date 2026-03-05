@@ -1,0 +1,25 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "nft-name-collection-path-test",
+    "contract": { "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000001" }] }
+  },
+  "metadata": { "owner": "Test Owner" },
+  "display": {
+    "formats": {
+      "0x40c10f19": {
+        "intent": "Mint NFT",
+        "fields": [
+          {
+            "label": "Token",
+            "format": "nftName",
+            "params": {
+              "collection": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "collection" }] } }
+            },
+            "path": "#.tokenId"
+          }
+        ]
+      }
+    }
+  }
+}

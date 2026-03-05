@@ -43,7 +43,7 @@ def convert_descriptor(
         return []
 
     context = cast(ResolvedContractContext, resolved_descriptor.context)
-    abis: dict[Selector, Function] = get_functions(context.contract.abi).functions
+    abis: dict[Selector, Function] = get_functions(context.contract.abi, include_read_only=True).functions
 
     output_descriptors = []
 
@@ -59,7 +59,7 @@ def convert_descriptor(
             if (abi := abis.get(selector)) is None:
                 out.error(
                     title="Invalid selector",
-                    message=f"Selector {selector} not found in ABI.",
+                    message=f"Selector {selector} not found in ABI for {deployment.address} on {deployment.chainId}",
                 )
                 continue
 
