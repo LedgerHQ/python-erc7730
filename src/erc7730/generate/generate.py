@@ -111,7 +111,7 @@ def _generate_context_calldata(
     elif (abis := get_contract_abis(chain_id, contract_address)) is None:
         raise Exception("Failed to fetch contract ABIs")
 
-    functions = list(get_functions(abis).functions.values())
+    functions = list(get_functions(abis, include_read_only=True).functions.values())
 
     context = InputContractContext(
         contract=InputContract(abi=functions, deployments=[InputDeployment(chainId=chain_id, address=contract_address)])

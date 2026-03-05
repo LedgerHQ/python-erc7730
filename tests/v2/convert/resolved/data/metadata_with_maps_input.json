@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "maps-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner",
+    "maps": {
+      "chainNames": {
+        "$keyType": "uint",
+        "values": {
+          "1": "Ethereum",
+          "137": "Polygon"
+        }
+      }
+    }
+  },
+  "display": {
+    "formats": {
+      "setChain(uint256)": {
+        "intent": "Set chain",
+        "fields": [
+          {
+            "path": "chainId",
+            "label": "Chain"
+          }
+        ]
+      }
+    }
+  }
+}
