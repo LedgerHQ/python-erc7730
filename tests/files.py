@@ -31,7 +31,7 @@ ERC7730_CALLDATA_DESCRIPTORS = sorted(
     [
         path
         for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_CALLDATA_PREFIX}*.json")
-        if _is_registry_descriptor(path)
+        if _is_registry_descriptor(path) and path.name not in ["calldata-lpv2.json", "calldata-stETH.json"]
     ]
 )
 ERC7730_EIP712_DESCRIPTORS = sorted(

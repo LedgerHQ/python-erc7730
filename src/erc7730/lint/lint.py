@@ -19,6 +19,7 @@ from erc7730.lint.lint_base import MultiLinter
 from erc7730.lint.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
 from erc7730.lint.lint_validate_abi import ValidateABILinter
 from erc7730.lint.lint_validate_display_fields import ValidateDisplayFieldsLinter
+from erc7730.lint.lint_validate_eip712_domain import ValidateEIP712DomainLinter
 from erc7730.lint.lint_validate_max_length import ValidateMaxLengthLinter
 from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.descriptor import InputERC7730Descriptor
@@ -51,7 +52,12 @@ def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = Fa
     :param out: output adder
     :return: number of files checked
     """
-    linters = [ValidateDisplayFieldsLinter(), ClassifyTransactionTypeLinter(), ValidateMaxLengthLinter()]
+    linters = [
+        ValidateDisplayFieldsLinter(),
+        ValidateEIP712DomainLinter(),
+        ClassifyTransactionTypeLinter(),
+        ValidateMaxLengthLinter(),
+    ]
     if not skip_abi_validation:
         linters.insert(0, ValidateABILinter())
     linter = MultiLinter(linters)

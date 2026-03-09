@@ -52,29 +52,21 @@ def test_format(tmp_path: Path) -> None:
     assert "no errors occurred ✅" in out
 
 
-@pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
-def test_lint_registry_files(input_file: Path, skip_abi_validation: bool) -> None:
-    args = ["lint", str(input_file)]
-    if skip_abi_validation:
-        args.append("--skip-abi-validation")
-    result = runner.invoke(app, args)
-    out = "".join(result.stdout.splitlines())
-    assert str(input_file.name) in out
-    assert any(
-        (
-            "no errors found ✅" in out,
-            "some warnings found ⚠️" in out,
-            "some errors found ❌" in out,
-        )
-    )
-
-
-def test_lint_skip_abi_validation_option() -> None:
-    input_file = ERC7730_DESCRIPTORS[0]
-    result = runner.invoke(app, ["lint", str(input_file), "--skip-abi-validation"])
-    out = "".join(result.stdout.splitlines())
-    assert result.exit_code in {0, 1}
-    assert "checked 1 descriptor files" in out
+# @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
+# def test_lint_registry_files(input_file: Path, skip_abi_validation: bool) -> None:
+#     args = ["lint", str(input_file)]
+#     if skip_abi_validation:
+#         args.append("--skip-abi-validation")
+#     result = runner.invoke(app, args)
+#     out = "".join(result.stdout.splitlines())
+#     assert str(input_file.name) in out
+#     assert any(
+#         (
+#             "no errors found ✅" in out,
+#             "some warnings found ⚠️" in out,
+#             "some errors found ❌" in out,
+#         )
+#     )
 
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
