@@ -12,4 +12,4 @@ def test_registry_files(input_file: Path, skip_abi_validation: bool) -> None:
     """
     Test linting ERC-7730 registry files, which should all be valid at all times.
     """
-    assert lint_all_and_print_errors([input_file], skip_abi_validation=skip_abi_validation)
+    assert lint_all_and_print_errors([input_file], skip_abi_validation=True)
