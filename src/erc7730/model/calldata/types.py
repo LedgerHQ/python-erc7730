@@ -34,6 +34,7 @@ class TrustedNameSource(StrEnum):
     FREENAME = "freename"
     DNS = "dns"
     DYNAMIC_RESOLVER = "dynamic_resolver"
+    MULTISIG_ADDRESS_BOOK = "multisig_address_book"
 
     @property
     def int_value(self) -> int:
@@ -52,3 +53,5 @@ class TrustedNameSource(StrEnum):
                 return 5
             case TrustedNameSource.DYNAMIC_RESOLVER:
                 return 6
+            case TrustedNameSource.MULTISIG_ADDRESS_BOOK:
+                return 7
