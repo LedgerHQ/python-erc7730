@@ -16,3 +16,5 @@ tmp/
 *.egg-info
 docs/build
 tests/**/*.xml
+pyrightconfig.json
+.env

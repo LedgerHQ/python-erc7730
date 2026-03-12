@@ -1,0 +1,39 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "field-group-test",
+    "eip712": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "MultiTransfer": {
+        "intent": "Transfer to multiple recipients",
+        "fields": [
+          {
+            "path": "#.transfers.[]",
+            "fields": [
+              {
+                "path": "#.transfers.[].to",
+                "label": "To"
+              },
+              {
+                "path": "#.transfers.[].amount",
+                "label": "Amount"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

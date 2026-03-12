@@ -1,0 +1,31 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "chain-id-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "0x3ac54ed6": {
+        "intent": "Bridge to chain",
+        "fields": [
+          {
+            "label": "Target Chain",
+            "format": "chainId",
+            "path": "#.chainId"
+          }
+        ]
+      }
+    }
+  }
+}

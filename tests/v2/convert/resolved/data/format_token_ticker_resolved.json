@@ -1,0 +1,34 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "token-ticker-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "formats": {
+      "0xc53cdef6": {
+        "intent": "Get token ticker",
+        "fields": [
+          {
+            "label": "Token",
+            "format": "tokenTicker",
+            "params": {
+              "chainId": 1
+            },
+            "path": "#.token"
+          }
+        ]
+      }
+    }
+  }
+}
