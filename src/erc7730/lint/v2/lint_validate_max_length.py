@@ -106,7 +106,7 @@ class ValidateMaxLengthLinter(ERC7730Linter):
     def _collect_long_labels(cls, field: ResolvedField, too_long: set[str]) -> None:
         match field:
             case ResolvedFieldDescription():
-                if len(field.label) > FIELD_NAME_MAX_LENGTH:
+                if field.label is not None and len(field.label) > FIELD_NAME_MAX_LENGTH:
                     too_long.add(field.label)
             case ResolvedFieldGroup():
                 if field.label is not None and len(field.label) > FIELD_NAME_MAX_LENGTH:

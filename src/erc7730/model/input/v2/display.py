@@ -115,10 +115,34 @@ class InputReference(InputFieldBase):
         "key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
     )
 
+    label: DescriptorPathStr | str | None = Field(
+        default=None,
+        title="Field Label",
+        description="Overrides the label in the referenced definition if set.",
+    )
+
     params: dict[str, Any] | None = Field(
         default=None,
         title="Parameters",
         description="Parameters override. These values takes precedence over the ones in the definition itself.",
+    )
+
+    separator: str | None = Field(
+        default=None,
+        title="Field Separator",
+        description="Separator override for the referenced definition.",
+    )
+
+    visible: "InputVisibilityRules | None" = Field(
+        default=None,
+        title="Visibility Rules",
+        description="Visibility override for the referenced definition.",
+    )
+
+    encryption: "InputEncryptionParameters | None" = Field(
+        default=None,
+        title="Encryption Parameters",
+        description="Encryption override for the referenced definition.",
     )
 
 
@@ -489,9 +513,11 @@ class InputFieldDefinition(Model):
         "reference in device specific sections.",
     )
 
-    label: DescriptorPathStr | str = Field(
+    label: DescriptorPathStr | str | None = Field(
+        default=None,
         title="Field Label",
-        description="The label of the field, that will be displayed to the user in front of the formatted field value.",
+        description="The label of the field, that will be displayed to the user in front of the formatted field value. "
+        "Can be omitted when the field visibility is 'never' or 'mustBe'.",
     )
 
     format: FieldFormat | None = Field(

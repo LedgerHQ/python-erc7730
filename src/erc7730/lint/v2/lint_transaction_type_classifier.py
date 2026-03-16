@@ -107,7 +107,8 @@ class DisplayFormatChecker:
     def _collect_field_labels(cls, field: ResolvedField, labels: set[str]) -> None:
         match field:
             case ResolvedFieldDescription():
-                labels.add(field.label)
+                if field.label is not None:
+                    labels.add(field.label)
             case _:
                 # ResolvedFieldGroup — recurse into sub-fields
                 if hasattr(field, "fields"):
