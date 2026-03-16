@@ -454,6 +454,7 @@ def _convert_v2_param(
                     for input_source in input_sources:
                         if input_source.lower() == "local":
                             sources.append(TrustedNameSource.LOCAL_ADDRESS_BOOK)
+                            sources.append(TrustedNameSource.MULTISIG_ADDRESS_BOOK)
                         if input_source.lower() in set(TrustedNameSource):
                             sources.append(TrustedNameSource(input_source.lower()))
 
