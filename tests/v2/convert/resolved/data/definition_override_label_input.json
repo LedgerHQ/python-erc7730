@@ -1,0 +1,36 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "definition-override-label-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "definitions": {
+      "myField": {
+        "label": "Default Label"
+      }
+    },
+    "formats": {
+      "doSomething(uint256 param1)": {
+        "intent": "Do something",
+        "fields": [
+          {
+            "path": "param1",
+            "$ref": "$.display.definitions.myField",
+            "label": "Custom Label"
+          }
+        ]
+      }
+    }
+  }
+}

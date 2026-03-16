@@ -1,0 +1,38 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "no-label-visible-must-be-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner"
+  },
+  "display": {
+    "definitions": {
+      "constrainedField": {
+        "format": "raw"
+      }
+    },
+    "formats": {
+      "doSomething(uint256 param1)": {
+        "intent": "Do something",
+        "fields": [
+          {
+            "path": "param1",
+            "$ref": "$.display.definitions.constrainedField",
+            "visible": {
+              "mustBe": ["1", "2", "3"]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

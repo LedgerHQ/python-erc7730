@@ -3,6 +3,7 @@ from typing import Any
 
 from pydantic import TypeAdapter
 
+from erc7730.common.options import first_not_none
 from erc7730.common.output import OutputAdder
 from erc7730.common.pydantic import model_to_json_str
 from erc7730.convert.resolved.v2.constants import ConstantProvider
@@ -12,6 +13,7 @@ from erc7730.model.input.v2.display import (
     InputFieldDefinition,
     InputFieldParameters,
     InputReference,
+    InputVisibilityConditions,
 )
 from erc7730.model.input.v2.format import FieldFormat
 from erc7730.model.paths import DataPath, DescriptorPath, Field
@@ -40,10 +42,14 @@ def resolve_reference(
     if (definition := _get_definition(reference.ref, definitions, out)) is None:
         return None
 
-    if (label := definition.label) is None:
+    resolved_visible = _resolve_visibility(reference)
+
+    label = first_not_none(reference.label, definition.label)
+    if label is None and not is_field_hidden(resolved_visible):
         return out.error(
             title="Missing display field label",
-            message=f"Label must be defined on the referenced display field definition {reference.ref}.",
+            message=f"Label must be defined either on display field, or on the referenced display field definition "
+            f"{reference.ref}.",
         )
 
     params: dict[str, Any] = {}
@@ -62,20 +68,24 @@ def resolve_reference(
     if (value_or_path := resolve_field_value(prefix, reference, definition.format, constants, out)) is None:
         return None
 
+    encryption = first_not_none(reference.encryption, definition.encryption)
+
     # Build field dict for model_validate to handle aliases and discriminated unions
     field_dict: dict[str, Any] = {
-        "label": str(constants.resolve(label, out)),
+        "label": str(constants.resolve(label, out)) if label is not None else None,
         "format": FieldFormat(definition.format) if definition.format is not None else None,
+        "visible": resolved_visible,
+        "separator": reference.separator,
     }
 
     if resolved_params is not None:
         field_dict["params"] = resolved_params.model_dump(by_alias=True, exclude_none=True)
 
-    if definition.encryption is not None:
+    if encryption is not None:
         resolved_encryption = ResolvedEncryptionParameters(
-            scheme=definition.encryption.scheme,
-            plaintextType=definition.encryption.plaintextType,
-            fallbackLabel=definition.encryption.fallbackLabel,
+            scheme=encryption.scheme,
+            plaintextType=encryption.plaintextType,
+            fallbackLabel=encryption.fallbackLabel,
         )
         field_dict["encryption"] = resolved_encryption.model_dump(by_alias=True, exclude_none=True)
 
@@ -86,6 +96,27 @@ def resolve_reference(
         field_dict["value"] = value_or_path.value
 
     return ResolvedFieldDescription.model_validate(field_dict)
+
+
+def is_field_hidden(resolved_visible: str | dict[str, Any] | None) -> bool:
+    """Check whether resolved visibility rules make the field hidden (never displayed)."""
+    return resolved_visible == "never" or (isinstance(resolved_visible, dict) and "mustBe" in resolved_visible)
+
+
+def _resolve_visibility(reference: InputReference) -> str | dict[str, Any] | None:
+    """Resolve visibility rules from reference override, converting model to dict for discriminator compatibility."""
+    if reference.visible is None:
+        return None
+    if isinstance(reference.visible, str):
+        return reference.visible
+    if isinstance(reference.visible, InputVisibilityConditions):
+        visibility_dict: dict[str, Any] = {}
+        if reference.visible.ifNotIn is not None:
+            visibility_dict["ifNotIn"] = reference.visible.ifNotIn
+        if reference.visible.mustBe is not None:
+            visibility_dict["mustBe"] = reference.visible.mustBe
+        return visibility_dict
+    return None
 
 
 def _get_definition(

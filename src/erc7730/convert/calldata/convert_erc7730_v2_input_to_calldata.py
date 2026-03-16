@@ -79,6 +79,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldGroup,
     ResolvedFormat,
     ResolvedNftNameParameters,
+    ResolvedVisibilityConditions,
 )
 from erc7730.model.types import Address, HexStr, ScalarType, Selector
 
@@ -275,6 +276,16 @@ def _convert_v2_field(
         # Skip hidden fields (v2 equivalent of v1 "excluded" fields)
         if field.visible == "never":
             return []
+        if field.label is None:
+            if isinstance(field.visible, ResolvedVisibilityConditions) and field.visible.mustBe is not None:
+                return out.error(
+                    title="Unsupported visible value",
+                    message="Fields with mustBe visibility conditions are not supported in calldata conversion.",
+                )
+            return out.error(
+                title="Missing field label",
+                message="Field label is mandatory for calldata conversion.",
+            )
         if (param := _convert_v2_param(abi=abi, field=field, enums=enums, out=out)) is None:
             return None
         return [CalldataDescriptorInstructionFieldV1(name=field.label, param=param)]
