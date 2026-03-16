@@ -339,6 +339,14 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         else:
             resolved_visible = definition.visible
 
+        from erc7730.convert.resolved.v2.references import _is_field_hidden
+
+        if definition.label is None and not _is_field_hidden(resolved_visible):
+            return out.error(
+                title="Missing display field label",
+                message=f"Label must be defined on the display field for path \"{definition.path}\".",
+            )
+
         # In v2, value_or_path is a ResolvedValue (ResolvedValuePath | ResolvedValueConstant)
         # Convert to v2's simpler path/value model
         # Convert params/encryption to dicts so discriminated unions work properly
@@ -352,7 +360,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         field_dict: dict[str, Any] = {
             "$id": definition.id,
             "visible": resolved_visible,
-            "label": constants.resolve(definition.label, out),
+            "label": constants.resolve(definition.label, out) if definition.label is not None else None,
             "format": FieldFormat(definition.format) if definition.format is not None else None,
             "params": params_dict,
             "separator": definition.separator,

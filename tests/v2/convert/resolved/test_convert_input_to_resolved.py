@@ -125,6 +125,36 @@ UPDATE_REFERENCES = False
             label="nft name with collection path",
             description="using nft name format with collectionPath resolved as ResolvedValue path",
         ),
+        TestCase(
+            id="definition_override_label",
+            label="definition override - label",
+            description="reference overrides definition label via $ref",
+        ),
+        TestCase(
+            id="definition_override_separator",
+            label="definition override - separator",
+            description="reference adds separator override via $ref",
+        ),
+        TestCase(
+            id="definition_override_visible",
+            label="definition override - visible",
+            description="reference adds visibility override via $ref",
+        ),
+        TestCase(
+            id="definition_override_encryption",
+            label="definition override - encryption",
+            description="reference overrides definition encryption via $ref",
+        ),
+        TestCase(
+            id="definition_no_label_visible_never",
+            label="definition without label - visible never",
+            description="definition without label is allowed when reference sets visible to never",
+        ),
+        TestCase(
+            id="definition_no_label_visible_must_be",
+            label="definition without label - visible mustBe",
+            description="definition without label is allowed when reference sets visible with mustBe condition",
+        ),
     ],
     ids=case_id,
 )
