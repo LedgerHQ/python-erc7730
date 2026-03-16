@@ -377,9 +377,11 @@ class ResolvedFieldDefinition(Model):
         "reference in device specific sections.",
     )
 
-    label: str = Field(
+    label: str | None = Field(
+        default=None,
         title="Field Label",
-        description=("The resolved label of the field, displayed to the user in front of the formatted field value."),
+        description="The resolved label of the field, displayed to the user in front of the formatted field value. "
+        "Can be None when the field visibility is 'never' or 'mustBe'.",
     )
 
     format: FieldFormat | None = Field(
