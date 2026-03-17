@@ -67,6 +67,31 @@ from erc7730.model.abi import Component, Function, InputOutput
             "mixed(bytes32[][] data, (address a,uint256 b)[][] _tuples, string name)",
             "mixed(bytes32[][],(address,uint256)[][],string)",
         ),
+        # fixed-size arrays
+        (
+            "exchange(address[11] _route, uint256[5][5] _swap_params, uint256 _amount, uint256 _min_dy)",
+            "exchange(address[11],uint256[5][5],uint256,uint256)",
+        ),
+        # fixed-size array single dimension
+        (
+            "foo(uint256[3] values)",
+            "foo(uint256[3])",
+        ),
+        # mixed fixed and dynamic arrays
+        (
+            "bar(address[5] addrs, uint256[] amounts, bytes32[2][] pairs)",
+            "bar(address[5],uint256[],bytes32[2][])",
+        ),
+        # fixed-size array of tuples
+        (
+            "baz((uint256,address)[3] items)",
+            "baz((uint256,address)[3])",
+        ),
+        # higher-dimensional fixed-size arrays
+        (
+            "multi(uint256[2][3][4] cube)",
+            "multi(uint256[2][3][4])",
+        ),
     ],
 )
 def test_reduce_signature(signature: str, expected: str) -> None:
