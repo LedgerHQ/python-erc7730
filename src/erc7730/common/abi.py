@@ -22,7 +22,7 @@ _SIGNATURE_PARSER = parser = Lark(
             named_param: type identifier?
             named_tuple:  tuple array* identifier?
 
-            array: "[]"
+            array: "[]" | "[" /[0-9]+/ "]"
             identifier: /[a-zA-Z$_][a-zA-Z0-9$_]*/
             type: identifier array*
 
@@ -61,8 +61,8 @@ class FunctionTransformer(Transformer_InPlaceRecursive):
 
         # Separate arrays from name
         # Arrays are "[]", name is anything else
-        arrays = [elem for elem in ast[1:] if elem == "[]"]
-        names = [elem for elem in ast[1:] if elem != "[]"]
+        arrays = [elem for elem in ast[1:] if isinstance(elem, str) and elem.startswith("[")]
+        names = [elem for elem in ast[1:] if not (isinstance(elem, str) and elem.startswith("["))]
 
         # Build type with array suffixes
         type_str = "tuple" + "".join(arrays)
@@ -73,6 +73,8 @@ class FunctionTransformer(Transformer_InPlaceRecursive):
         return Component(name=name, type=type_str, components=components)
 
     def array(self, ast: Any) -> str:
+        if ast:
+            return f"[{ast[0]}]"
         return "[]"
 
     def identifier(self, ast: Any) -> str:
