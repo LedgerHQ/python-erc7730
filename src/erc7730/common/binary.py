@@ -31,7 +31,7 @@ def tlv(tag: int | IntEnum, value: bytes | str | None = None) -> bytes:
 
 
 def length_value(
-    value: bytes | str | None,
+    value: bytes | bytearray | str | None,
 ) -> bytes:
     """
     Prepend the length (DER encoded) of the value encoded to the value itself.
@@ -46,8 +46,8 @@ def length_value(
     if value is None:
         return (0).to_bytes(1, "big")
     match value:
-        case bytes():
-            value_encoded = value
+        case bytes() | bytearray():
+            value_encoded = bytes(value)
         case str():
             value_encoded = value.encode("ascii", errors="strict")
     return der_encode_int(len(value_encoded)) + value_encoded
