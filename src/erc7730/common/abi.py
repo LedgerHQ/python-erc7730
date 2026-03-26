@@ -152,7 +152,7 @@ def get_functions(abis: list[ABI], *, include_read_only: bool = False) -> Functi
     return functions
 
 
-_ENCODE_TYPE_RE = re.compile(r"(\w+)\(([^)]*)\)")
+_ENCODE_TYPE_RE = re.compile(r"([\w:]+)\(([^)]*)\)")
 
 
 def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, str]]]]:
