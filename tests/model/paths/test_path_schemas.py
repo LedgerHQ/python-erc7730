@@ -92,6 +92,51 @@ def test_compute_abi_paths_multidimensional_tuple() -> None:
     assert compute_abi_schema_paths(abi) == expected
 
 
+def test_compute_abi_paths_with_fixed_size_arrays() -> None:
+    abi = Function(
+        name="exchange",
+        inputs=[
+            InputOutput(name="_route", type="address[11]"),
+            InputOutput(name="_swap_params", type="uint256[5][5]"),
+            InputOutput(name="_amount", type="uint256"),
+            InputOutput(name="_pools", type="address[5]"),
+        ],
+    )
+    expected = {
+        to_path("#._route"),
+        to_path("#._route.[]"),
+        to_path("#._swap_params"),
+        to_path("#._swap_params.[].[]"),
+        to_path("#._amount"),
+        to_path("#._pools"),
+        to_path("#._pools.[]"),
+    }
+    assert compute_abi_schema_paths(abi) == expected
+
+
+def test_compute_abi_paths_with_fixed_size_array_of_tuples() -> None:
+    abi = Function(
+        name="batch",
+        inputs=[
+            InputOutput(
+                name="items",
+                type="tuple[3]",
+                components=[
+                    Component(name="to", type="address"),
+                    Component(name="amount", type="uint256"),
+                ],
+            )
+        ],
+    )
+    expected = {
+        to_path("#.items"),
+        to_path("#.items.[]"),
+        to_path("#.items.[].to"),
+        to_path("#.items.[].amount"),
+    }
+    assert compute_abi_schema_paths(abi) == expected
+
+
 def test_compute_eip712_paths_with_slicable_params() -> None:
     schema = EIP712Schema(
         primaryType="Foo",
