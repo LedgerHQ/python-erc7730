@@ -15,6 +15,7 @@ from erc7730.common.output import OutputAdder
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.lint.v2.path_schemas import compute_format_schema_paths
 from erc7730.model.paths import DataPath
+from erc7730.model.paths.path_ops import data_path_starts_with
 from erc7730.model.paths.path_schemas import compute_abi_schema_paths
 from erc7730.model.resolved.v2.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
@@ -101,21 +102,27 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             format_paths = compute_format_schema_paths(fmt)
             abi_paths = abi_paths_by_selector[selector]
 
-            # Check for display fields referencing non-existent ABI paths
+            # Check for display fields referencing non-existent ABI paths.
+            # A format path is valid if it matches an ABI path exactly OR is a prefix of one
+            # (e.g. defining a field for an array root covers all nested elements).
             for path in format_paths.data_paths - abi_paths:
-                out.error(
-                    title="Invalid display field",
-                    message=f"A display field is defined for `{path}`, but it does not exist in function "
-                    f"{selector} ABI (see {explorer_url}). Please check the field path is valid.",
-                )
+                if not any(data_path_starts_with(abi_path, path) for abi_path in abi_paths):
+                    out.error(
+                        title="Invalid display field",
+                        message=f"A display field is defined for `{path}`, but it does not exist in function "
+                        f"{selector} ABI (see {explorer_url}). Please check the field path is valid.",
+                    )
 
-            # Check for ABI paths without corresponding display fields
+            # Check for ABI paths without corresponding display fields.
+            # An ABI path is covered if it matches a format path exactly OR a format path is a prefix of it
+            # (e.g. a field defined for an array root covers all descendant paths).
             for path in abi_paths - format_paths.data_paths:
-                out.warning(
-                    title="Missing display field",
-                    message=f"No display field is defined for path `{path}` in function {selector} "
-                    f"(see {explorer_url}).",
-                )
+                if not any(data_path_starts_with(path, fmt_path) for fmt_path in format_paths.data_paths):
+                    out.warning(
+                        title="Missing display field",
+                        message=f"No display field is defined for path `{path}` in function {selector} "
+                        f"(see {explorer_url}).",
+                    )
 
         # Check selector exhaustiveness: all ABI functions should have display formats
         for selector, abi in reference_abis.functions.items():
