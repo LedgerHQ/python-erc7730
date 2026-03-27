@@ -85,6 +85,6 @@ def lint_file(path: Path, linter: ERC7730Linter, out: OutputAdder, show_as: Path
 
     with BufferAdder(file_out, prolog=f"➡️ checking [bold]{label}[/bold]…", epilog="") as out, ExceptionsToOutput(out):
         input_descriptor = InputERC7730Descriptor.load(path)
-        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, out)
+        resolved_descriptor = ERC7730InputToResolved().convert(input_descriptor, out, strict_maps=False)
         if resolved_descriptor is not None:
             linter.lint(resolved_descriptor, out)
