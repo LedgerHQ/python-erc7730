@@ -9,6 +9,7 @@ from erc7730.common.pydantic import model_to_json_str
 from erc7730.convert.resolved.v2.constants import ConstantProvider
 from erc7730.convert.resolved.v2.parameters import resolve_field_parameters
 from erc7730.convert.resolved.v2.values import resolve_field_value
+from erc7730.model.input.v2.common import InputMapReference
 from erc7730.model.input.v2.display import (
     InputFieldDefinition,
     InputFieldParameters,
@@ -38,6 +39,8 @@ def resolve_reference(
     enums: dict[Id, EnumDefinition],
     constants: ConstantProvider,
     out: OutputAdder,
+    *,
+    strict_maps: bool = False,
 ) -> ResolvedField | None:
     if (definition := _get_definition(reference.ref, definitions, out)) is None:
         return None
@@ -62,17 +65,37 @@ def resolve_reference(
 
     if params:
         input_params: InputFieldParameters = TypeAdapter(InputFieldParameters).validate_json(json.dumps(params))
-        if (resolved_params := resolve_field_parameters(prefix, input_params, enums, constants, out)) is None:
+        if (
+            resolved_params := resolve_field_parameters(
+                prefix, input_params, enums, constants, out, strict_maps=strict_maps
+            )
+        ) is None:
             return None
 
-    if (value_or_path := resolve_field_value(prefix, reference, definition.format, constants, out)) is None:
+    if (
+        value_or_path := resolve_field_value(
+            prefix, reference, definition.format, constants, out, strict_maps=strict_maps
+        )
+    ) is None:
         return None
 
     encryption = first_not_none(reference.encryption, definition.encryption)
 
-    # Build field dict for model_validate to handle aliases and discriminated unions
+    resolved_label: str | None = None
+    if label is not None:
+        if isinstance(label, InputMapReference):
+            constants.resolve_map_reference(prefix, label, out)
+            if strict_maps:
+                return out.error(
+                    title="Unsupported map reference",
+                    message=f"Map references are not yet supported for label. Map at {label.map} with "
+                    f"keyPath {label.keyPath} cannot be resolved.",
+                )
+        else:
+            resolved_label = str(constants.resolve(label, out))
+
     field_dict: dict[str, Any] = {
-        "label": str(constants.resolve(label, out)) if label is not None else None,
+        "label": resolved_label,
         "format": FieldFormat(definition.format) if definition.format is not None else None,
         "visible": resolved_visible,
         "separator": reference.separator,

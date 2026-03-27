@@ -9,6 +9,8 @@ from pydantic import Field
 from pydantic_string_url import HttpUrl
 
 from erc7730.model.base import Model
+from erc7730.model.input.path import DescriptorPathStr
+from erc7730.model.input.v2.common import InputMapReference
 from erc7730.model.types import Id, MixedCaseAddress
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
@@ -21,9 +23,13 @@ class InputDomain(Model):
     Each value of the domain constraint MUST match the corresponding eip 712 message domain value.
     """
 
-    name: str | None = Field(default=None, title="Name", description="The EIP-712 domain name.")
+    name: DescriptorPathStr | str | InputMapReference | None = Field(
+        default=None, title="Name", description="The EIP-712 domain name."
+    )
 
-    version: str | None = Field(default=None, title="Version", description="The EIP-712 version.")
+    version: DescriptorPathStr | str | InputMapReference | None = Field(
+        default=None, title="Version", description="The EIP-712 version."
+    )
 
     chainId: int | None = Field(default=None, title="Chain ID", description="The EIP-155 chain id.")
 

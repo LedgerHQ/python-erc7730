@@ -8,8 +8,9 @@ from typing_extensions import TypeVar
 from erc7730.common.output import OutputAdder
 from erc7730.common.properties import get_property
 from erc7730.model.input.path import ContainerPathStr, DataPathStr
+from erc7730.model.input.v2.common import InputMapReference
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
-from erc7730.model.input.v2.display import InputMapReference
+from erc7730.model.input.v2.metadata import InputMapDefinition
 from erc7730.model.paths import ROOT_DESCRIPTOR_PATH, ArrayElement, ContainerPath, DataPath, DescriptorPath, Field
 from erc7730.model.paths.path_ops import descriptor_path_append, to_absolute
 from erc7730.model.types import MixedCaseAddress
@@ -196,37 +197,25 @@ class DefaultConstantProvider(ConstantProvider):
     @override
     def resolve_map_reference(self, prefix: DataPath, map_ref: InputMapReference, out: OutputAdder) -> Any:
         """
-        Resolve a map reference to its value by looking up the map and resolving the keyPath.
+        Validate a map reference: check that the map path resolves to a valid map definition in metadata.maps,
+        and that the keyPath is a valid data/container path.
 
         :param prefix: current path prefix
         :param map_ref: map reference with map descriptor path and keyPath
         :param out: error handler
-        :return: resolved value from map, or None if not found
+        :return: the map reference if valid, or None if validation fails
         """
-        # Get the map definition
         if (map_def := self.get(map_ref.map, out)) is None:
-            return out.error(
-                title="Invalid map reference",
-                message=f"Map at {map_ref.map} does not exist.",
-            )
-
-        # Ensure map has the expected structure
-        if not hasattr(map_def, "values") or not isinstance(map_def.values, dict):
-            return out.error(
-                title="Invalid map reference",
-                message=f"Map at {map_ref.map} is not a valid map definition.",
-            )
-
-        # Resolve the key path to get the key value
-        if (self.resolve_path(map_ref.keyPath, out)) is None:
             return None
 
-        # For map references, the key path is either a DataPath or ContainerPath
-        # We can't actually resolve the runtime value here during conversion,
-        # so we store the path for runtime resolution. However, for constant validation
-        # we could check if it's a constant path.
-        # Since this is input-to-resolved conversion, we pass through the structure.
-        # The actual key lookup happens at display time, not conversion time.
+        if not isinstance(map_def, InputMapDefinition):
+            return out.error(
+                title="Invalid map reference",
+                message=f"Map at {map_ref.map} is not a valid map definition (expected a map object, "
+                f"got {type(map_def).__name__}).",
+            )
 
-        # Return the map reference as-is for the resolved model to handle at runtime
+        if self.resolve_path(map_ref.keyPath, out) is None:
+            return None
+
         return map_ref

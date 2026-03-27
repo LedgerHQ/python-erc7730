@@ -15,6 +15,7 @@ from erc7730.model.display import (
     FormatBase,
 )
 from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
+from erc7730.model.input.v2.common import InputMapReference
 from erc7730.model.input.v2.format import DateEncoding, FieldFormat
 from erc7730.model.input.v2.unions import (
     field_discriminator,
@@ -56,22 +57,6 @@ InputVisibilityRules = Annotated[
 ]
 
 
-class InputMapReference(Model):
-    """
-    A reference to a map for dynamic value resolution.
-    """
-
-    map: DescriptorPathStr = Field(
-        title="Map Reference",
-        description="The path to the referenced map.",
-    )
-
-    keyPath: DescriptorPathStr | DataPathStr | ContainerPathStr = Field(
-        title="Key Path",
-        description="The path to the key used to resolve a value in the referenced map.",
-    )
-
-
 class InputFieldBase(Model):
     """
     A field formatter, containing formatting information of a single field in a message.
@@ -84,7 +69,7 @@ class InputFieldBase(Model):
         """to extract the field value from the structured data. Exactly one of "path" or "value" must be set.""",
     )
 
-    value: DescriptorPathStr | ScalarType | None = Field(
+    value: DescriptorPathStr | ScalarType | InputMapReference | None = Field(
         default=None,
         title="Value",
         description="A literal value on which the format should be applied instead of looking up a field in the "
@@ -115,7 +100,7 @@ class InputReference(InputFieldBase):
         "key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
     )
 
-    label: DescriptorPathStr | str | None = Field(
+    label: DescriptorPathStr | str | InputMapReference | None = Field(
         default=None,
         title="Field Label",
         description="Overrides the label in the referenced definition if set.",
@@ -170,23 +155,23 @@ class InputTokenAmountParameters(Model):
         ),
     )
 
-    nativeCurrencyAddress: list[DescriptorPathStr | MixedCaseAddress] | DescriptorPathStr | MixedCaseAddress | None = (
-        Field(
-            default=None,
-            title="Native Currency Address",
-            description="An address or array of addresses, any of which are interpreted as an amount in native "
-            "currency rather than a token.",
-        )
+    nativeCurrencyAddress: (
+        list[DescriptorPathStr | MixedCaseAddress] | DescriptorPathStr | MixedCaseAddress | InputMapReference | None
+    ) = Field(
+        default=None,
+        title="Native Currency Address",
+        description="An address or array of addresses, any of which are interpreted as an amount in native "
+        "currency rather than a token.",
     )
 
-    threshold: DescriptorPathStr | HexStr | int | None = Field(
+    threshold: DescriptorPathStr | HexStr | int | InputMapReference | None = Field(
         default=None,
         title="Unlimited Threshold",
         description="The threshold above which the amount should be displayed using the message parameter rather than "
         "the real amount (encoded as an int or byte array).",
     )
 
-    message: DescriptorPathStr | str | None = Field(
+    message: DescriptorPathStr | str | InputMapReference | None = Field(
         default=None,
         title="Unlimited Message",
         description="The message to display when the amount is above the threshold.",
@@ -513,7 +498,7 @@ class InputFieldDefinition(Model):
         "reference in device specific sections.",
     )
 
-    label: DescriptorPathStr | str | None = Field(
+    label: DescriptorPathStr | str | InputMapReference | None = Field(
         default=None,
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value. "
@@ -628,7 +613,7 @@ class InputFormat(FormatBase):
     in a single type of message (v2).
     """
 
-    interpolatedIntent: str | None = Field(
+    interpolatedIntent: DescriptorPathStr | str | InputMapReference | None = Field(
         default=None,
         title="Interpolated Intent Message",
         description=(

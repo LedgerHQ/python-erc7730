@@ -16,6 +16,7 @@ from erc7730.convert.resolved.v2.constants import ConstantProvider, DefaultConst
 from erc7730.convert.resolved.v2.parameters import resolve_field_parameters
 from erc7730.convert.resolved.v2.references import is_field_hidden, resolve_reference
 from erc7730.convert.resolved.v2.values import resolve_field_value
+from erc7730.model.input.v2.common import InputMapReference
 from erc7730.model.input.v2.context import (
     InputContract,
     InputContractContext,
@@ -37,7 +38,16 @@ from erc7730.model.input.v2.display import (
 )
 from erc7730.model.input.v2.format import FieldFormat
 from erc7730.model.input.v2.metadata import InputMetadata
-from erc7730.model.paths import ROOT_DATA_PATH, Array, ArrayElement, ArraySlice, ContainerPath, DataPath, Field
+from erc7730.model.paths import (
+    ROOT_DATA_PATH,
+    Array,
+    ArrayElement,
+    ArraySlice,
+    ContainerPath,
+    DataPath,
+    DescriptorPath,
+    Field,
+)
 from erc7730.model.paths.path_ops import data_path_concat
 from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.metadata import EnumDefinition
@@ -79,15 +89,23 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
     """
 
     @override
-    def convert(self, descriptor: InputERC7730Descriptor, out: OutputAdder) -> ResolvedERC7730Descriptor | None:
+    def convert(
+        self, descriptor: InputERC7730Descriptor, out: OutputAdder, *, strict_maps: bool = False
+    ) -> ResolvedERC7730Descriptor | None:
         with ExceptionsToOutput(out):
             constants = DefaultConstantProvider(descriptor)
 
-            if (context := self._resolve_context(descriptor.context, out)) is None:
+            if (context := self._resolve_context(descriptor.context, constants, out, strict_maps=strict_maps)) is None:
                 return None
-            if (metadata := self._resolve_metadata(descriptor.metadata, out)) is None:
+            if (
+                metadata := self._resolve_metadata(descriptor.metadata, constants, out, strict_maps=strict_maps)
+            ) is None:
                 return None
-            if (display := self._resolve_display(descriptor.display, context, metadata.enums, constants, out)) is None:
+            if (
+                display := self._resolve_display(
+                    descriptor.display, context, metadata.enums, constants, out, strict_maps=strict_maps
+                )
+            ) is None:
                 return None
 
             return ResolvedERC7730Descriptor.model_validate(
@@ -105,18 +123,30 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
     @classmethod
     def _resolve_context(
-        cls, context: InputContractContext | InputEIP712Context, out: OutputAdder
+        cls,
+        context: InputContractContext | InputEIP712Context,
+        constants: ConstantProvider,
+        out: OutputAdder,
+        *,
+        strict_maps: bool = False,
     ) -> ResolvedContractContext | ResolvedEIP712Context | None:
         match context:
             case InputContractContext():
                 return cls._resolve_context_contract(context, out)
             case InputEIP712Context():
-                return cls._resolve_context_eip712(context, out)
+                return cls._resolve_context_eip712(context, constants, out, strict_maps=strict_maps)
             case _:
                 assert_never(context)
 
     @classmethod
-    def _resolve_metadata(cls, metadata: InputMetadata, out: OutputAdder) -> ResolvedMetadata | None:
+    def _resolve_metadata(
+        cls,
+        metadata: InputMetadata,
+        constants: ConstantProvider,
+        out: OutputAdder,
+        *,
+        strict_maps: bool = False,
+    ) -> ResolvedMetadata | None:
         resolved_enums = {}
         if metadata.enums is not None:
             for enum_id, enum in metadata.enums.items():
@@ -130,7 +160,6 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                     {"$keyType": map_def.keyType, "values": map_def.values}
                 )
 
-        # Convert InputOwnerInfo to ResolvedOwnerInfo if present
         resolved_info = None
         if metadata.info is not None:
             resolved_info = ResolvedOwnerInfo(
@@ -140,9 +169,20 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 url=metadata.info.url,
             )
 
+        resolved_owner = cls._resolve_string_or_map(
+            metadata.owner, "owner", constants, out, strict_maps=strict_maps, allow_data_path_in_key=False
+        )
+        if strict_maps and isinstance(metadata.owner, InputMapReference):
+            return None
+        resolved_contract_name = cls._resolve_string_or_map(
+            metadata.contractName, "contractName", constants, out, strict_maps=strict_maps, allow_data_path_in_key=False
+        )
+        if strict_maps and isinstance(metadata.contractName, InputMapReference):
+            return None
+
         return ResolvedMetadata(
-            owner=metadata.owner,
-            contractName=metadata.contractName,
+            owner=resolved_owner,
+            contractName=resolved_contract_name,
             info=resolved_info,
             token=metadata.token,
             constants=metadata.constants,
@@ -165,6 +205,43 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 return enum
             case _:
                 assert_never(enum)
+
+    @classmethod
+    def _resolve_string_or_map(
+        cls,
+        value: DescriptorPath | str | InputMapReference | None,
+        field_name: str,
+        constants: ConstantProvider,
+        out: OutputAdder,
+        *,
+        strict_maps: bool = False,
+        allow_data_path_in_key: bool = True,
+    ) -> str | None:
+        """Resolve a string field that may be a literal, a constant reference, or a map reference.
+
+        :param allow_data_path_in_key: if False, reject structured data paths (#.) in the map keyPath.
+            Should be False for fields in the context and metadata sections where data paths have no meaning.
+        """
+        if value is None:
+            return None
+        if isinstance(value, InputMapReference):
+            if not allow_data_path_in_key and isinstance(value.keyPath, DataPath):
+                out.error(
+                    title="Invalid map keyPath",
+                    message=f"Map reference for {field_name} uses a structured data path "
+                    f'"{value.keyPath}" as keyPath, but structured data paths are not valid in '
+                    "context/metadata sections. Use a container path (@.) or descriptor path ($.) instead.",
+                )
+            constants.resolve_map_reference(ROOT_DATA_PATH, value, out)
+            if strict_maps:
+                out.error(
+                    title="Unsupported map reference",
+                    message=f"Map references are not yet supported for {field_name}. Map at {value.map} with "
+                    f"keyPath {value.keyPath} cannot be resolved.",
+                )
+            return None
+        resolved = constants.resolve(value, out)
+        return str(resolved) if resolved is not None else None
 
     @classmethod
     def _resolve_context_contract(
@@ -214,17 +291,31 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         return ResolvedFactory(deployments=deployments, deployEvent=factory.deployEvent)
 
     @classmethod
-    def _resolve_context_eip712(cls, context: InputEIP712Context, out: OutputAdder) -> ResolvedEIP712Context | None:
-        if (eip712 := cls._resolve_eip712(context.eip712, out)) is None:
+    def _resolve_context_eip712(
+        cls,
+        context: InputEIP712Context,
+        constants: ConstantProvider,
+        out: OutputAdder,
+        *,
+        strict_maps: bool = False,
+    ) -> ResolvedEIP712Context | None:
+        if (eip712 := cls._resolve_eip712(context.eip712, constants, out, strict_maps=strict_maps)) is None:
             return None
 
         return ResolvedEIP712Context.model_validate({"$id": context.id, "eip712": eip712})
 
     @classmethod
-    def _resolve_eip712(cls, eip712: InputEIP712, out: OutputAdder) -> ResolvedEIP712 | None:
+    def _resolve_eip712(
+        cls,
+        eip712: InputEIP712,
+        constants: ConstantProvider,
+        out: OutputAdder,
+        *,
+        strict_maps: bool = False,
+    ) -> ResolvedEIP712 | None:
         if eip712.domain is None:
             domain = None
-        elif (domain := cls._resolve_domain(eip712.domain, out)) is None:
+        elif (domain := cls._resolve_domain(eip712.domain, constants, out, strict_maps=strict_maps)) is None:
             return None
 
         # Note: In v2, schemas field is deprecated and ignored during resolution
@@ -238,10 +329,28 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         )
 
     @classmethod
-    def _resolve_domain(cls, domain: InputDomain, out: OutputAdder) -> ResolvedDomain | None:
+    def _resolve_domain(
+        cls,
+        domain: InputDomain,
+        constants: ConstantProvider,
+        out: OutputAdder,
+        *,
+        strict_maps: bool = False,
+    ) -> ResolvedDomain | None:
+        resolved_name = cls._resolve_string_or_map(
+            domain.name, "domain.name", constants, out, strict_maps=strict_maps, allow_data_path_in_key=False
+        )
+        if strict_maps and isinstance(domain.name, InputMapReference):
+            return None
+        resolved_version = cls._resolve_string_or_map(
+            domain.version, "domain.version", constants, out, strict_maps=strict_maps, allow_data_path_in_key=False
+        )
+        if strict_maps and isinstance(domain.version, InputMapReference):
+            return None
+
         return ResolvedDomain(
-            name=domain.name,
-            version=domain.version,
+            name=resolved_name,
+            version=resolved_version,
             chainId=domain.chainId,
             verifyingContract=None if domain.verifyingContract is None else Address(domain.verifyingContract),
             salt=domain.salt,
@@ -255,6 +364,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition] | None,
         constants: ConstantProvider,
         out: OutputAdder,
+        *,
+        strict_maps: bool = False,
     ) -> ResolvedDisplay | None:
         definitions = display.definitions or {}
         enums = enums or {}
@@ -262,7 +373,11 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         for format_id, format in display.formats.items():
             if (resolved_format_id := cls._resolve_format_id(format_id, context, out)) is None:
                 return None
-            if (resolved_format := cls._resolve_format(format, definitions, enums, constants, out)) is None:
+            if (
+                resolved_format := cls._resolve_format(
+                    format, definitions, enums, constants, out, strict_maps=strict_maps
+                )
+            ) is None:
                 return None
             if resolved_format_id in formats:
                 return out.error(
@@ -281,6 +396,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
+        *,
+        strict_maps: bool = False,
     ) -> ResolvedFieldDescription | None:
         match definition.format:
             case None | FieldFormat.RAW | FieldFormat.AMOUNT | FieldFormat.TOKEN_AMOUNT | FieldFormat.DURATION:
@@ -306,9 +423,13 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             case _:
                 assert_never(definition.format)
 
-        params = resolve_field_parameters(prefix, definition.params, enums, constants, out)
+        params = resolve_field_parameters(prefix, definition.params, enums, constants, out, strict_maps=strict_maps)
 
-        if (value_or_path := resolve_field_value(prefix, definition, definition.format, constants, out)) is None:
+        if (
+            value_or_path := resolve_field_value(
+                prefix, definition, definition.format, constants, out, strict_maps=strict_maps
+            )
+        ) is None:
             return None
 
         # Convert InputEncryptionParameters to ResolvedEncryptionParameters if present
@@ -339,16 +460,32 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         else:
             resolved_visible = definition.visible
 
-        if definition.label is None and not is_field_hidden(resolved_visible):
+        resolved_label: str | None = None
+        if definition.label is not None:
+            if isinstance(definition.label, InputMapReference):
+                constants.resolve_map_reference(prefix, definition.label, out)
+                if strict_maps:
+                    return out.error(
+                        title="Unsupported map reference",
+                        message=f"Map references are not yet supported for label. Map at {definition.label.map} "
+                        f"with keyPath {definition.label.keyPath} cannot be resolved.",
+                    )
+            else:
+                resolved_label = constants.resolve(definition.label, out)
+
+        if (
+            resolved_label is None
+            and not is_field_hidden(resolved_visible)
+            and (definition.label is None or not isinstance(definition.label, InputMapReference))
+        ):
             return out.error(
                 title="Missing display field label",
                 message=f'Label must be defined on the display field for path "{definition.path}".',
             )
 
-        # In v2, value_or_path is a ResolvedValue (ResolvedValuePath | ResolvedValueConstant)
-        # Convert to v2's simpler path/value model
-        # Convert params/encryption to dicts so discriminated unions work properly
         params_dict = params.model_dump(by_alias=True, exclude_none=True) if params is not None else None
+        if params_dict is not None and not params_dict:
+            params_dict = None
         encryption_dict = (
             resolved_encryption.model_dump(by_alias=True, exclude_none=True)
             if resolved_encryption is not None
@@ -358,7 +495,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         field_dict: dict[str, Any] = {
             "$id": definition.id,
             "visible": resolved_visible,
-            "label": constants.resolve(definition.label, out) if definition.label is not None else None,
+            "label": resolved_label,
             "format": FieldFormat(definition.format) if definition.format is not None else None,
             "params": params_dict,
             "separator": definition.separator,
@@ -412,15 +549,27 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
+        *,
+        strict_maps: bool = False,
     ) -> ResolvedFormat | None:
-        if (fields := cls._resolve_fields(ROOT_DATA_PATH, format.fields, definitions, enums, constants, out)) is None:
+        if (
+            fields := cls._resolve_fields(
+                ROOT_DATA_PATH, format.fields, definitions, enums, constants, out, strict_maps=strict_maps
+            )
+        ) is None:
+            return None
+
+        resolved_interpolated_intent = cls._resolve_string_or_map(
+            format.interpolatedIntent, "interpolatedIntent", constants, out, strict_maps=strict_maps
+        )
+        if strict_maps and isinstance(format.interpolatedIntent, InputMapReference):
             return None
 
         return ResolvedFormat.model_validate(
             {
                 "$id": format.id,
                 "intent": format.intent,
-                "interpolatedIntent": format.interpolatedIntent,
+                "interpolatedIntent": resolved_interpolated_intent,
                 "fields": [f.model_dump(by_alias=True, exclude_none=True) for f in fields],
             }
         )
@@ -434,10 +583,16 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
+        *,
+        strict_maps: bool = False,
     ) -> list[ResolvedField] | None:
         resolved_fields = []
         for input_format in fields:
-            if (resolved_field := cls._resolve_field(prefix, input_format, definitions, enums, constants, out)) is None:
+            if (
+                resolved_field := cls._resolve_field(
+                    prefix, input_format, definitions, enums, constants, out, strict_maps=strict_maps
+                )
+            ) is None:
                 return None
             resolved_fields.extend(resolved_field)
         return resolved_fields
@@ -451,20 +606,32 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
+        *,
+        strict_maps: bool = False,
     ) -> list[ResolvedField] | None:
         resolved_fields: list[ResolvedField] = []
         match field:
             case InputReference():
-                if (resolved_field := resolve_reference(prefix, field, definitions, enums, constants, out)) is None:
+                if (
+                    resolved_field := resolve_reference(
+                        prefix, field, definitions, enums, constants, out, strict_maps=strict_maps
+                    )
+                ) is None:
                     return None
                 resolved_fields.append(resolved_field)
             case InputFieldDescription():
-                if (resolved_field := cls._resolve_field_description(prefix, field, enums, constants, out)) is None:
+                if (
+                    resolved_field := cls._resolve_field_description(
+                        prefix, field, enums, constants, out, strict_maps=strict_maps
+                    )
+                ) is None:
                     return None
                 resolved_fields.append(resolved_field)
             case InputFieldGroup():
                 if (
-                    resolved_field_group := cls._resolve_field_group(prefix, field, definitions, enums, constants, out)
+                    resolved_field_group := cls._resolve_field_group(
+                        prefix, field, definitions, enums, constants, out, strict_maps=strict_maps
+                    )
                 ) is None:
                     return None
                 resolved_fields.extend(resolved_field_group)
@@ -481,9 +648,10 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         enums: dict[Id, EnumDefinition],
         constants: ConstantProvider,
         out: OutputAdder,
+        *,
+        strict_maps: bool = False,
     ) -> list[ResolvedFieldGroup | ResolvedFieldDescription] | None:
         if group.path is None:
-            # No path = logical grouping only, resolve fields with current prefix
             if (
                 resolved_fields := cls._resolve_fields(
                     prefix=prefix,
@@ -492,6 +660,7 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                     enums=enums,
                     constants=constants,
                     out=out,
+                    strict_maps=strict_maps,
                 )
             ) is None:
                 return None
@@ -522,7 +691,13 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
 
         if (
             resolved_fields := cls._resolve_fields(
-                prefix=path, fields=group.fields, definitions=definitions, enums=enums, constants=constants, out=out
+                prefix=path,
+                fields=group.fields,
+                definitions=definitions,
+                enums=enums,
+                constants=constants,
+                out=out,
+                strict_maps=strict_maps,
             )
         ) is None:
             return None
