@@ -65,7 +65,7 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "thundercore"
         case 137:
             return "polygon"
-        case 143: 
+        case 143:
             return "monad"
         case 146:
             return "sonic"
