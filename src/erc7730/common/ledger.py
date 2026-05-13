@@ -162,7 +162,7 @@ def ledger_network_id(chain_id: int) -> str | None:
         case 10001:
             return "ethereum_pow"
         case 16661:
-            return "0g"
+            return "zero_gravity"
         case 17000:
             return "ethereum_holesky"
         case 24484:
