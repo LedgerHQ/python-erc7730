@@ -65,6 +65,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "thundercore"
         case 137:
             return "polygon"
+        case 143:
+            return "monad"
         case 146:
             return "sonic"
         case 196:
@@ -143,6 +145,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "mantle"
         case 5003:
             return "mantle_sepolia"
+        case 5031:
+            return "somnia"
         case 6342:
             return "megaeth_testnet"
         case 8217:
@@ -157,6 +161,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "shido"
         case 10001:
             return "ethereum_pow"
+        case 16661:
+            return "zero_gravity"
         case 17000:
             return "ethereum_holesky"
         case 24484:

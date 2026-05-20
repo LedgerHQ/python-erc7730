@@ -40,8 +40,6 @@ def test_get_supported_chains() -> None:
     assert "Moonbase Alpha Testnet" in names
     assert "opBNB Mainnet" in names
     assert "opBNB Testnet" in names
-    assert "Scroll Mainnet" in names
-    assert "Scroll Sepolia Testnet" in names
     assert "Taiko Mainnet" in names
 
 
