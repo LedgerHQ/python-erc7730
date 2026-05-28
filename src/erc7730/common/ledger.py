@@ -147,8 +147,6 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "mantle_sepolia"
         case 5031:
             return "somnia"
-        case 5042:
-            return "arc"
         case 6342:
             return "megaeth_testnet"
         case 8217:
@@ -227,8 +225,6 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "id4good"
         case 1313114:
             return "ether1"
-        case 5042002:
-            return "arc_testnet"
         case 7762959:
             return "musicoin"
         case 11155111:
