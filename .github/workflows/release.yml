@@ -41,18 +41,12 @@ jobs:
         timeout-minutes: 10
         run: pdm build
 
-      - name: Upload library artifacts to Ledger Artifactory repository
+      - name: Publish library artifacts to public PyPI via Ledger Artifactory
         timeout-minutes: 10
         env:
-          PDM_PUBLISH_REPO: https://jfrog.ledgerlabs.net/artifactory/api/pypi/vault-pypi-prod-green
+          PDM_PUBLISH_REPO: https://jfrog.ledgerlabs.net/artifactory/api/pypi/vault-pypi-prod-public
           PDM_PUBLISH_USERNAME: ${{ steps.jfrog-login.outputs.oidc-user }}
           PDM_PUBLISH_PASSWORD: ${{ steps.jfrog-login.outputs.oidc-token }}
-        run: pdm publish --no-build
-
-      - name: Upload library artifacts to PyPI
-        timeout-minutes: 10
-        env:
-          PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_PUBLIC_API_TOKEN }}
         run: pdm publish --no-build
 
       - name: Generate library build attestations
