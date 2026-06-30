@@ -111,7 +111,7 @@ jobs:
       - name: Setup Github Pages
         timeout-minutes: 10
         if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload docs to Github Pages
         timeout-minutes: 10
