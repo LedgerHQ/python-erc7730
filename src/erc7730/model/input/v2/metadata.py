@@ -12,6 +12,8 @@ from pydantic import Field
 from pydantic_string_url import HttpUrl
 
 from erc7730.model.base import Model
+from erc7730.model.input.path import DescriptorPathStr
+from erc7730.model.input.v2.common import InputMapReference
 from erc7730.model.metadata import TokenInfo
 from erc7730.model.resolved.metadata import EnumDefinition
 from erc7730.model.types import Id, ScalarType
@@ -90,13 +92,13 @@ class InputMetadata(Model):
     message (as matched by the `context` section)
     """
 
-    owner: str | None = Field(
+    owner: DescriptorPathStr | str | InputMapReference | None = Field(
         default=None,
         title="Owner display name.",
         description="The display name of the owner or target of the contract / message to be clear signed.",
     )
 
-    contractName: str | None = Field(
+    contractName: DescriptorPathStr | str | InputMapReference | None = Field(
         default=None,
         title="Contract Name",
         description="The name of the contract targeted by the transaction or message.",

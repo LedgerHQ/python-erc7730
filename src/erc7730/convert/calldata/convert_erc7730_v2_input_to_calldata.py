@@ -131,8 +131,7 @@ def erc7730_v2_descriptor_to_calldata_descriptors(
             if chain_id not in deployment_chain_ids:
                 return []
 
-        # Resolve the v2 descriptor
-        if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, out)) is None:
+        if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, out, strict_maps=True)) is None:
             return []
 
         context = cast(ResolvedContractContext, resolved_descriptor.context)
