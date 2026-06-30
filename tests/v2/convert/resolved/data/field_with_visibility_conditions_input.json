@@ -27,6 +27,24 @@
                 "0x0000000000000000000000000000000000000000"
               ]
             }
+          },
+          {
+            "path": "destinationChainId",
+            "label": "Destination Chain",
+            "visible": {
+              "mustBe": [
+                100
+              ]
+            }
+          },
+          {
+            "path": "hasSourceSwaps",
+            "label": "Has Source Swaps",
+            "visible": {
+              "mustBe": [
+                true
+              ]
+            }
           }
         ]
       }

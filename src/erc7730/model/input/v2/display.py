@@ -31,13 +31,13 @@ class InputVisibilityConditions(Model):
     Complex visibility conditions for field display rules.
     """
 
-    ifNotIn: list[str] | None = Field(
+    ifNotIn: list[ScalarType | None] | None = Field(
         None,
         title="If Not In",
         description="Display this field only if its value is NOT in this list.",
     )
 
-    mustBe: list[str] | None = Field(
+    mustBe: list[ScalarType | None] | None = Field(
         None,
         title="Must Be",
         description="Skip displaying this field but its value MUST match one of these values.",
