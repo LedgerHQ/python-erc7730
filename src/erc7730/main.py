@@ -3,7 +3,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Annotated, assert_never
+from typing import Annotated, Literal, assert_never
 
 from eip712.convert.input_to_resolved import EIP712InputToResolvedConverter
 from eip712.model.input.descriptor import InputEIP712DAppDescriptor
@@ -13,6 +13,7 @@ from rich import print
 from typer import Argument, Exit, Option, Typer
 
 from erc7730.common.output import ConsoleOutputAdder
+from erc7730.attest import build_eas_attest_tx, build_eas_typed_data, descriptor_hash, load_descriptor_json
 from erc7730.convert.calldata.convert_erc7730_input_to_calldata import erc7730_descriptor_to_calldata_descriptors
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import erc7730_v2_descriptor_to_calldata_descriptors
 from erc7730.convert.convert import convert_to_file_and_print_errors
@@ -221,6 +222,33 @@ def command_generate(
         url=HttpUrl(url) if url is not None else None,
     )
     print(descriptor.to_json_string())
+
+
+@app.command(
+    name="attest",
+    short_help="Generate EAS attestation payloads for an ERC-7730 file.",
+    help="""
+    Generate EAS attestation payloads for an ERC-7730 file.
+    """,
+)
+def command_attest(
+    input_erc7730_path: Annotated[Path, Argument(help="The input ERC-7730 file path")],
+    output_format: Annotated[
+        Literal["eip712", "tx"], Option("--format", help="Output format: eip712 or tx")
+    ] = "eip712",
+    ttl: Annotated[str, Option("--ttl", help="Attestation time-to-live, for example 6mo or 30d")] = "6mo",
+) -> None:
+    descriptor = load_descriptor_json(input_erc7730_path)
+    digest = descriptor_hash(descriptor)
+
+    try:
+        if output_format == "eip712":
+            builtins.print(json.dumps(build_eas_typed_data(digest, ttl=ttl), indent=2))
+        else:
+            builtins.print(json.dumps(build_eas_attest_tx(digest, ttl=ttl), indent=2))
+    except ValueError as exc:
+        builtins.print(f"error: {exc}")
+        raise Exit(1) from exc
 
 
 @app.command(
