@@ -123,4 +123,4 @@ jobs:
       - name: Deploy GitHub Pages
         timeout-minutes: 10
         if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
