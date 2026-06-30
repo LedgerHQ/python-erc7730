@@ -139,6 +139,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "reosc"
         case 4002:
             return "fantom_testnet"
+        case 4663:
+            return "robinhood"
         case 4919:
             return "venidium"
         case 5000:
@@ -185,6 +187,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "avalanche_c_chain"
         case 44787:
             return "celo_alfajores"
+        case 46630:
+            return "robinhood_testnet"
         case 59144:
             return "linea"
         case 62621:
