@@ -17,6 +17,7 @@ from erc7730.common.ledger import (
 )
 from erc7730.common.output import OutputAdder
 from erc7730.lint.v2 import ERC7730Linter
+from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import ResolvedField, ResolvedFieldDescription, ResolvedFieldGroup
 
@@ -28,7 +29,9 @@ class ValidateMaxLengthLinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
+    def lint(
+        self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+    ) -> None:
         self._validate_metadata_lengths(descriptor, out)
         self._validate_display_lengths(descriptor, out)
         self._validate_enum_lengths(descriptor, out)
