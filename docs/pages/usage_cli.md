@@ -73,13 +73,13 @@ checked 61 descriptor files, some errors found ❌
 
 It can be called with single files or directories, in which case all descriptors will be checked.
 
-Use `--skip-abi-validation` to disable external ABI comparisons against Etherscan (useful for offline runs or faster local checks).
+Use `--skip-abi-validation` to disable external ABI comparisons against Sourcify/Etherscan (useful for offline runs or faster local checks).
 
 ### `erc7730 generate`
 
 The `generate` command bootstraps a new descriptor file from ABIs or message schemas:
 ```shell
-# fetch ABIs from etherscan and generate a new calldata descriptor
+# fetch ABIs from sourcify/etherscan and generate a new calldata descriptor
 erc7730 generate --chain-id=1 --address=0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45
 
 # generate a new calldata descriptor using given ABI file
@@ -89,7 +89,9 @@ erc7730 generate --chain-id=1 --address=0x00000000000000000000000000000000000000
 erc7730 generate --chain-id=1 --address=0x0000000000000000000000000000000000000000 --schema schemas.json
 ```
 
-To fetch ABIs automatically, you will need to [setup an Etherscan API key](https://docs.etherscan.io/getting-started/viewing-api-usage-statistics):
+ABIs are fetched from [Sourcify](https://sourcify.dev) first, which requires no API key. If the contract is not
+verified on Sourcify, Etherscan is used as a fallback, which requires
+[setting up an Etherscan API key](https://docs.etherscan.io/getting-started/viewing-api-usage-statistics):
 ```shell
 export ETHERSCAN_API_KEY=XXXXXX
 ```

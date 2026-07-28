@@ -103,7 +103,7 @@ def command_lint(
     paths: Annotated[list[Path], Argument(help="The files or directory paths to lint")],
     gha: Annotated[bool, Option(help="Enable Github annotations output")] = False,
     skip_abi_validation: Annotated[
-        bool, Option("--skip-abi-validation", help="Skip ABI comparison with Etherscan explorer data")
+        bool, Option("--skip-abi-validation", help="Skip ABI comparison with Sourcify/Etherscan reference data")
     ] = False,
     v2: Annotated[
         bool, Option("--v2", help="Use v2 model for validation (auto-detected from $schema if not set)")

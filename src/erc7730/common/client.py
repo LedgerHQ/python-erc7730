@@ -5,7 +5,7 @@ from functools import cache
 from typing import Any, TypeVar, final, override
 
 from hishel import CacheTransport, FileStorage
-from httpx import URL, BaseTransport, Client, HTTPTransport, Request, Response
+from httpx import URL, BaseTransport, Client, HTTPStatusError, HTTPTransport, Request, Response, codes
 from httpx._content import IteratorByteStream
 from httpx_file import FileTransport
 from httpx_retries import RetryTransport
@@ -21,6 +21,7 @@ from erc7730.model.types import Address
 # ruff: noqa: UP047
 
 ETHERSCAN = "api.etherscan.io"
+SOURCIFY = "sourcify.dev"
 
 _T = TypeVar("_T")
 
@@ -32,6 +33,13 @@ class EtherscanChain(Model):
     chainname: str
     chainid: int
     blockexplorer: HttpUrl
+
+
+class SourcifyContract(Model):
+    """Sourcify verified contract, restricted to the fields used by this library."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    abi: list[ABI] | None = None
 
 
 @cache
@@ -46,12 +54,59 @@ def get_supported_chains() -> list[EtherscanChain]:
 
 def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
     """
+    Get contract ABIs from Sourcify, falling back to Etherscan if the contract is not available on Sourcify.
+
+    :param chain_id: EIP-155 chain ID
+    :param contract_address: EVM contract address
+    :return: deserialized list of ABIs
+    :raises Exception: if contract source is not available, API key not setup, or unexpected response
+    """
+    try:
+        if (abis := get_contract_abis_from_sourcify(chain_id, contract_address)) is not None:
+            return abis
+        sourcify_error = "contract source is not available on Sourcify"
+    except Exception as e:
+        sourcify_error = str(e)
+
+    try:
+        return get_contract_abis_from_etherscan(chain_id, contract_address)
+    except Exception as e:
+        raise Exception(f"{sourcify_error}, and fetching from Etherscan failed: {e}") from e
+
+
+def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) -> list[ABI] | None:
+    """
+    Get contract ABIs from Sourcify.
+
+    :param chain_id: EIP-155 chain ID
+    :param contract_address: EVM contract address
+    :return: deserialized list of ABIs, or None if chain is not supported or contract source is not available
+    :raises Exception: if unexpected response
+    """
+    try:
+        return get(
+            url=HttpUrl(f"https://{SOURCIFY}/server/v2/contract/{chain_id}/{contract_address}"),
+            fields="abi",
+            model=SourcifyContract,
+        ).abi
+    except HTTPStatusError as e:
+        if e.response.status_code == codes.NOT_FOUND:
+            return None  # contract source is not available on Sourcify
+        if e.response.status_code == codes.BAD_REQUEST:
+            return None  # chain id is not supported by Sourcify
+        if e.response.status_code == codes.TOO_MANY_REQUESTS:
+            raise Exception("Sourcify rate limit exceeded, please retry") from e
+        raise e
+
+
+def get_contract_abis_from_etherscan(chain_id: int, contract_address: Address) -> list[ABI]:
+    """
     Get contract ABIs from Etherscan.
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs
-    :raises NotImplementedError: if chain id not supported, API key not setup, or unexpected response
+    :raises Exception: if chain id not supported, API key not setup, or unexpected response
     """
     try:
         return get(

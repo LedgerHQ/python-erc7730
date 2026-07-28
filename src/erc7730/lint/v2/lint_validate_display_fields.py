@@ -1,8 +1,8 @@
 """
-V2 linter that validates display fields against reference ABIs fetched from Etherscan.
+V2 linter that validates display fields against reference ABIs fetched from Sourcify or Etherscan.
 
 In v2, ABI and EIP-712 schemas are NOT embedded in the descriptor. Instead:
-  - For contract context: fetch ABI from Etherscan, validate display field paths match ABI params,
+  - For contract context: fetch ABI from Sourcify or Etherscan, validate display field paths match ABI params,
     and check selector exhaustiveness.
   - For EIP-712 context: no schema to validate against (no-op).
 """
@@ -24,10 +24,10 @@ from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 @final
 class ValidateDisplayFieldsLinter(ERC7730Linter):
     """
-    Validates display fields against reference ABIs fetched from Etherscan.
+    Validates display fields against reference ABIs fetched from Sourcify or Etherscan.
 
     For contract context:
-      - Fetches ABI from Etherscan for each deployment
+      - Fetches ABI from Sourcify or Etherscan for each deployment
       - Validates that display field paths exist in the ABI
       - Validates that all ABI function params have display fields
       - Checks that all selectors in the ABI have corresponding display formats
@@ -53,7 +53,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         if (deployments := context.contract.deployments) is None:
             return
 
-        # Try to fetch ABI from Etherscan for the first deployment that succeeds
+        # Try to fetch ABI from Sourcify or Etherscan for the first deployment that succeeds
         reference_abis = None
         explorer_url = None
         for deployment in deployments:

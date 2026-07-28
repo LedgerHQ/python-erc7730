@@ -3,7 +3,7 @@ V2 linter that classifies transaction types and validates expected display field
 
 In v2, classification relies on:
   - For EIP-712 context: the format key (primaryType) — e.g., "Permit*" → PERMIT
-  - For contract context: the fetched Etherscan ABI (via ABIClassifier, currently unimplemented)
+  - For contract context: the fetched reference ABI (via ABIClassifier, currently unimplemented)
 """
 
 from typing import final, override
@@ -24,7 +24,7 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
     Classifies transaction type from context/format and validates expected display fields.
 
     For EIP-712: classifies by format key (primaryType). If "permit" found in format key, classifies as PERMIT.
-    For contract: classifies from fetched Etherscan ABI using ABIClassifier.
+    For contract: classifies from fetched reference ABI using ABIClassifier.
     """
 
     @override

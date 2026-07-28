@@ -6,7 +6,7 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--skip-abi-validation",
         action="store_true",
         default=False,
-        help="Skip Etherscan ABI validation in lint-related tests.",
+        help="Skip reference ABI validation in lint-related tests.",
     )
 
 

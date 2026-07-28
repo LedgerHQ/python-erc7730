@@ -3,7 +3,7 @@
 ### Could not fetch ABI
 - **Level**: ⚠️ Warning 
 - **Message**: `Fetching reference ABI for chain id <chain_id> failed, descriptor ABIs will not be validated: <error>`
-- **Description**: ABI fetch from external source (Etherscan or equivalent) has failed. Subsequents checks are skipped for the current deployment.
+- **Description**: ABI fetch from external sources (Sourcify, then Etherscan as a fallback) has failed. Subsequents checks are skipped for the current deployment.
 
 ### Proxy Contract
 - **Level**: ⚠️ Warning 
