@@ -27,6 +27,7 @@ from typing import final, override
 
 from erc7730.common.output import OutputAdder
 from erc7730.lint.v2 import ERC7730Linter
+from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.v2.context import ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 
@@ -218,7 +219,9 @@ class ValidateEIP712KeysLinter(ERC7730Linter):
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
+    def lint(
+        self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+    ) -> None:
         if not isinstance(descriptor.context, ResolvedEIP712Context):
             return
         for key in descriptor.display.formats:
