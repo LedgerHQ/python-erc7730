@@ -10,7 +10,7 @@ def field_discriminator(v: Any) -> str | None:
     :param v: deserialized raw data
     :return: the discriminator tag
     """
-    if has_any_property(v, "$ref"):
+    if has_any_property(v, "$ref", "ref"):
         return "reference"
     if has_any_property(v, "fields"):
         return "nested_fields"
