@@ -24,6 +24,7 @@ def test_help() -> None:
     assert "ERC-7730" in out
     assert "convert" in out
     assert "lint" in out
+    assert "attest" in out
 
 
 @pytest.mark.parametrize("model_type", list(ERC7730ModelType))
