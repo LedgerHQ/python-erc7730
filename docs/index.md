@@ -16,4 +16,5 @@ This library implements:
 pages/usage_cli.md
 pages/usage_library.md
 pages/lint.md
+pages/developer.md
 ```
