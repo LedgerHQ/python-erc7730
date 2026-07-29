@@ -17,7 +17,7 @@ jobs:
   # Minimal permissions: read-only token, no secrets.
   # ──────────────────────────────────────────────────────────────────
   ci:
-    name: lint & test
+    name: continuous integration
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
