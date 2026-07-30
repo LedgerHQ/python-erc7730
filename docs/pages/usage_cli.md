@@ -46,7 +46,12 @@ registry/1inch/eip712-1inch-aggregation-router.json
 
 ### `erc7730 lint`
 
-The `lint` command runs validations on descriptors and outputs warnings and errors to the console:
+The `lint` command runs validations on descriptors and outputs warnings and errors to the console.
+The linter auto-detects the schema version from the `$schema` field. Use `--v2` to force v2 mode.
+
+```{note}
+The v1 linter is deprecated. New descriptors should use the v2 schema.
+```
 ```shell
 $ erc7730 lint registry
 🔍 checking 61 descriptor files…

@@ -12,6 +12,8 @@ from erc7730.model.input.path import DescriptorPathStr
 from erc7730.model.paths import DescriptorPath
 from erc7730.model.paths.path_parser import to_path
 
+pytestmark = pytest.mark.v1
+
 
 def _provider(**constants: str | int | bool | float | None) -> DefaultConstantProvider:
     return DefaultConstantProvider(

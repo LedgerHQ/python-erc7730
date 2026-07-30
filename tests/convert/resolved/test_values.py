@@ -5,6 +5,8 @@ from erc7730.common.output import RaisingOutputAdder
 from erc7730.convert.resolved.values import encode_value
 from erc7730.model.types import HexStr, ScalarType
 
+pytestmark = pytest.mark.v1
+
 
 @pytest.mark.parametrize(
     "abi_type,value,expected",

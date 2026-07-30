@@ -1,6 +1,9 @@
 """
 Version 1 of the data model for Ledger specific calldata descriptor (also referred to as "generic parser" descriptor).
 
+.. deprecated::
+    The v1 schema is deprecated. Use the v2 model instead.
+
 See documentation in https://github.com/LedgerHQ/app-ethereum for specifications of this protocol
 
 This data model is exposed in the public API and used by client applications to interact with the Ethereum application
