@@ -15,6 +15,8 @@ from tests.cases import path_id
 from tests.files import ERC7730_EIP712_DESCRIPTORS
 from tests.skip import single_or_first, single_or_skip
 
+pytestmark = pytest.mark.v1
+
 DATA = Path(__file__).resolve().parent / "data"
 
 

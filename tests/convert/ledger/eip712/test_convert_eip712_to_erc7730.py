@@ -11,6 +11,8 @@ from tests.files import LEGACY_EIP712_DESCRIPTORS
 from tests.schemas import assert_valid_erc_7730
 from tests.skip import single_or_skip
 
+pytestmark = pytest.mark.v1
+
 
 @pytest.mark.parametrize("input_file", LEGACY_EIP712_DESCRIPTORS, ids=path_id)
 def test_legacy_registry_files(input_file: Path) -> None:

@@ -11,6 +11,8 @@ from erc7730.model.input.lenses import get_deployments
 from erc7730.model.paths import Array, DataPath, Field
 from erc7730.model.types import Address
 
+pytestmark = pytest.mark.v1
+
 DATA = Path(__file__).resolve().parent / "data"
 
 

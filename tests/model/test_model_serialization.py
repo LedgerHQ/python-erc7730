@@ -12,6 +12,8 @@ from tests.cases import path_id
 from tests.files import ERC7730_DESCRIPTORS
 from tests.schemas import assert_valid_erc_7730
 
+pytestmark = pytest.mark.v1
+
 HEX_STRING_RE = re.compile(r"^0x[0-9a-fA-F]+$")
 
 

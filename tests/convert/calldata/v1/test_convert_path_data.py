@@ -23,6 +23,8 @@ from erc7730.model.calldata.v1.value import (
 )
 from erc7730.model.input.path import DataPathStr
 
+pytestmark = pytest.mark.v1
+
 DATA = Path(__file__).resolve().parent / "data"
 UPDATE_REFERENCES = False
 

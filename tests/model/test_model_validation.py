@@ -6,6 +6,8 @@ from erc7730.common.output import ExceptionsToOutput, SetOutputAdder
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from tests.cases import TestCase, case_id
 
+pytestmark = pytest.mark.v1
+
 DATA = Path(__file__).resolve().parent / "data"
 
 

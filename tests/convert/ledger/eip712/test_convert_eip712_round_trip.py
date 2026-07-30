@@ -19,6 +19,8 @@ from tests.dict_utils import del_by_path, is_in_path, map_by_path
 from tests.files import ERC7730_EIP712_DESCRIPTORS, LEGACY_EIP712_DESCRIPTORS
 from tests.skip import single_or_skip
 
+pytestmark = pytest.mark.v1
+
 
 @pytest.mark.parametrize("input_file", ERC7730_EIP712_DESCRIPTORS, ids=path_id)
 def test_roundtrip_from_erc7730(input_file: Path) -> None:
