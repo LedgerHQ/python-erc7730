@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import final, override
 
 from erc7730.common.output import OutputAdder
+from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 
 
@@ -10,11 +11,16 @@ class ERC7730Linter(ABC):
     Linter for ERC-7730 v2 descriptors, inspects a (structurally valid) resolved v2 descriptor and emits notes,
     warnings, or errors.
 
+    The input descriptor it was resolved from is also provided, as resolution drops information some checks need
+    (most notably, contract format keys are reduced to selectors, losing the declared parameter names).
+
     A linter may emit false positives or false negatives. It is up to the user to interpret the output.
     """
 
     @abstractmethod
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
+    def lint(
+        self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+    ) -> None:
         raise NotImplementedError()
 
 
@@ -26,6 +32,8 @@ class MultiLinter(ERC7730Linter):
         self.linters = linters
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
+    def lint(
+        self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+    ) -> None:
         for linter in self.linters:
-            linter.lint(descriptor, out)
+            linter.lint(input_descriptor, descriptor, out)

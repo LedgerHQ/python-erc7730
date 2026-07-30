@@ -65,6 +65,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "thundercore"
         case 137:
             return "polygon"
+        case 143:
+            return "monad"
         case 146:
             return "sonic"
         case 196:
@@ -137,12 +139,18 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "reosc"
         case 4002:
             return "fantom_testnet"
+        case 4663:
+            return "robinhood"
         case 4919:
             return "venidium"
         case 5000:
             return "mantle"
         case 5003:
             return "mantle_sepolia"
+        case 5031:
+            return "somnia"
+        case 5042:
+            return "arc"
         case 6342:
             return "megaeth_testnet"
         case 8217:
@@ -157,6 +165,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "shido"
         case 10001:
             return "ethereum_pow"
+        case 16661:
+            return "zero_gravity"
         case 17000:
             return "ethereum_holesky"
         case 24484:
@@ -177,6 +187,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "avalanche_c_chain"
         case 44787:
             return "celo_alfajores"
+        case 46630:
+            return "robinhood_testnet"
         case 59144:
             return "linea"
         case 62621:
@@ -219,6 +231,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "id4good"
         case 1313114:
             return "ether1"
+        case 5042002:
+            return "arc_testnet"
         case 7762959:
             return "musicoin"
         case 11155111:

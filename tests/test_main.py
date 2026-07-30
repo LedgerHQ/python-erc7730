@@ -69,6 +69,7 @@ def test_format(tmp_path: Path) -> None:
 #     )
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_resolve_registry_files(input_file: Path) -> None:
     result = runner.invoke(app, ["resolve", str(input_file)])
@@ -88,6 +89,7 @@ def test_generate_from_contract_address(label: str, chain_id: int, contract_addr
     assert json.loads(out) is not None
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("input_file", LEGACY_EIP712_DESCRIPTORS, ids=path_id)
 def test_convert_legacy_registry_eip712_files(input_file: Path, tmp_path: Path) -> None:
     result = runner.invoke(app, ["convert", "eip712-to-erc7730", str(input_file), str(tmp_path / input_file.name)])
@@ -96,6 +98,7 @@ def test_convert_legacy_registry_eip712_files(input_file: Path, tmp_path: Path) 
     assert "✅" in out
 
 
+@pytest.mark.integration
 @pytest.mark.parametrize("input_file", ERC7730_EIP712_DESCRIPTORS, ids=path_id)
 def test_convert_registry_files_to_legacy_eip712_files(input_file: Path, tmp_path: Path) -> None:
     result = runner.invoke(app, ["convert", "erc7730-to-eip712", str(input_file), str(tmp_path / input_file.name)])

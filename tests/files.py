@@ -24,7 +24,10 @@ ERC7730_REGISTRY = ERC7730_REGISTRY_ROOT / ERC_7730_REGISTRY_DIRECTORY
 
 def _is_registry_descriptor(path: Path) -> bool:
     """Return true for descriptor files, not nested test fixture files."""
-    return "tests" not in path.relative_to(ERC7730_REGISTRY).parts
+    return (
+        "tests" not in path.relative_to(ERC7730_REGISTRY).parts
+        and "testsv2" not in path.relative_to(ERC7730_REGISTRY).parts
+    )
 
 
 ERC7730_CALLDATA_DESCRIPTORS = sorted(
@@ -42,8 +45,8 @@ ERC7730_EIP712_DESCRIPTORS = sorted(
     ]
 )
 ERC7730_DESCRIPTORS = sorted(ERC7730_CALLDATA_DESCRIPTORS + ERC7730_EIP712_DESCRIPTORS)
-ERC7730_SCHEMA_PATH = ERC7730_REGISTRY_ROOT / "specs" / "erc7730-v1.schema.json"
-ERC7730_SCHEMA = load_json_file(ERC7730_SCHEMA_PATH)
+ERC7730_V2_SCHEMA_PATH = ERC7730_REGISTRY_ROOT / "specs" / "erc7730-v2.schema.json"
+ERC7730_V2_SCHEMA = load_json_file(ERC7730_V2_SCHEMA_PATH)
 
 # legacy registry resources
 LEGACY_REGISTRY = TEST_REGISTRIES / "ledger-asset-dapps"

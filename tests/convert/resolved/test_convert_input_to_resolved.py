@@ -7,20 +7,13 @@ from erc7730.convert.resolved.convert_erc7730_input_to_resolved import ERC7730In
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from tests.assertions import assert_model_json_equals
-from tests.cases import TestCase, case_id, path_id
-from tests.files import ERC7730_DESCRIPTORS
+from tests.cases import TestCase, case_id
 from tests.skip import single_or_skip
+
+pytestmark = pytest.mark.v1
 
 DATA = Path(__file__).resolve().parent / "data"
 UPDATE_REFERENCES = False
-
-
-@pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
-def test_registry_files(input_file: Path) -> None:
-    """
-    Test converting ERC-7730 registry files from input to resolved form.
-    """
-    convert_and_raise_errors(InputERC7730Descriptor.load(input_file), ERC7730InputToResolved())
 
 
 @pytest.mark.parametrize(

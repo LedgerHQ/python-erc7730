@@ -1,6 +1,9 @@
 """
 Version 1 of the conversion to Ledger specific calldata descriptor (also referred to as "generic parser" descriptor).
 
+.. deprecated::
+    The v1 schema is deprecated. Use the v2 conversion path instead.
+
 See documentation in https://github.com/LedgerHQ/app-ethereum for specifications of this protocol
 
 The version 1 of the protocol comes with the following limitations:
