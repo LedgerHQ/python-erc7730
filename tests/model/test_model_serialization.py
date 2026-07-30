@@ -6,13 +6,12 @@ from typing import Any
 import pytest
 
 from erc7730.common.json import read_json_with_includes
-from erc7730.model.input.descriptor import InputERC7730Descriptor
-from tests.assertions import assert_dict_equals
+from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
+from tests.assertions import assert_dict_equals, assert_model_json_schema
 from tests.cases import path_id
-from tests.files import ERC7730_DESCRIPTORS
-from tests.schemas import assert_valid_erc_7730
+from tests.files import ERC7730_DESCRIPTORS, ERC7730_V2_SCHEMA
 
-pytestmark = pytest.mark.v1
+pytestmark = pytest.mark.integration
 
 HEX_STRING_RE = re.compile(r"^0x[0-9a-fA-F]+$")
 
@@ -38,13 +37,13 @@ def normalize_hex_strings(value: Any) -> Any:
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
 def test_schema(input_file: Path) -> None:
-    """Test model serializes to JSON that matches the schema."""
+    """Test model serializes to JSON that matches the v2 schema."""
 
     # TODO: invalid files in registry
     if input_file.name in {"eip712-rarible-erc-1155.json", "eip712-rarible-erc-721.json"}:
         pytest.skip("Rarible EIP-712 schemas are missing EIP712Domain")
 
-    assert_valid_erc_7730(InputERC7730Descriptor.load(input_file))
+    assert_model_json_schema(InputERC7730Descriptor.load(input_file), ERC7730_V2_SCHEMA)
 
 
 @pytest.mark.parametrize("input_file", ERC7730_DESCRIPTORS, ids=path_id)
