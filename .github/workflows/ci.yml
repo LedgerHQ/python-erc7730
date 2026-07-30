@@ -1,6 +1,6 @@
 name: 🔎 continuous integration
 
-on:
+"on":
   push:
     branches:
       - main
@@ -53,7 +53,16 @@ jobs:
 
       - name: Test
         timeout-minutes: 40
-        run: pdm run test
+        env:
+          HAS_INTEGRATION_LABEL: >-
+            ${{ contains(github.event.pull_request.labels.*.name, 'integration')
+            || contains(github.event.pull_request.labels.*.name, 'submodules') }}
+        run: |
+          ARGS=""
+          if [ "$HAS_INTEGRATION_LABEL" = "true" ]; then
+            ARGS="--run-integration"
+          fi
+          pdm run test $ARGS
 
       - name: Upload test results
         timeout-minutes: 10
