@@ -10,10 +10,16 @@ This library implements:
  * Validation, available as a command line tool
  * Conversion between Ledger specific legacy descriptors and ERC-7730
 
+```{note}
+The v1 schema is deprecated. New descriptors should use the v2 schema. The v1 model and linter are
+retained for backward compatibility but will be removed in a future release.
+```
+
 
 ```{toctree}
 :maxdepth: 2
 pages/usage_cli.md
 pages/usage_library.md
 pages/lint.md
+pages/developer.md
 ```

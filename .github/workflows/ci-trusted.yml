@@ -1,0 +1,52 @@
+name: 🏷️ PR labels
+
+# ─────────────────────────────────────────────────────────────────────────────
+# This workflow runs trusted-only operations that need write access to the PR
+# (labeling, commenting).
+#
+# SECURITY: uses pull_request_target which runs in the BASE branch context
+# with access to secrets and write tokens.  It must NEVER checkout or execute
+# code from the fork — only use metadata and artifacts.
+# ─────────────────────────────────────────────────────────────────────────────
+
+"on":
+  pull_request_target:
+    types: [opened, reopened, synchronize, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  labels:
+    name: PR labels
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout base branch (trusted code only)
+        timeout-minutes: 5
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+
+      - name: Add labels
+        timeout-minutes: 5
+        uses: actions/labeler@v6
+
+      - name: Enforce labels
+        timeout-minutes: 5
+        uses: mheap/github-action-required-labels@v5
+        with:
+          mode: minimum
+          count: 1
+          labels: |
+            documentation
+            ci
+            sources
+            dependencies
+            submodules
+          add_comment: true

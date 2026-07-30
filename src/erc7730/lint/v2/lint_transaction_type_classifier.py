@@ -3,7 +3,7 @@ V2 linter that classifies transaction types and validates expected display field
 
 In v2, classification relies on:
   - For EIP-712 context: the format key (primaryType) — e.g., "Permit*" → PERMIT
-  - For contract context: the fetched Etherscan ABI (via ABIClassifier, currently unimplemented)
+  - For contract context: the fetched reference ABI (via ABIClassifier, currently unimplemented)
 """
 
 from typing import final, override
@@ -13,6 +13,7 @@ from erc7730.common.output import OutputAdder
 from erc7730.lint.classifier import TxClass
 from erc7730.lint.classifier.abi_classifier import ABIClassifier
 from erc7730.lint.v2 import ERC7730Linter
+from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.v2.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import ResolvedDisplay, ResolvedField, ResolvedFieldDescription, ResolvedFormat
@@ -24,11 +25,13 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
     Classifies transaction type from context/format and validates expected display fields.
 
     For EIP-712: classifies by format key (primaryType). If "permit" found in format key, classifies as PERMIT.
-    For contract: classifies from fetched Etherscan ABI using ABIClassifier.
+    For contract: classifies from fetched reference ABI using ABIClassifier.
     """
 
     @override
-    def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
+    def lint(
+        self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+    ) -> None:
         if (tx_class := self._determine_tx_class(descriptor)) is None:
             return None
         DisplayFormatChecker(tx_class, descriptor.display).check(out)

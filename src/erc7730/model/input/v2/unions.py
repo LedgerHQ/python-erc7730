@@ -17,7 +17,7 @@ def field_discriminator(v: Any) -> str | None:
     :param v: deserialized raw data
     :return: the discriminator tag
     """
-    if has_any_property(v, "$ref"):
+    if has_any_property(v, "$ref", "ref"):
         return "reference"
     if has_any_property(v, "fields"):
         return "field_group"  # was "nested_fields" in v1
@@ -79,6 +79,6 @@ def visibility_rules_discriminator(v: Any) -> str | None:
     """
     if isinstance(v, str):
         return "simple"
-    if isinstance(v, dict) and has_any_property(v, "ifNotIn", "mustBe"):
+    if has_any_property(v, "ifNotIn", "mustBe"):
         return "conditions"
     return None

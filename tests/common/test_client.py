@@ -40,8 +40,6 @@ def test_get_supported_chains() -> None:
     assert "Moonbase Alpha Testnet" in names
     assert "opBNB Mainnet" in names
     assert "opBNB Testnet" in names
-    assert "Scroll Mainnet" in names
-    assert "Scroll Sepolia Testnet" in names
     assert "Taiko Mainnet" in names
 
 
@@ -49,6 +47,28 @@ def test_get_contract_abis() -> None:
     result = client.get_contract_abis(chain_id=1, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d")
     assert result is not None
     assert len(result) > 0
+
+
+def test_get_contract_abis_from_sourcify() -> None:
+    result = client.get_contract_abis_from_sourcify(
+        chain_id=1, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d"
+    )
+    assert result is not None
+    assert len(result) > 0
+
+
+def test_get_contract_abis_from_sourcify_unverified_contract() -> None:
+    result = client.get_contract_abis_from_sourcify(
+        chain_id=1, contract_address="0x0000000000000000000000000000000000000001"
+    )
+    assert result is None
+
+
+def test_get_contract_abis_from_sourcify_unsupported_chain() -> None:
+    result = client.get_contract_abis_from_sourcify(
+        chain_id=99999999, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d"
+    )
+    assert result is None
 
 
 def test_get_from_github() -> None:

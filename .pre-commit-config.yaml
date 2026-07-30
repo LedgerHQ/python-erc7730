@@ -1,11 +1,5 @@
 repos:
 
-  - repo: https://github.com/mxr/sync-pre-commit-deps
-    rev: v0.0.1
-    hooks:
-      - id: sync-pre-commit-deps
-        name: sync pre-commit dependencies
-
   - repo: https://github.com/pdm-project/pdm
     rev: 2.25.9
     hooks:
