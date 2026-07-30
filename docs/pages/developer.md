@@ -70,3 +70,10 @@ pdm run lint
 ```bash
 pdm run test
 ```
+
+By default, deprecated v1 tests and integration tests (full registry) are skipped. To include them:
+
+```bash
+pdm run test --run-v1           # include deprecated v1 tests
+pdm run test --run-integration  # include integration tests against the full registry
+```

@@ -1,3 +1,9 @@
+"""V1 linter implementation.
+
+.. deprecated::
+    The v1 linter is deprecated. Use ``erc7730.lint.v2`` for new descriptors.
+"""
+
 import os
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
