@@ -1,0 +1,45 @@
+name: 📊 test reports
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Publishes test reports after CI completes. Triggered by workflow_run so it
+# runs only after CI finishes (including after approval for fork PRs).
+# ─────────────────────────────────────────────────────────────────────────────
+
+"on":
+  workflow_run:
+    workflows: ["🔎 continuous integration"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+
+jobs:
+  test-reports:
+    name: publish test reports
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+      && github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Download test results artifact
+        timeout-minutes: 5
+        uses: actions/download-artifact@v4
+        with:
+          name: test-results
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Publish test reports
+        timeout-minutes: 5
+        if: hashFiles('tests/.tests.xml') != ''
+        uses: pmeier/pytest-results-action@v0.8.0
+        with:
+          path: tests/.tests.xml
+          title: Test results
+          summary: true
+          display-options: fEX
+          fail-on-empty: false

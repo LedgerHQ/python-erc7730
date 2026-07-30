@@ -1,15 +1,15 @@
-name: 🏷️ PR labels & reports
+name: 🏷️ PR labels
 
 # ─────────────────────────────────────────────────────────────────────────────
 # This workflow runs trusted-only operations that need write access to the PR
-# (labeling, commenting, publishing test reports).
+# (labeling, commenting).
 #
 # SECURITY: uses pull_request_target which runs in the BASE branch context
 # with access to secrets and write tokens.  It must NEVER checkout or execute
 # code from the fork — only use metadata and artifacts.
 # ─────────────────────────────────────────────────────────────────────────────
 
-on:
+"on":
   pull_request_target:
     types: [opened, reopened, synchronize, labeled, unlabeled]
 
@@ -50,39 +50,3 @@ jobs:
             dependencies
             submodules
           add_comment: true
-
-  test-reports:
-    name: publish test reports
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # Wait for the CI workflow to complete so the artifact is available
-    if: github.event.action == 'synchronize' || github.event.action == 'opened'
-    steps:
-      - name: Wait for CI workflow
-        timeout-minutes: 5
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          check-name: "continuous integration"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          wait-interval: 30
-
-      - name: Download test results artifact
-        timeout-minutes: 5
-        uses: actions/download-artifact@v4
-        with:
-          name: test-results
-          run-id: ${{ github.event.workflow_run.id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-
-      - name: Publish test reports
-        timeout-minutes: 5
-        if: hashFiles('tests/.tests.xml') != ''
-        uses: pmeier/pytest-results-action@v0.8.0
-        with:
-          path: tests/.tests.xml
-          title: Test results
-          summary: true
-          display-options: fEX
-          fail-on-empty: false
