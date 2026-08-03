@@ -35,7 +35,7 @@ jobs:
 
       - name: Add labels
         timeout-minutes: 5
-        uses: actions/labeler@v6
+        uses: actions/labeler@v7
 
       - name: Enforce labels
         timeout-minutes: 5
