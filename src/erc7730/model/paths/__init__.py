@@ -123,6 +123,9 @@ class ContainerField(StrEnum):
     TO = auto()
     """The destination address of the containing transaction, ie the target smart contract address."""
 
+    CHAIN_ID = "chainId"
+    """The chain id of the transaction / verifying contract of the message."""
+
 
 DataPathElement = Annotated[
     Field | ArrayElement | ArraySlice | Array,

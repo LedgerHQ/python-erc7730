@@ -136,6 +136,10 @@ def convert_container_path(
             field = CalldataDescriptorContainerPathValueV1.VALUE
             type_family = CalldataDescriptorTypeFamily.UINT
             type_size = 32
+        case ContainerField.CHAIN_ID:
+            field = CalldataDescriptorContainerPathValueV1.CHAIN_ID
+            type_family = CalldataDescriptorTypeFamily.UINT
+            type_size = 32
         case _:
             assert_never(path.field)
     return CalldataDescriptorValuePathV1(

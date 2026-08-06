@@ -483,16 +483,18 @@ class ERC7730V2toEIP712Converter:
         domain = context.eip712.domain
         has_deployments = len(context.eip712.deployments) > 0
 
-        # Get contract name from metadata
-        contract_name = descriptor.metadata.owner
-        if contract_name is None:
+        # owner is required for legacy EIP-712 conversion
+        if (owner := descriptor.metadata.owner) is None:
             return out.error(
                 title="Missing owner",
                 message="metadata.owner is required for legacy EIP-712 conversion.",
             )
 
+        # Get contract name from metadata, preferring the explicit contractName field
+        contract_name = descriptor.metadata.contractName or owner
+
         # Get dapp name: prefer domain.name, fall back to metadata.owner
-        dapp_name: str = (domain.name if domain is not None and domain.name is not None else None) or contract_name
+        dapp_name: str = (domain.name if domain is not None and domain.name is not None else None) or owner
 
         # Reconstruct EIP712Domain type
         domain_fields = _reconstruct_eip712_domain(domain, has_deployments, out)

@@ -40,6 +40,14 @@ def test_valid_input_container_path() -> None:
     )
 
 
+def test_valid_input_container_path_chain_id() -> None:
+    _test_valid_input_path(
+        string="@.chainId",
+        obj=ContainerPath(field=ContainerField.CHAIN_ID),
+        json="""{ "type": "container", "field": "chainId" }""",
+    )
+
+
 def test_valid_input_data_path_absolute() -> None:
     _test_valid_input_path(
         string="#.params.[].[-2].[1:5].[:5].[5:].amountIn",
@@ -132,6 +140,14 @@ def test_valid_resolved_container_path() -> None:
         string="@.to",
         obj=ContainerPath(field=ContainerField.TO),
         json="""{ "type": "container", "field": "to" }""",
+    )
+
+
+def test_valid_resolved_container_path_chain_id() -> None:
+    _test_valid_resolved_path(
+        string="@.chainId",
+        obj=ContainerPath(field=ContainerField.CHAIN_ID),
+        json="""{ "type": "container", "field": "chainId" }""",
     )
 
 

@@ -77,6 +77,7 @@ class CalldataDescriptorContainerPathValueV1(IntEnum):
     FROM = 0x0
     TO = 0x1
     VALUE = 0x2
+    CHAIN_ID = 0x3
 
 
 class CalldataDescriptorPathElementBaseV1(Model):
