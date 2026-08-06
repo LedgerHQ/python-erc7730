@@ -94,7 +94,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: ci
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -121,5 +121,9 @@ jobs:
 
       - name: Deploy GitHub Pages
         id: deployment
-        timeout-minutes: 10
+        timeout-minutes: 30
         uses: actions/deploy-pages@v5
+        with:
+          # Pages runner backlog can spend several minutes in the queue before
+          # the build starts; give the deployment more room than the 10min default.
+          timeout: 1500000
