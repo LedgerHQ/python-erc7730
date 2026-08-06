@@ -459,8 +459,7 @@ class ERC7730V2toEIP712Converter:
                     message="Descriptor context is not EIP-712; only EIP-712 descriptors can be converted.",
                 )
 
-            # Resolve the v2 descriptor
-            resolved = ERC7730InputToResolved().convert(input_descriptor, out)
+            resolved = ERC7730InputToResolved().convert(input_descriptor, out, strict_maps=True)
             if resolved is None:
                 return None
 

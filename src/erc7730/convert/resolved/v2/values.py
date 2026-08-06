@@ -5,6 +5,7 @@ from pydantic import TypeAdapter, ValidationError
 from erc7730.common.abi import ABIDataType
 from erc7730.common.output import OutputAdder
 from erc7730.convert.resolved.v2.constants import ConstantProvider
+from erc7730.model.input.v2.common import InputMapReference
 from erc7730.model.input.v2.display import InputFieldBase
 from erc7730.model.input.v2.format import FieldFormat
 from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
@@ -19,6 +20,8 @@ def resolve_field_value(
     input_field_format: FieldFormat | None,
     constants: ConstantProvider,
     out: OutputAdder,
+    *,
+    strict_maps: bool = False,
 ) -> ResolvedValue | None:
     """
     Resolve value, as a data path or constant value, for a field or reference.
@@ -62,6 +65,7 @@ def resolve_field_value(
             abi_type=abi_type,
             constants=constants,
             out=out,
+            strict_maps=strict_maps,
         )
     ) is None:
         return out.error(title="Invalid field", message="Field must have either a path or a value.")
@@ -71,10 +75,12 @@ def resolve_field_value(
 def resolve_path_or_constant_value(
     prefix: DataPath,
     input_path: DescriptorPath | DataPath | ContainerPath | None,
-    input_value: DescriptorPath | ScalarType | None,
+    input_value: DescriptorPath | ScalarType | InputMapReference | None,
     abi_type: ABIDataType,
     constants: ConstantProvider,
     out: OutputAdder,
+    *,
+    strict_maps: bool = False,
 ) -> ResolvedValue | None:
     """
     Resolve value, as a data path or constant value.
@@ -87,6 +93,16 @@ def resolve_path_or_constant_value(
     :param out: error handler
     :return: resolved value or None if error or value resolves to None
     """
+    if isinstance(input_value, InputMapReference):
+        constants.resolve_map_reference(prefix, input_value, out)
+        if strict_maps:
+            return out.error(
+                title="Unsupported map reference",
+                message=f"Map references are not yet supported. Map at {input_value.map} with "
+                f"keyPath {input_value.keyPath} cannot be resolved.",
+            )
+        return None
+
     if input_path is not None:
         if input_value is not None:
             return out.error(

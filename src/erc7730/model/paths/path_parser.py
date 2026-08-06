@@ -25,7 +25,7 @@ PATH_PARSER = Lark(
         ?descriptor_path_component: field | array_element
     
         container_path: "@." container_field
-        !container_field: "from" | "to" | "value"
+        !container_field: "from" | "to" | "value" | "chainId"
     
         ?data_path: absolute_data_path | relative_data_path
         absolute_data_path: "#." data_path_component ("." data_path_component)*

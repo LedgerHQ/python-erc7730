@@ -136,6 +136,11 @@ def convert_container_path(
             field = CalldataDescriptorContainerPathValueV1.VALUE
             type_family = CalldataDescriptorTypeFamily.UINT
             type_size = 32
+        case ContainerField.CHAINID:
+            return out.error(
+                title="Unsupported container field",
+                message="Container field @.chainId is not supported in calldata descriptor v1 format.",
+            )
         case _:
             assert_never(path.field)
     return CalldataDescriptorValuePathV1(
