@@ -34,6 +34,8 @@ class CalldataDescriptorParamType(IntEnum):
     ENUM = 0x07
     TRUSTED_NAME = 0x08
     CALLDATA = 0x09
+    TOKEN = 0x0A
+    NETWORK = 0x0B
 
 
 class CalldataDescriptorDateType(IntEnum):
@@ -309,6 +311,42 @@ class CalldataDescriptorParamCalldataV1(CalldataDescriptorParamBaseV1):
     )
 
 
+class CalldataDescriptorParamTokenV1(CalldataDescriptorParamBaseV1):
+    """Descriptor for the PARAM_TOKEN struct."""
+
+    type: Literal["TOKEN"] = Field(
+        default="TOKEN",
+        title="Parameter type",
+        description="Type of the parameter",
+    )
+
+    version: Literal[1] = Field(
+        default=1,
+        title="Struct version",
+        description="Version of the PARAM_TOKEN struct",
+    )
+
+    native_currencies: list[Address] | None = Field(
+        default=None, title="Native currencies", description="Addresses to interpret as native currency"
+    )
+
+
+class CalldataDescriptorParamNetworkV1(CalldataDescriptorParamBaseV1):
+    """Descriptor for the PARAM_NETWORK struct."""
+
+    type: Literal["NETWORK"] = Field(
+        default="NETWORK",
+        title="Parameter type",
+        description="Type of the parameter",
+    )
+
+    version: Literal[1] = Field(
+        default=1,
+        title="Struct version",
+        description="Version of the PARAM_NETWORK struct",
+    )
+
+
 CalldataDescriptorParamV1 = Annotated[
     CalldataDescriptorParamRawV1
     | CalldataDescriptorParamAmountV1
@@ -319,7 +357,9 @@ CalldataDescriptorParamV1 = Annotated[
     | CalldataDescriptorParamUnitV1
     | CalldataDescriptorParamEnumV1
     | CalldataDescriptorParamTrustedNameV1
-    | CalldataDescriptorParamCalldataV1,
+    | CalldataDescriptorParamCalldataV1
+    | CalldataDescriptorParamTokenV1
+    | CalldataDescriptorParamNetworkV1,
     Field(
         title="Field parameter",
         description="Format specific parameters for a calldata descriptor field.",
