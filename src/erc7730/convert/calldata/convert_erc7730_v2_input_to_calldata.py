@@ -49,9 +49,11 @@ from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamDatetimeV1,
     CalldataDescriptorParamDurationV1,
     CalldataDescriptorParamEnumV1,
+    CalldataDescriptorParamNetworkV1,
     CalldataDescriptorParamNFTV1,
     CalldataDescriptorParamRawV1,
     CalldataDescriptorParamTokenAmountV1,
+    CalldataDescriptorParamTokenV1,
     CalldataDescriptorParamTrustedNameV1,
     CalldataDescriptorParamUnitV1,
     CalldataDescriptorParamV1,
@@ -584,6 +586,23 @@ def _convert_v2_param(
 
         case FieldFormat.AMOUNT:
             return CalldataDescriptorParamAmountV1(value=value)
+
+        case FieldFormat.TOKEN_TICKER:
+            # tokenTicker maps to PARAM_TOKEN: the field value is the token address, ticker is resolved by the device.
+            # chainId/chainIdPath have no equivalent tag in PARAM_TOKEN, so they cannot be encoded and are ignored.
+            if field.params is not None and (
+                getattr(field.params, "chainId", None) is not None
+                or getattr(field.params, "chainIdPath", None) is not None
+            ):
+                out.warning(
+                    "tokenTicker chainId/chainIdPath cannot be encoded in the PARAM_TOKEN struct and will be ignored."
+                )
+            # native_currencies is left unset: PARAM_TOKEN supports NATIVE_CURRENCY, but tokenTicker has no such param.
+            return CalldataDescriptorParamTokenV1(value=value)
+
+        case FieldFormat.CHAIN_ID:
+            # chainId maps to PARAM_NETWORK: the field value is the chain ID, network name is resolved by the device.
+            return CalldataDescriptorParamNetworkV1(value=value)
 
         case FieldFormat.TOKEN_AMOUNT:
             token_path: CalldataDescriptorValueV1 | None = None
