@@ -283,12 +283,19 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         out: OutputAdder,
     ) -> ResolvedFieldDescription | None:
         match definition.format:
-            case None | FieldFormat.RAW | FieldFormat.AMOUNT | FieldFormat.TOKEN_AMOUNT | FieldFormat.DURATION:
+            # tokenTicker parameters (chainId/chainIdPath) are all optional per schema, so a bare field is valid
+            case (
+                None
+                | FieldFormat.RAW
+                | FieldFormat.AMOUNT
+                | FieldFormat.TOKEN_AMOUNT
+                | FieldFormat.TOKEN_TICKER
+                | FieldFormat.DURATION
+            ):
                 pass
             case (
                 FieldFormat.ADDRESS_NAME
                 | FieldFormat.INTEROPERABLE_ADDRESS_NAME
-                | FieldFormat.TOKEN_TICKER
                 | FieldFormat.CALL_DATA
                 | FieldFormat.NFT_NAME
                 | FieldFormat.DATE
