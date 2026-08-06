@@ -89,6 +89,34 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
     """
     paths: set[DataPath] = set()
 
+    def split_array_dimensions(type_name: str) -> tuple[str, int, int]:
+        """
+        Return ``(base_type, total_dims, trailing_dynamic_dims)`` for an ABI type.
+
+        ``total_dims`` counts all array suffixes, including fixed-size ones like ``[11]``.
+        ``trailing_dynamic_dims`` preserves the historical behavior that only considered
+        trailing ``[]`` dimensions when building ABI schema paths.
+        """
+
+        trailing_dynamic_dims = 0
+        base_type = type_name
+        while base_type.endswith("[]"):
+            trailing_dynamic_dims += 1
+            base_type = base_type[:-2]
+
+        total_dims = trailing_dynamic_dims
+        while base_type.endswith("]"):
+            left_bracket = base_type.rfind("[")
+            if left_bracket < 0:
+                break
+            dimension = base_type[left_bracket + 1 : -1]
+            if not dimension.isdigit():
+                break
+            total_dims += 1
+            base_type = base_type[:left_bracket]
+
+        return base_type, total_dims, trailing_dynamic_dims
+
     def append_paths(path: DataPath, params: list[InputOutput] | list[Component] | None) -> None:
         if not params:
             return None
@@ -98,31 +126,34 @@ def compute_abi_schema_paths(abi: Function) -> set[DataPath]:
 
             sub_path = data_path_append(path, Field(identifier=param.name))
 
-            # Determine base type and array dimensions
-            full_type = param.type
-            dims = 0
-            while full_type.endswith("[]"):
-                dims += 1
-                full_type = full_type[:-2]
-
-            param_base_type = full_type
+            param_base_type, total_dims, trailing_dynamic_dims = split_array_dimensions(param.type)
 
             # If the (non-array) base type is bytes, allow indexing into the byte sequence
             if param_base_type == "bytes":
                 paths.add(data_path_append(sub_path, Array()))
 
-            # TODO: For now there is no use case that requires paths for intermediate array levels
-            # So we only add the final array level if any
-            if dims > 0:
-                for _ in range(dims):
-                    sub_path = data_path_append(sub_path, Array())
-                paths.add(sub_path)
+            legacy_path = sub_path
+            if trailing_dynamic_dims > 0:
+                for _ in range(trailing_dynamic_dims):
+                    legacy_path = data_path_append(legacy_path, Array())
+                paths.add(legacy_path)
+
+            full_array_path = sub_path
+            if total_dims > 0:
+                for _ in range(total_dims):
+                    full_array_path = data_path_append(full_array_path, Array())
+                if total_dims > trailing_dynamic_dims:
+                    paths.add(full_array_path)
 
             # Recurse into tuple/components if present, otherwise add the final path
             if param.components:
-                append_paths(sub_path, param.components)  # type: ignore
+                if total_dims > 0 and trailing_dynamic_dims == 0:
+                    paths.add(sub_path)
+                append_paths(full_array_path if total_dims > 0 else sub_path, param.components)  # type: ignore[arg-type]
             else:
-                paths.add(sub_path)
+                paths.add(legacy_path if trailing_dynamic_dims > 0 else sub_path)
+                if total_dims > trailing_dynamic_dims:
+                    paths.add(full_array_path)
 
     append_paths(ROOT_DATA_PATH, abi.inputs)
 
