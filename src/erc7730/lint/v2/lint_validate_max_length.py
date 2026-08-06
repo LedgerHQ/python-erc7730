@@ -62,10 +62,11 @@ class ValidateMaxLengthLinter(ERC7730Linter):
                     f"{CREATOR_URL_MAX_LENGTH} characters and may be truncated on Ledger devices.",
                 )
 
-        if descriptor.context.id is not None and len(descriptor.context.id) > CONTRACT_NAME_MAX_LENGTH:
+        contract_name = descriptor.metadata.contractName or descriptor.context.id
+        if contract_name is not None and len(contract_name) > CONTRACT_NAME_MAX_LENGTH:
             out.warning(
-                title="Contract id too long",
-                message=f"Contract id `{descriptor.context.id}` exceeds "
+                title="Contract name too long",
+                message=f"Contract name `{contract_name}` exceeds "
                 f"{CONTRACT_NAME_MAX_LENGTH} characters and may be truncated on Ledger devices.",
             )
 

@@ -235,7 +235,7 @@ def _convert_v2_selector(
         creator_name=descriptor.metadata.owner,
         creator_legal_name=creator_legal_name,
         creator_url=creator_url,
-        contract_name=descriptor.context.id,
+        contract_name=descriptor.metadata.contractName or descriptor.context.id,
         deploy_date=deploy_date,
     )
 
