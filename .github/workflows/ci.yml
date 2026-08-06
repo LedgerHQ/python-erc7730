@@ -95,6 +95,9 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       pages: write
       id-token: write
@@ -117,5 +120,6 @@ jobs:
           path: "./docs/build"
 
       - name: Deploy GitHub Pages
+        id: deployment
         timeout-minutes: 10
         uses: actions/deploy-pages@v5
