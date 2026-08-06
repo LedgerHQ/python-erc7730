@@ -73,14 +73,21 @@ jobs:
           path: tests/.tests.xml
           include-hidden-files: true
 
-      # Build docs on every PR to catch errors early (no artifact upload).
       - name: Build docs
         timeout-minutes: 10
         if: ${{ !cancelled() }}
         run: pdm run docs
 
+      - name: Upload docs artifact
+        timeout-minutes: 10
+        if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: docs-build
+          path: "./docs/build"
+
   # ──────────────────────────────────────────────────────────────────
-  # Build & deploy docs — only on push to main
+  # Deploy docs — only on push to main
   # ──────────────────────────────────────────────────────────────────
   deploy-docs:
     name: deploy docs
@@ -88,32 +95,16 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
-      contents: read
       pages: write
       id-token: write
     steps:
-      - name: Checkout
+      - name: Download docs artifact
         timeout-minutes: 10
-        uses: actions/checkout@v7
+        uses: actions/download-artifact@v8
         with:
-          fetch-depth: 0
-          submodules: "recursive"
-
-      - name: Setup mise
-        timeout-minutes: 10
-        uses: jdx/mise-action@v4.2.3
-
-      - name: Install dependencies
-        timeout-minutes: 10
-        run: pdm install --dev --check --frozen-lockfile
-
-      - name: Build docs
-        timeout-minutes: 10
-        run: pdm run docs
+          name: docs-build
+          path: "./docs/build"
 
       - name: Setup Github Pages
         timeout-minutes: 10
@@ -126,6 +117,5 @@ jobs:
           path: "./docs/build"
 
       - name: Deploy GitHub Pages
-        id: deployment
         timeout-minutes: 10
         uses: actions/deploy-pages@v5
