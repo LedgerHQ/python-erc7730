@@ -49,6 +49,7 @@ from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamDatetimeV1,
     CalldataDescriptorParamDurationV1,
     CalldataDescriptorParamEnumV1,
+    CalldataDescriptorParamNetworkV1,
     CalldataDescriptorParamNFTV1,
     CalldataDescriptorParamRawV1,
     CalldataDescriptorParamTokenAmountV1,
@@ -598,6 +599,10 @@ def _convert_v2_param(
                 )
             # native_currencies is left unset: PARAM_TOKEN supports NATIVE_CURRENCY, but tokenTicker has no such param.
             return CalldataDescriptorParamTokenV1(value=value)
+
+        case FieldFormat.CHAIN_ID:
+            # chainId maps to PARAM_NETWORK: the field value is the chain ID, network name is resolved by the device.
+            return CalldataDescriptorParamNetworkV1(value=value)
 
         case FieldFormat.TOKEN_AMOUNT:
             token_path: CalldataDescriptorValueV1 | None = None

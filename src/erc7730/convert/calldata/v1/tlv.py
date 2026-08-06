@@ -22,6 +22,7 @@ from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamDatetimeV1,
     CalldataDescriptorParamDurationV1,
     CalldataDescriptorParamEnumV1,
+    CalldataDescriptorParamNetworkV1,
     CalldataDescriptorParamNFTV1,
     CalldataDescriptorParamRawV1,
     CalldataDescriptorParamTokenAmountV1,
@@ -166,6 +167,12 @@ class CalldataDescriptorParamTokenTag(IntEnum):
 
 
 @pydantic_enum_by_name
+class CalldataDescriptorParamNetworkTag(IntEnum):
+    VERSION = 0x00
+    VALUE = 0x01
+
+
+@pydantic_enum_by_name
 class CalldataDescriptorValueTag(IntEnum):
     VERSION = 0x00
     TYPE_FAMILY = 0x01
@@ -297,6 +304,9 @@ def tlv_field(obj: CalldataDescriptorInstructionFieldV1) -> bytes:
         case CalldataDescriptorParamTokenV1():
             param_type = CalldataDescriptorParamType.TOKEN
             param_value = tlv_param_token(obj.param)
+        case CalldataDescriptorParamNetworkV1():
+            param_type = CalldataDescriptorParamType.NETWORK
+            param_value = tlv_param_network(obj.param)
         case _:
             assert_never(obj.param)
 
@@ -503,6 +513,20 @@ def tlv_param_token(obj: CalldataDescriptorParamTokenV1) -> bytes:
     if (native_currencies := obj.native_currencies) is not None:
         for currency in native_currencies:
             out += tlv(CalldataDescriptorParamTokenTag.NATIVE_CURRENCY, from_hex(currency))
+
+    return out
+
+
+def tlv_param_network(obj: CalldataDescriptorParamNetworkV1) -> bytes:
+    """
+    Encode a struct of type PARAM_NETWORK.
+
+    @param obj: object representation of struct
+    @return: encoded struct TLV
+    """
+    out = bytearray()
+    out += tlv(CalldataDescriptorParamNetworkTag.VERSION, obj.version.to_bytes(1))
+    out += tlv(CalldataDescriptorParamNetworkTag.VALUE, tlv_value(obj.value))
 
     return out
 
