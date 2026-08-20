@@ -18,8 +18,7 @@ from typing import assert_never
 from erc7730.common.abi import ABIDataType
 from erc7730.common.binary import from_hex
 from erc7730.common.output import OutputAdder
-from erc7730.convert.calldata.v1.abi import ABITree
-from erc7730.convert.calldata.v1.path import convert_container_path, convert_data_path
+from erc7730.convert.calldata.v1.path import DataPathConverter, convert_container_path
 from erc7730.convert.calldata.v1.tlv import tlv_value
 from erc7730.model.calldata.v1.instruction import MAX_MAP_ENTRY_SIZE, CalldataDescriptorInstructionMapEntryV1
 from erc7730.model.calldata.v1.value import (
@@ -78,7 +77,7 @@ class MapEntries:
         self,
         value_map: ResolvedValueMap,
         abi_type: ABIDataType,
-        abi: ABITree,
+        convert_path: DataPathConverter,
         out: OutputAdder,
     ) -> CalldataDescriptorValueMapRefV1 | None:
         """
@@ -86,13 +85,13 @@ class MapEntries:
 
         :param value_map: resolved map lookup
         :param abi_type: data type the map values are encoded with
-        :param abi: function ABI tree
+        :param convert_path: strategy converting the key data path to a calldata value
         :param out: error handler
         :return: MAP_REF value, or None on error
         """
         map_name = str(value_map.map)
 
-        if (encoded_keys := encode_map_keys(value_map, abi, out)) is None:
+        if (encoded_keys := encode_map_keys(value_map, convert_path, out)) is None:
             return None
         key, keys_bytes = encoded_keys
 
@@ -142,20 +141,20 @@ class MapEntries:
 
 
 def encode_map_keys(
-    value_map: ResolvedValueMap, abi: ABITree, out: OutputAdder
+    value_map: ResolvedValueMap, convert_path: DataPathConverter, out: OutputAdder
 ) -> tuple[CalldataDescriptorValuePathV1, dict[str, bytes]] | None:
     """
     Convert the key path of a map lookup to the value the device reads the key from, and encode the map keys the way
     the device reads that value.
 
     :param value_map: resolved map lookup
-    :param abi: function ABI tree
+    :param convert_path: strategy converting the key data path to a calldata value
     :param out: error handler
     :return: value the device reads the key from, and encoded keys indexed by source key, or None on error
     """
     map_name = str(value_map.map)
 
-    if (key := _convert_key_path(value_map, abi, out)) is None:
+    if (key := _convert_key_path(value_map, convert_path, out)) is None:
         return None
 
     if len(tlv_value(key)) > MAP_REF_KEY_MAX_SIZE:
@@ -188,7 +187,7 @@ def encode_map_keys(
 
 
 def _convert_key_path(
-    value_map: ResolvedValueMap, abi: ABITree, out: OutputAdder
+    value_map: ResolvedValueMap, convert_path: DataPathConverter, out: OutputAdder
 ) -> CalldataDescriptorValuePathV1 | None:
     """Convert the key path of a map lookup to the value the device reads the key from."""
     match value_map.keyPath:
@@ -196,10 +195,14 @@ def _convert_key_path(
             return convert_container_path(container_path, out)
 
         case DataPath() as data_path:
-            if (key := convert_data_path(data_path, abi, out)) is None:
+            if (key := convert_path(data_path, out)) is None:
                 return None
-            assert isinstance(key.binary_path, CalldataDescriptorDataPathV1)  # nosec B101 - data path converts to one
-
+            if not isinstance(key.binary_path, CalldataDescriptorDataPathV1):
+                return out.error(
+                    title="Unsupported map key",
+                    message=f"Path {data_path} used as key of map {value_map.map} cannot be looked up by the "
+                    "device: maps are only supported on transaction fields.",
+                )
             # the device looks up a single key: it rejects a path reading several values
             for element in key.binary_path.elements:
                 if isinstance(element, CalldataDescriptorPathElementArrayV1) and not _is_single_element(element):
