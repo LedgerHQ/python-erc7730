@@ -8,6 +8,7 @@ logic.
 """
 
 import hashlib
+from collections.abc import Callable
 from typing import cast
 
 from pydantic_string_url import HttpUrl
@@ -22,7 +23,9 @@ from erc7730.common.binary import from_hex
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.options import first_not_none
 from erc7730.common.output import ConsoleOutputAdder, OutputAdder, exception_to_output
-from erc7730.convert.calldata.v1.abi import ABITree, function_to_abi_tree
+from erc7730.convert.calldata.v1.abi import function_to_abi_tree
+from erc7730.convert.calldata.v1.eip712_path import convert_eip712_data_path
+from erc7730.convert.calldata.v1.eip712_schema import ReconstructedSchema, reconstruct_schema
 from erc7730.convert.calldata.v1.enum import convert_enums
 from erc7730.convert.calldata.v1.path import (
     convert_container_path,
@@ -35,10 +38,15 @@ from erc7730.convert.resolved.v2.values import encode_value
 from erc7730.model.abi import Function
 from erc7730.model.calldata.descriptor import (
     CalldataDescriptor,
+    CalldataDescriptorEIP712V1,
     CalldataDescriptorV1,
 )
 from erc7730.model.calldata.types import TrustedNameSource, TrustedNameType
+from erc7730.model.calldata.v1.eip712 import (
+    CalldataDescriptorInstructionEIP712SchemaV1,
+)
 from erc7730.model.calldata.v1.instruction import (
+    CalldataDescriptorInstructionEIP712MessageInfoV1,
     CalldataDescriptorInstructionFieldV1,
     CalldataDescriptorInstructionTransactionInfoV1,
 )
@@ -61,10 +69,11 @@ from erc7730.model.calldata.v1.param import (
 from erc7730.model.calldata.v1.value import (
     CalldataDescriptorTypeFamily,
     CalldataDescriptorValueConstantV1,
+    CalldataDescriptorValuePathV1,
     CalldataDescriptorValueV1,
 )
 from erc7730.model.display import AddressNameType
-from erc7730.model.input.v2.context import InputContractContext
+from erc7730.model.input.v2.context import InputContractContext, InputEIP712Context
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.input.v2.format import DateEncoding, FieldFormat
 from erc7730.model.paths import ContainerPath, DataPath
@@ -73,6 +82,7 @@ from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValueP
 from erc7730.model.resolved.v2.context import (
     ResolvedContractContext,
     ResolvedDeployment,
+    ResolvedEIP712Context,
 )
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import (
@@ -84,6 +94,10 @@ from erc7730.model.resolved.v2.display import (
     ResolvedVisibilityConditions,
 )
 from erc7730.model.types import Address, HexStr, ScalarType, Selector
+
+# Converts a resolved data path to a calldata protocol value; contract binding navigates the ABI tree, EIP-712
+# binding navigates the reconstructed message value tree.
+DataPathConverter = Callable[[DataPath, OutputAdder], CalldataDescriptorValuePathV1 | None]
 
 
 def erc7730_v2_descriptor_to_calldata_descriptors(
@@ -105,6 +119,9 @@ def erc7730_v2_descriptor_to_calldata_descriptors(
     out = ConsoleOutputAdder()
 
     try:
+        if isinstance(input_descriptor.context, InputEIP712Context):
+            return _convert_eip712_descriptors(input_descriptor, source, chain_id, out)
+
         if not isinstance(input_descriptor.context, InputContractContext):
             return []
 
@@ -202,6 +219,9 @@ def _convert_v2_selector(
     """
     abi_tree = function_to_abi_tree(abi)
 
+    def convert_path(data_path: DataPath, out: OutputAdder) -> CalldataDescriptorValuePathV1 | None:
+        return convert_data_path(data_path, abi_tree, out)
+
     creator_legal_name: str | None = None
     creator_url: str | None = None
     deploy_date: str | None = None
@@ -220,7 +240,7 @@ def _convert_v2_selector(
 
     fields: list[CalldataDescriptorInstructionFieldV1] = []
     for input_field in format.fields:
-        if (output_fields := _convert_v2_field(abi=abi_tree, field=input_field, enums=enums_by_id, out=out)) is None:
+        if (output_fields := _convert_v2_field(convert_path, input_field, enums_by_id, out)) is None:
             return None
         fields.extend(output_fields)
 
@@ -257,7 +277,7 @@ def _convert_v2_selector(
 
 
 def _convert_v2_field(
-    abi: ABITree,
+    convert_path: DataPathConverter,
     field: ResolvedFieldDescription | ResolvedFieldGroup,
     enums: dict[str, int],
     out: OutputAdder,
@@ -268,7 +288,7 @@ def _convert_v2_field(
     Fields with ``visible == "never"`` are skipped — they correspond to v1 ``excluded`` fields
     that were never included in calldata output.
 
-    :param abi: function ABI tree
+    :param convert_path: strategy converting a resolved data path to a calldata value (ABI or EIP-712 navigation)
     :param field: v2 resolved field
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
     :param out: error handler
@@ -288,16 +308,19 @@ def _convert_v2_field(
                 title="Missing field label",
                 message="Field label is mandatory for calldata conversion.",
             )
-        if (param := _convert_v2_param(abi=abi, field=field, enums=enums, out=out)) is None:
+        if (param := _convert_v2_param(convert_path=convert_path, field=field, enums=enums, out=out)) is None:
             return None
         return [CalldataDescriptorInstructionFieldV1(name=field.label, param=param)]
     elif isinstance(field, ResolvedFieldGroup):
-        # In v1 protocol, nested fields are flattened
+        # TODO the protocol defines a PARAM_GROUP struct (with ITERATION_TYPE) for nested fields; for now nested
+        #      fields are flattened, matching the existing v1 contract behavior. Revisit once PARAM_GROUP device
+        #      semantics (notably BUNDLED iteration) are finalized in the Ethereum app specifications.
         instructions: list[CalldataDescriptorInstructionFieldV1] = []
         for nested_field in field.fields:
-            if (nested_instructions := _convert_v2_field(abi=abi, field=nested_field, enums=enums, out=out)) is None:
+            nested = _convert_v2_field(convert_path=convert_path, field=nested_field, enums=enums, out=out)
+            if nested is None:
                 return None
-            instructions.extend(nested_instructions)
+            instructions.extend(nested)
         return instructions
     else:
         return out.error(
@@ -310,7 +333,7 @@ def _convert_v2_value(
     path_str: str | None,
     value: ScalarType | None,
     format_type: FieldFormat | None,
-    abi: ABITree,
+    convert_path: DataPathConverter,
     out: OutputAdder,
 ) -> CalldataDescriptorValueV1 | None:
     """
@@ -322,7 +345,7 @@ def _convert_v2_value(
     :param path_str: v2 resolved path string (e.g. "#.amount", "@.from")
     :param value: v2 resolved constant value
     :param format_type: field format type
-    :param abi: function ABI tree
+    :param convert_path: strategy converting a resolved data path to a calldata value
     :param out: error handler
     :return: calldata protocol value or None on error
     """
@@ -338,7 +361,7 @@ def _convert_v2_value(
         if isinstance(parsed_path, ContainerPath):
             return convert_container_path(parsed_path, out)
         elif isinstance(parsed_path, DataPath):
-            return convert_data_path(parsed_path, abi, out)
+            return convert_path(parsed_path, out)
         else:
             return out.error(
                 title="Unsupported path type",
@@ -392,7 +415,7 @@ def _format_to_abi_type(format_type: FieldFormat | None) -> ABIDataType:
 
 
 def _convert_v2_param(
-    abi: ABITree,
+    convert_path: DataPathConverter,
     field: ResolvedFieldDescription,
     enums: dict[str, int],
     out: OutputAdder,
@@ -402,14 +425,14 @@ def _convert_v2_param(
 
     This mirrors the v1 convert_param logic but works with v2 resolved types.
 
-    :param abi: function ABI tree
+    :param convert_path: strategy converting a resolved data path to a calldata value (ABI or EIP-712 navigation)
     :param field: v2 resolved field description
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
     :param out: error handler
     :return: calldata protocol field parameter or None on error
     """
     path_str = str(field.path) if field.path is not None else None
-    if (value := _convert_v2_value(path_str, field.value, field.format, abi, out)) is None:
+    if (value := _convert_v2_value(path_str, field.value, field.format, convert_path, out)) is None:
         return None
 
     def _convert_resolved_value(
@@ -419,7 +442,7 @@ def _convert_v2_param(
         if resolved_value is None:
             return None
         if isinstance(resolved_value, ResolvedValuePath):
-            return _convert_v2_value(str(resolved_value.path), None, None, abi, out)
+            return _convert_v2_value(str(resolved_value.path), None, None, convert_path, out)
         if isinstance(resolved_value, ResolvedValueConstant):
             raw = encode_value(resolved_value.value, abi_type, out)
             if raw is None:
@@ -631,3 +654,149 @@ def _convert_v2_param(
                 title="Unsupported format",
                 message=f"Field format '{field.format}' is not supported for calldata conversion.",
             )
+
+
+# --- EIP-712 message conversion ("EIP712 v2" in the Ethereum app specifications) ---
+
+
+def _convert_eip712_descriptors(
+    input_descriptor: InputERC7730Descriptor,
+    source: HttpUrl | None,
+    chain_id: int | None,
+    out: OutputAdder,
+) -> list[CalldataDescriptor]:
+    """
+    Generate calldata descriptors for a v2 input ERC-7730 descriptor with EIP-712 context.
+
+    Unlike the contract binding (which navigates serialized calldata via the ABI), the EIP-712 binding reconstructs
+    the message schema from the ``display.formats`` encodeType keys and navigates the message value tree.
+
+    :param input_descriptor: deserialized v2 input ERC-7730 descriptor with EIP-712 context
+    :param source: source of the descriptor file
+    :param chain_id: if set, only emit descriptors for the given chain id
+    :param out: error handler
+    :return: output calldata descriptors (1 per chain + message primary type)
+    """
+    context = input_descriptor.context
+    if not isinstance(context, InputEIP712Context):
+        return []
+
+    if chain_id is not None:
+        deployment_chain_ids = {d.chainId for d in context.eip712.deployments}
+        if chain_id not in deployment_chain_ids:
+            return []
+
+    if (resolved_descriptor := ERC7730InputToResolved().convert(input_descriptor, out)) is None:
+        return []
+
+    resolved_context = cast(ResolvedEIP712Context, resolved_descriptor.context)
+    domain = resolved_context.eip712.domain
+    has_deployments = len(resolved_context.eip712.deployments) > 0
+
+    output_descriptors: list[CalldataDescriptor] = []
+
+    for deployment in resolved_context.eip712.deployments:
+        if chain_id is not None and chain_id != deployment.chainId:
+            continue
+
+        if ledger_network_id(deployment.chainId) is None:
+            out.warning(f"Chain id {deployment.chainId} is not known, skipping it")
+            continue
+
+        for encode_type_key, format in resolved_descriptor.display.formats.items():
+            schema = reconstruct_schema(str(encode_type_key), domain, has_deployments, out)
+            if schema is None:
+                continue
+
+            descriptor = _convert_eip712_message(
+                descriptor=resolved_descriptor,
+                deployment=deployment,
+                schema=schema,
+                format=format,
+                source=source,
+                out=out,
+            )
+
+            if descriptor is not None:
+                output_descriptors.append(descriptor)
+
+    return output_descriptors
+
+
+def _convert_eip712_message(
+    descriptor: ResolvedERC7730Descriptor,
+    deployment: ResolvedDeployment,
+    schema: ReconstructedSchema,
+    format: ResolvedFormat,
+    source: HttpUrl | None,
+    out: OutputAdder,
+) -> CalldataDescriptor | None:
+    """
+    Generate a calldata descriptor for a single EIP-712 message primary type.
+
+    :param descriptor: resolved v2 source ERC-7730 descriptor
+    :param deployment: chain id / verifying contract address for which the descriptor is generated
+    :param schema: reconstructed EIP-712 schema (structs + primary type hash)
+    :param format: v2 resolved format for the message
+    :param source: source of the descriptor file
+    :param out: error handler
+    :return: output calldata descriptor or None if invalid
+    """
+
+    def convert_path(data_path: DataPath, out: OutputAdder) -> CalldataDescriptorValuePathV1 | None:
+        return convert_eip712_data_path(data_path, schema.primary_type, schema.types, out)
+
+    creator_legal_name: str | None = None
+    creator_url: str | None = None
+    deploy_date: str | None = None
+    if descriptor.metadata.info is not None:
+        creator_legal_name = descriptor.metadata.owner
+        creator_url = str(descriptor.metadata.info.url) if descriptor.metadata.info.url else None
+        deploy_date = (
+            descriptor.metadata.info.deploymentDate.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if descriptor.metadata.info.deploymentDate
+            else None
+        )
+
+    # TODO the ENUM_VALUE struct carries a SELECTOR tag whose meaning for EIP-712 messages is not defined in the
+    #      specification; a zeroed selector is used until it is clarified.
+    enum_selector = Selector("0x00000000")
+    enums = convert_enums(deployment, enum_selector, descriptor.metadata.enums)  # type: ignore[arg-type]
+    enums_by_id = {enum.enum_id: enum.id for enum in enums}
+
+    fields: list[CalldataDescriptorInstructionFieldV1] = []
+    for input_field in format.fields:
+        if (output_fields := _convert_v2_field(convert_path, input_field, enums_by_id, out)) is None:
+            return None
+        fields.extend(output_fields)
+
+    hash = hashlib.sha3_256()
+    for field in fields:
+        hash.update(from_hex(field.descriptor))
+
+    schema_info = CalldataDescriptorInstructionEIP712SchemaV1(structs=schema.structs)
+
+    message_info = CalldataDescriptorInstructionEIP712MessageInfoV1(
+        chain_id=deployment.chainId,
+        address=deployment.address,
+        primary_type_hash=schema.primary_type_hash,
+        hash=hash.digest().hex(),
+        operation_type=first_not_none(format.intent, format.id, schema.primary_type),  # type: ignore[arg-type]
+        creator_name=descriptor.metadata.owner,
+        creator_legal_name=creator_legal_name,
+        creator_url=creator_url,
+        contract_name=descriptor.metadata.contractName or descriptor.context.id,
+        deploy_date=deploy_date,
+    )
+
+    return CalldataDescriptorEIP712V1(
+        source=source,
+        network=cast(str, ledger_network_id(deployment.chainId)),
+        chain_id=deployment.chainId,
+        address=deployment.address,
+        primary_type_hash=schema.primary_type_hash,
+        schema_info=schema_info,
+        message_info=message_info,
+        enums=enums,
+        fields=fields,
+    )

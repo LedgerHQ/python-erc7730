@@ -18,6 +18,7 @@ from erc7730.model.calldata.v1.value import (
     CalldataDescriptorContainerPathV1,
     CalldataDescriptorContainerPathValueV1,
     CalldataDescriptorDataPathV1,
+    CalldataDescriptorEIP712PathV1,
     CalldataDescriptorPathElementArrayV1,
     CalldataDescriptorPathElementLeafV1,
     CalldataDescriptorPathElementRefV1,
@@ -345,6 +346,8 @@ def apply_path(calldata: HexStr, path: CalldataDescriptorValuePathV1) -> Any:
     match path.binary_path:
         case CalldataDescriptorContainerPathV1():
             raise ValueError("This function only supports data paths")
+        case CalldataDescriptorEIP712PathV1():
+            raise ValueError("This function only supports data paths, not EIP-712 message paths")
         case CalldataDescriptorDataPathV1():
             raw_value = apply_path_raw(calldata, path.binary_path)
         case _:

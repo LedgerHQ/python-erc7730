@@ -46,13 +46,18 @@ class CalldataDescriptorInstructionBaseV1(CalldataDescriptorStructV1, ABC, extra
     """Base class for calldata descriptor instructions."""
 
 
-class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructionBaseV1):
-    """Instruction descriptor for the TRANSACTION_INFO struct."""
+class CalldataDescriptorInstructionTransactionInfoBaseV1(CalldataDescriptorInstructionBaseV1, ABC):
+    """
+    Common fields for the TRANSACTION_INFO / EIP712_MESSAGE_INFO structs.
+
+    These two structs share the same wire structure and are handled as a single structure in the Ethereum app; they
+    differ only by tag 0x03 (SELECTOR for calldata, PRIMARY_TYPE_HASH for EIP-712 messages).
+    """
 
     version: Literal[1] = Field(
         default=1,
         title="Struct version",
-        description="Version of the TRANSACTION_INFO struct",
+        description="Version of the struct",
     )
 
     chain_id: int = Field(
@@ -64,11 +69,6 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
     address: Address = Field(
         title="Contract address",
         description="The contract deployment address.",
-    )
-
-    selector: Selector = Field(
-        title="Function selector",
-        description="The 4-bytes function selector this descriptor applies to.",
     )
 
     hash: str = Field(
@@ -124,6 +124,15 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         description="Displayed in review first screens",
     )
 
+
+class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructionTransactionInfoBaseV1):
+    """Instruction descriptor for the TRANSACTION_INFO struct."""
+
+    selector: Selector = Field(
+        title="Function selector",
+        description="The 4-bytes function selector this descriptor applies to.",
+    )
+
     @computed_field(title="Descriptor", description="Hex encoded TRANSACTION_INFO TLV struct")  # type: ignore[misc]
     @cached_property
     def descriptor(self) -> CalldataDescriptorInstructionHex:
@@ -132,6 +141,31 @@ class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructi
         )
 
         return tlv_transaction_info(self).hex()
+
+
+class CalldataDescriptorInstructionEIP712MessageInfoV1(CalldataDescriptorInstructionTransactionInfoBaseV1):
+    """
+    Instruction descriptor for the EIP712_MESSAGE_INFO struct.
+
+    Same wire structure as TRANSACTION_INFO, except tag 0x03 carries the EIP-712 primary type hash (32 bytes) instead
+    of a function selector (4 bytes). Referred to as "EIP712 v2" in the Ethereum app specifications.
+    """
+
+    primary_type_hash: HexStr = Field(
+        title="Primary type hash",
+        description="keccak256(encodeType(primaryType)) of the EIP-712 message primary type.",
+        min_length=64,
+        max_length=66,
+    )
+
+    @computed_field(title="Descriptor", description="Hex encoded EIP712_MESSAGE_INFO TLV struct")  # type: ignore[misc]
+    @cached_property
+    def descriptor(self) -> CalldataDescriptorInstructionHex:
+        from erc7730.convert.calldata.v1.tlv import (
+            tlv_eip712_message_info,
+        )
+
+        return tlv_eip712_message_info(self).hex()
 
 
 class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBaseV1):

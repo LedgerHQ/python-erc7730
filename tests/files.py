@@ -34,7 +34,7 @@ ERC7730_CALLDATA_DESCRIPTORS = sorted(
     [
         path
         for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_CALLDATA_PREFIX}*.json")
-        if _is_registry_descriptor(path) and path.name not in ["calldata-lpv2.json", "calldata-stETH.json"]
+        if _is_registry_descriptor(path)
     ]
 )
 ERC7730_EIP712_DESCRIPTORS = sorted(
@@ -45,6 +45,13 @@ ERC7730_EIP712_DESCRIPTORS = sorted(
     ]
 )
 ERC7730_DESCRIPTORS = sorted(ERC7730_CALLDATA_DESCRIPTORS + ERC7730_EIP712_DESCRIPTORS)
+
+# Registry descriptors that legitimately generate no calldata descriptor: conversion is still run on them (exercising
+# resolution), but the non-empty calldata assertion is skipped.
+ERC7730_EXPECTED_EMPTY_CALLDATA = {
+    "calldata-KasExitBridge.json",  # only deployed on chain 38833 (Igra), which is not a Ledger-supported network
+    "calldata-PftNft.json",  # enum keyed by "True"/"False" instead of integer field values (not encodable as uint8)
+}
 ERC7730_V2_SCHEMA_PATH = ERC7730_REGISTRY_ROOT / "specs" / "erc7730-v2.schema.json"
 ERC7730_V2_SCHEMA = load_json_file(ERC7730_V2_SCHEMA_PATH)
 
