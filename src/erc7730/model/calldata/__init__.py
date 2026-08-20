@@ -9,13 +9,12 @@ using the generic parser protocol.
 
 from abc import ABC
 from enum import StrEnum, auto
-from typing import Literal
 
 from pydantic import Field
 from pydantic_string_url import HttpUrl
 
 from erc7730.model.base import Model
-from erc7730.model.types import Address, Id, Selector
+from erc7730.model.types import Address, Id
 
 
 class CalldataDescriptorVersion(StrEnum):
@@ -26,18 +25,13 @@ class CalldataDescriptorVersion(StrEnum):
 
 class CalldataDescriptorBase(Model, ABC):
     """
-    A clear signing descriptor for a smart contract function calldata.
+    A clear signing descriptor for a smart contract function calldata or an EIP-712 message.
 
-    Note a calldata descriptor is bound to a single deployment (single chain id/contract address) and a single function.
+    Note a calldata descriptor is bound to a single deployment (single chain id/contract address) and a single function
+    (contract calldata) or message primary type (EIP-712).
 
     Also referred to as a "generic parser descriptor".
     """
-
-    type: Literal["calldata"] = Field(
-        default="calldata",
-        title="Descriptor type",
-        description="Type of the descriptor",
-    )
 
     source: HttpUrl | None = Field(
         default=None,
@@ -59,9 +53,4 @@ class CalldataDescriptorBase(Model, ABC):
     address: Address = Field(
         title="Contract address",
         description="The contract deployment address.",
-    )
-
-    selector: Selector = Field(
-        title="Function selector",
-        description="The 4-bytes function selector this descriptor applies to.",
     )
