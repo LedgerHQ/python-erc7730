@@ -224,11 +224,94 @@ class CalldataDescriptorDataPathV1(CalldataDescriptorStructV1):
     )
 
 
+class CalldataDescriptorEIP712PathElementStructFieldV1(Model):
+    """Descriptor for the EIP712_STRUCT_FIELD path element (descend into a struct field by declaration index)."""
+
+    type: Literal["struct_field"] = Field(
+        default="struct_field",
+        title="Element type",
+        description="Type of the EIP-712 path element",
+    )
+
+    index: int = Field(
+        title="Field index",
+        description="Index of the field in the struct declaration order",
+        ge=0,
+        le=255,
+    )
+
+
+class CalldataDescriptorEIP712PathElementArraySliceV1(Model):
+    """Descriptor for the EIP712_ARRAY_SLICE path element (select an array segment)."""
+
+    type: Literal["array_slice"] = Field(
+        default="array_slice",
+        title="Element type",
+        description="Type of the EIP-712 path element",
+    )
+
+    start: int | None = Field(
+        default=None,
+        title="Start",
+        description="Start index in array (inclusive). If not provided, lower bound is array start.",
+        ge=-32768,
+        le=32767,
+    )
+
+    end: int | None = Field(
+        default=None,
+        title="End",
+        description="End index in array (exclusive). If not provided, upper bound is array end.",
+        ge=-32768,
+        le=32767,
+    )
+
+
+CalldataDescriptorEIP712PathElementV1 = Annotated[
+    CalldataDescriptorEIP712PathElementStructFieldV1 | CalldataDescriptorEIP712PathElementArraySliceV1,
+    Field(
+        title="EIP-712 path element",
+        description="Path element to reach the target value in the EIP-712 value tree",
+        discriminator="type",
+    ),
+]
+
+
+class CalldataDescriptorEIP712PathV1(CalldataDescriptorStructV1):
+    """
+    Descriptor for the EIP712_PATH struct.
+
+    Path into the EIP-712 value tree, navigated by struct field index and array slices (as opposed to DATA_PATH which
+    navigates serialized transaction calldata by byte offsets). Referred to as "EIP712 v2" in the Ethereum app
+    specifications.
+    """
+
+    version: Literal[1] = Field(
+        default=1,
+        title="Struct version",
+        description="Version of the EIP712_PATH struct",
+    )
+
+    type: Literal["EIP712"] = Field(
+        default="EIP712",
+        title="Path type",
+        description="Type of the path",
+    )
+
+    elements: list[CalldataDescriptorEIP712PathElementV1] = Field(
+        title="Elements",
+        description="Interleaved struct field / array slice elements to reach the target value in the value tree",
+        min_length=1,
+        max_length=256,
+    )
+
+
 CalldataDescriptorPathV1 = Annotated[
-    CalldataDescriptorContainerPathV1 | CalldataDescriptorDataPathV1,
+    CalldataDescriptorContainerPathV1 | CalldataDescriptorDataPathV1 | CalldataDescriptorEIP712PathV1,
     Field(
         title="Path",
-        description="Data or container path to reach the target value in the serialized transaction",
+        description="Data, container or EIP-712 path to reach the target value in the serialized transaction or "
+        "message value tree",
         discriminator="type",
     ),
 ]

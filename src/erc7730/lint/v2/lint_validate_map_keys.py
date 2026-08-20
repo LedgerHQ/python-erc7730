@@ -10,10 +10,13 @@ from typing import assert_never, final, override
 from erc7730.common.output import OutputAdder
 from erc7730.convert.calldata.v1.abi import function_to_abi_tree
 from erc7730.convert.calldata.v1.map import encode_map_keys
+from erc7730.convert.calldata.v1.path import convert_data_path
 from erc7730.convert.resolved.v2.values import is_deployment_key
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.lint.v2.lint_validate_display_fields import parse_declared_abis
+from erc7730.model.calldata.v1.value import CalldataDescriptorValuePathV1
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
+from erc7730.model.paths import DataPath
 from erc7730.model.resolved.v2.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import (
@@ -50,8 +53,12 @@ class ValidateMapKeysLinter(ERC7730Linter):
                         continue
                     # only built when needed: some ABI types (fixed point numbers) cannot be converted to a tree
                     abi_tree = function_to_abi_tree(abi)
+
+                    def convert_path(data_path: DataPath, out: OutputAdder) -> CalldataDescriptorValuePathV1 | None:
+                        return convert_data_path(data_path, abi_tree, out)
+
                     for value_map in value_maps:
-                        encode_map_keys(value_map, abi_tree, out)
+                        encode_map_keys(value_map, convert_path, out)
             case _:
                 assert_never(descriptor.context)
 

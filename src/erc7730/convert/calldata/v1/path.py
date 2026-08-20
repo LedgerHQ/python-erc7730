@@ -2,6 +2,7 @@
 Conversion of ERC-7730 ABI paths to calldata descriptor binary paths.
 """
 
+from collections.abc import Callable
 from typing import Any, assert_never
 
 from erc7730.common.binary import from_hex
@@ -18,6 +19,7 @@ from erc7730.model.calldata.v1.value import (
     CalldataDescriptorContainerPathV1,
     CalldataDescriptorContainerPathValueV1,
     CalldataDescriptorDataPathV1,
+    CalldataDescriptorEIP712PathV1,
     CalldataDescriptorPathElementArrayV1,
     CalldataDescriptorPathElementLeafV1,
     CalldataDescriptorPathElementRefV1,
@@ -148,6 +150,11 @@ def convert_container_path(
         type_family=type_family,
         type_size=type_size,
     )
+
+
+# Converts a resolved data path to a calldata protocol value; contract binding navigates the ABI tree, EIP-712
+# binding navigates the reconstructed message value tree.
+DataPathConverter = Callable[[DataPath, OutputAdder], CalldataDescriptorValuePathV1 | None]
 
 
 def convert_data_path(
@@ -345,6 +352,8 @@ def apply_path(calldata: HexStr, path: CalldataDescriptorValuePathV1) -> Any:
     match path.binary_path:
         case CalldataDescriptorContainerPathV1():
             raise ValueError("This function only supports data paths")
+        case CalldataDescriptorEIP712PathV1():
+            raise ValueError("This function only supports data paths, not EIP-712 message paths")
         case CalldataDescriptorDataPathV1():
             raw_value = apply_path_raw(calldata, path.binary_path)
         case _:
