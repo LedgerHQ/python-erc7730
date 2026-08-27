@@ -32,7 +32,7 @@
             "label": "Destination Chain",
             "path": "#.destinationChainId",
             "visible": {
-              "mustBe": [
+              "mustMatch": [
                 100
               ]
             }
@@ -41,7 +41,7 @@
             "label": "Has Source Swaps",
             "path": "#.hasSourceSwaps",
             "visible": {
-              "mustBe": [
+              "mustMatch": [
                 true
               ]
             }

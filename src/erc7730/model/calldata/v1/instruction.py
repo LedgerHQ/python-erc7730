@@ -6,12 +6,14 @@ See documentation in https://github.com/LedgerHQ/app-ethereum for specifications
 """
 
 from abc import ABC
+from enum import IntEnum
 from functools import cached_property
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, model_validator
 from pydantic_string_url import HttpUrl
 
+from erc7730.common.pydantic import pydantic_enum_by_name
 from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamV1,
 )
@@ -39,6 +41,24 @@ CalldataDescriptorInstructionProtobuf = Annotated[
         max_length=32768,
     ),
 ]
+
+
+# maximum number of CONSTRAINT tags per FIELD struct, as documented in app-ethereum
+MAX_FIELD_CONSTRAINTS = 5
+
+
+@pydantic_enum_by_name
+class CalldataDescriptorFieldVisibilityV1(IntEnum):
+    """
+    Visibility of a calldata field (``VisibleType`` in the FIELD struct).
+
+    ``MUST_BE`` and ``IF_NOT_IN`` require at least one constraint value; the device rejects the
+    transaction when a ``MUST_BE`` value matches no constraint.
+    """
+
+    ALWAYS = 0x00
+    MUST_BE = 0x01
+    IF_NOT_IN = 0x02
 
 
 # extra must be ignored because of descriptor computed field
@@ -213,6 +233,37 @@ class CalldataDescriptorInstructionFieldV1(CalldataDescriptorInstructionBaseV1):
         title="Field parameter",
         description="Parameter of the field",
     )
+
+    visibility: CalldataDescriptorFieldVisibilityV1 = Field(
+        default=CalldataDescriptorFieldVisibilityV1.ALWAYS,
+        title="Field visibility",
+        description="Whether the field is displayed, and whether its value is constrained",
+    )
+
+    constraints: list[HexStr] | None = Field(
+        default=None,
+        title="Field value constraints",
+        description="Constraint values (raw bytes, hex encoded) checked against the field value, "
+        "with OR semantics. Only meaningful when visibility is MUST_BE or IF_NOT_IN.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_constraints(self) -> Self:
+        constraints = self.constraints or []
+        if self.visibility is CalldataDescriptorFieldVisibilityV1.ALWAYS:
+            if constraints:
+                raise ValueError("Constraints are only allowed with MUST_BE or IF_NOT_IN visibility.")
+            return self
+        if not constraints:
+            raise ValueError(f"Visibility {self.visibility.name} requires at least one constraint.")
+        if len(constraints) > MAX_FIELD_CONSTRAINTS:
+            raise ValueError(f"At most {MAX_FIELD_CONSTRAINTS} constraints are allowed, got {len(constraints)}.")
+        for constraint in constraints:
+            # size is encoded on a single byte by the device, and an empty value is rejected
+            size = len(constraint.removeprefix("0x")) // 2
+            if not 1 <= size <= 255:
+                raise ValueError(f"Constraint value must be 1 to 255 bytes, got {size}.")
+        return self
 
     @computed_field(title="Descriptor", description="Hex encoded FIELD TLV struct")  # type: ignore[misc]
     @cached_property

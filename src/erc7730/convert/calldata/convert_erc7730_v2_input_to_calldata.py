@@ -39,6 +39,8 @@ from erc7730.model.calldata.descriptor import (
 )
 from erc7730.model.calldata.types import TrustedNameSource, TrustedNameType
 from erc7730.model.calldata.v1.instruction import (
+    MAX_FIELD_CONSTRAINTS,
+    CalldataDescriptorFieldVisibilityV1,
     CalldataDescriptorInstructionFieldV1,
     CalldataDescriptorInstructionTransactionInfoV1,
 )
@@ -268,6 +270,11 @@ def _convert_v2_field(
     Fields with ``visible == "never"`` are skipped — they correspond to v1 ``excluded`` fields
     that were never included in calldata output.
 
+    Conditional visibility rules are mapped onto the FIELD struct ``VISIBLE`` / ``CONSTRAINT`` tags:
+    ``mustMatch`` becomes ``MUST_BE`` (the device rejects the transaction when the value matches no
+    constraint) and ``ifNotIn`` becomes ``IF_NOT_IN`` (the field is displayed only when its value
+    matches no constraint).
+
     :param abi: function ABI tree
     :param field: v2 resolved field
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
@@ -278,19 +285,34 @@ def _convert_v2_field(
         # Skip hidden fields (v2 equivalent of v1 "excluded" fields)
         if field.visible == "never":
             return []
-        if field.label is None:
-            if isinstance(field.visible, ResolvedVisibilityConditions) and field.visible.mustBe is not None:
+
+        visibility = CalldataDescriptorFieldVisibilityV1.ALWAYS
+        constraints: list[str] | None = None
+        if isinstance(field.visible, ResolvedVisibilityConditions):
+            if field.visible.mustMatch is not None:
+                visibility = CalldataDescriptorFieldVisibilityV1.MUST_BE
+                values = field.visible.mustMatch
+            else:
+                visibility = CalldataDescriptorFieldVisibilityV1.IF_NOT_IN
+                values = field.visible.ifNotIn or []
+            if (constraints := _convert_v2_constraints(values=values, out=out)) is None:
+                return None
+
+        # A mustMatch field is never displayed, so the descriptor is allowed to omit its label, but
+        # the FIELD struct still requires a NAME tag.
+        if (name := field.label) is None:
+            if visibility is not CalldataDescriptorFieldVisibilityV1.MUST_BE:
                 return out.error(
-                    title="Unsupported visible value",
-                    message="Fields with mustBe visibility conditions are not supported in calldata conversion.",
+                    title="Missing field label",
+                    message="Field label is mandatory for calldata conversion.",
                 )
-            return out.error(
-                title="Missing field label",
-                message="Field label is mandatory for calldata conversion.",
-            )
+            name = field.id or "constraint"
+
         if (param := _convert_v2_param(abi=abi, field=field, enums=enums, out=out)) is None:
             return None
-        return [CalldataDescriptorInstructionFieldV1(name=field.label, param=param)]
+        return [
+            CalldataDescriptorInstructionFieldV1(name=name, param=param, visibility=visibility, constraints=constraints)
+        ]
     elif isinstance(field, ResolvedFieldGroup):
         # In v1 protocol, nested fields are flattened
         instructions: list[CalldataDescriptorInstructionFieldV1] = []
@@ -304,6 +326,74 @@ def _convert_v2_field(
             title="Unknown field type",
             message=f"Unexpected field type: {type(field)}",
         )
+
+
+def _convert_v2_constraints(values: list[ScalarType | None], out: OutputAdder) -> list[str] | None:
+    """
+    Convert visibility condition values to CONSTRAINT tag payloads (raw bytes, hex encoded).
+
+    The device compares a constraint against the field value according to the field type: numerically
+    for integers (so width does not matter), right-aligned on 20 bytes for addresses, and byte for
+    byte for bytes and strings (so width does matter). A ``0x`` prefixed value is therefore emitted
+    with its width preserved, and it is up to the descriptor author to give a hex constraint the
+    exact width of the value it pins.
+
+    :param values: condition values from the descriptor
+    :param out: error handler
+    :return: hex encoded constraint payloads, or None on error
+    """
+    if not values:
+        return out.error(
+            title="Empty visibility condition",
+            message="Visibility conditions must define at least one value.",
+        )
+    if len(values) > MAX_FIELD_CONSTRAINTS:
+        return out.error(
+            title="Too many visibility condition values",
+            message=f"At most {MAX_FIELD_CONSTRAINTS} values are supported per field, got {len(values)}.",
+        )
+
+    constraints: list[str] = []
+    for value in values:
+        match value:
+            case None:
+                return out.error(
+                    title="Unsupported visibility condition value",
+                    message="Null values are not supported in visibility conditions.",
+                )
+            case bool():
+                payload = bytes([1 if value else 0])
+            case int():
+                if value < 0:
+                    return out.error(
+                        title="Unsupported visibility condition value",
+                        message=f"Negative values are not supported in visibility conditions: {value}.",
+                    )
+                payload = value.to_bytes(max(1, (value.bit_length() + 7) // 8), byteorder="big")
+            case float():
+                return out.error(
+                    title="Unsupported visibility condition value",
+                    message=f"Floating point values are not supported in visibility conditions: {value}.",
+                )
+            case str() if value.startswith("0x"):
+                try:
+                    payload = from_hex(value)
+                except ValueError:
+                    return out.error(
+                        title="Invalid visibility condition value",
+                        message=f"Value {value} is not valid hexadecimal.",
+                    )
+            case str():
+                payload = value.encode("utf-8")
+
+        if not 1 <= len(payload) <= 255:
+            return out.error(
+                title="Invalid visibility condition value",
+                message=f"Constraint value must encode to 1 to 255 bytes, {value} encodes to {len(payload)}.",
+            )
+        constraints.append(f"0x{payload.hex()}")
+
+    return constraints
 
 
 def _convert_v2_value(

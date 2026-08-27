@@ -79,6 +79,6 @@ def visibility_rules_discriminator(v: Any) -> str | None:
     """
     if isinstance(v, str):
         return "simple"
-    if has_any_property(v, "ifNotIn", "mustBe"):
+    if has_any_property(v, "ifNotIn", "mustMatch"):
         return "conditions"
     return None

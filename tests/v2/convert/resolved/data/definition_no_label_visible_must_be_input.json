@@ -28,7 +28,7 @@
             "path": "param1",
             "$ref": "$.display.definitions.constrainedField",
             "visible": {
-              "mustBe": ["1", "2", "3"]
+              "mustMatch": ["1", "2", "3"]
             }
           }
         ]
