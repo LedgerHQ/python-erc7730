@@ -23,7 +23,7 @@
             "path": "#.param1",
             "format": "raw",
             "visible": {
-              "mustBe": ["1", "2", "3"]
+              "mustMatch": ["1", "2", "3"]
             }
           }
         ]

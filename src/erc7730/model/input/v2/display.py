@@ -15,7 +15,7 @@ from erc7730.model.display import (
     FormatBase,
 )
 from erc7730.model.input.path import ContainerPathStr, DataPathStr, DescriptorPathStr
-from erc7730.model.input.v2.format import DateEncoding, FieldFormat
+from erc7730.model.input.v2.format import DateEncoding, FieldFormat, IterationStrategy, VisibilityRule
 from erc7730.model.input.v2.unions import (
     field_discriminator,
     field_parameters_discriminator,
@@ -37,21 +37,23 @@ class InputVisibilityConditions(Model):
         description="Display this field only if its value is NOT in this list.",
     )
 
-    mustBe: list[ScalarType | None] | None = Field(
+    mustMatch: list[ScalarType | None] | None = Field(
         None,
-        title="Must Be",
+        title="Must Match",
         description="Skip displaying this field but its value MUST match one of these values.",
     )
 
     @model_validator(mode="after")
-    def _validate_at_least_one_condition(self) -> Self:
-        if self.ifNotIn is None and self.mustBe is None:
-            raise ValueError('At least one of "ifNotIn" or "mustBe" must be set.')
+    def _validate_exactly_one_condition(self) -> Self:
+        if self.ifNotIn is None and self.mustMatch is None:
+            raise ValueError('At least one of "ifNotIn" or "mustMatch" must be set.')
+        if self.ifNotIn is not None and self.mustMatch is not None:
+            raise ValueError('"ifNotIn" and "mustMatch" are mutually exclusive.')
         return self
 
 
 InputVisibilityRules = Annotated[
-    Annotated[str, Tag("simple")] | Annotated[InputVisibilityConditions, Tag("conditions")],
+    Annotated[VisibilityRule, Tag("simple")] | Annotated[InputVisibilityConditions, Tag("conditions")],
     Discriminator(visibility_rules_discriminator),
 ]
 
@@ -255,7 +257,7 @@ class InputInteroperableAddressNameParameters(Model):
     Interoperable Address Names Formatting Parameters.
     """
 
-    types: list[str] | DescriptorPathStr | None = Field(
+    types: list[AddressNameType] | DescriptorPathStr | None = Field(
         default=None,
         title="Address Type",
         description="An array of expected types of the address (wallet, eoa, contract, token, collection).",
@@ -517,7 +519,7 @@ class InputFieldDefinition(Model):
         default=None,
         title="Field Label",
         description="The label of the field, that will be displayed to the user in front of the formatted field value. "
-        "Can be omitted when the field visibility is 'never' or 'mustBe'.",
+        "Can be omitted when the field visibility is 'never' or 'mustMatch'.",
     )
 
     format: FieldFormat | None = Field(
@@ -603,7 +605,7 @@ class InputFieldGroup(Model):
         description="An optional label for the field group.",
     )
 
-    iteration: str | None = Field(
+    iteration: IterationStrategy | None = Field(
         default=None,
         title="Iteration Strategy",
         description="Specifies how iteration over arrays should be handled: 'sequential' or 'bundled'.",

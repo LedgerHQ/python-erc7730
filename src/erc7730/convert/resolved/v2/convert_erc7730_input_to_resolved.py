@@ -338,8 +338,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 visibility_dict: dict[str, Any] = {}
                 if definition.visible.ifNotIn is not None:
                     visibility_dict["ifNotIn"] = definition.visible.ifNotIn
-                if definition.visible.mustBe is not None:
-                    visibility_dict["mustBe"] = definition.visible.mustBe
+                if definition.visible.mustMatch is not None:
+                    visibility_dict["mustMatch"] = definition.visible.mustMatch
                 resolved_visible = visibility_dict
             else:
                 resolved_visible = None

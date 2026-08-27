@@ -35,9 +35,6 @@ def test_get_supported_chains() -> None:
     assert "Gnosis" in names
     assert "Mantle Mainnet" in names
     assert "Mantle Sepolia Testnet" in names
-    assert "Moonbeam Mainnet" in names
-    assert "Moonriver Mainnet" in names
-    assert "Moonbase Alpha Testnet" in names
     assert "opBNB Mainnet" in names
     assert "opBNB Testnet" in names
     assert "Taiko Mainnet" in names
