@@ -10,6 +10,35 @@ from enum import StrEnum
 from erc7730.model.display import DateEncoding as BaseDataEncoding
 
 
+class VisibilityRule(StrEnum):
+    """
+    A simple visibility rule, specifying when a field should be displayed.
+
+    Complex, value dependent rules are expressed with the "ifNotIn" / "mustMatch" conditions instead.
+    """
+
+    ALWAYS = "always"
+    """The field should always be displayed."""
+
+    NEVER = "never"
+    """The field should never be displayed."""
+
+    OPTIONAL = "optional"
+    """The field should be displayed only if the wallet is able to."""
+
+
+class IterationStrategy(StrEnum):
+    """
+    The strategy to use when iterating over the arrays a field group is scoped under.
+    """
+
+    SEQUENTIAL = "sequential"
+    """Each array element is displayed as its own group of fields."""
+
+    BUNDLED = "bundled"
+    """All array elements are displayed as a single group of fields."""
+
+
 class FieldFormat(StrEnum):
     """
     The format of the field (v2), that will be used to format the field value in a human readable way.
