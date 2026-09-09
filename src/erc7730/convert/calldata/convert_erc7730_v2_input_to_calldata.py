@@ -39,6 +39,8 @@ from erc7730.model.calldata.descriptor import (
 )
 from erc7730.model.calldata.types import TrustedNameSource, TrustedNameType
 from erc7730.model.calldata.v1.instruction import (
+    MAX_FIELD_CONSTRAINTS,
+    CalldataDescriptorFieldVisibilityV1,
     CalldataDescriptorInstructionFieldV1,
     CalldataDescriptorInstructionTransactionInfoV1,
 )
@@ -59,8 +61,12 @@ from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamV1,
 )
 from erc7730.model.calldata.v1.value import (
+    CalldataDescriptorDataPathV1,
+    CalldataDescriptorPathElementLeafV1,
+    CalldataDescriptorPathLeafType,
     CalldataDescriptorTypeFamily,
     CalldataDescriptorValueConstantV1,
+    CalldataDescriptorValuePathV1,
     CalldataDescriptorValueV1,
 )
 from erc7730.model.display import AddressNameType
@@ -84,6 +90,13 @@ from erc7730.model.resolved.v2.display import (
     ResolvedVisibilityConditions,
 )
 from erc7730.model.types import Address, HexStr, ScalarType, Selector
+
+# size of a calldata chunk (CALLDATA_CHUNK_SIZE in app-ethereum): the device reads a static ABI leaf
+# as a whole chunk, so a static value is always compared on that many bytes
+CALLDATA_CHUNK_SIZE = 32
+
+# length of an EVM address (ADDRESS_LENGTH in app-ethereum)
+ADDRESS_LENGTH = 20
 
 
 def erc7730_v2_descriptor_to_calldata_descriptors(
@@ -268,6 +281,12 @@ def _convert_v2_field(
     Fields with ``visible == "never"`` are skipped — they correspond to v1 ``excluded`` fields
     that were never included in calldata output.
 
+    Conditional visibility rules are mapped onto the FIELD struct ``VISIBLE`` / ``CONSTRAINT`` tags:
+    ``mustMatch`` becomes ``MUST_BE`` (the device rejects the transaction when the value matches no
+    constraint) and ``ifNotIn`` becomes ``IF_NOT_IN`` (the field is displayed only when its value
+    matches no constraint). Only the ``RAW`` and ``TRUSTED_NAME`` parameter types honour these tags,
+    so they are rejected on any other format rather than emitted and ignored by the device.
+
     :param abi: function ABI tree
     :param field: v2 resolved field
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
@@ -278,19 +297,68 @@ def _convert_v2_field(
         # Skip hidden fields (v2 equivalent of v1 "excluded" fields)
         if field.visible == "never":
             return []
-        if field.label is None:
-            if isinstance(field.visible, ResolvedVisibilityConditions) and field.visible.mustBe is not None:
+
+        visibility = CalldataDescriptorFieldVisibilityV1.ALWAYS
+        condition_values: list[ScalarType | None] | None = None
+        if isinstance(field.visible, ResolvedVisibilityConditions):
+            if field.visible.mustMatch is not None:
+                visibility = CalldataDescriptorFieldVisibilityV1.MUST_BE
+                condition_values = field.visible.mustMatch
+            else:
+                visibility = CalldataDescriptorFieldVisibilityV1.IF_NOT_IN
+                condition_values = field.visible.ifNotIn
+
+        # A mustMatch field is never displayed, so the descriptor is allowed to omit its label, but
+        # the FIELD struct still requires a NAME tag.
+        if (name := field.label) is None:
+            if visibility is not CalldataDescriptorFieldVisibilityV1.MUST_BE:
                 return out.error(
-                    title="Unsupported visible value",
-                    message="Fields with mustBe visibility conditions are not supported in calldata conversion.",
+                    title="Missing field label",
+                    message="Field label is mandatory for calldata conversion.",
                 )
-            return out.error(
-                title="Missing field label",
-                message="Field label is mandatory for calldata conversion.",
-            )
+            name = field.id or "constraint"
+
         if (param := _convert_v2_param(abi=abi, field=field, enums=enums, out=out)) is None:
             return None
-        return [CalldataDescriptorInstructionFieldV1(name=field.label, param=param)]
+
+        # Constraints are compared by the parameter formatter, so they are encoded against the type
+        # of the value that formatter reads, not against the JSON type used in the descriptor.
+        constraints: list[str] | None = None
+        if condition_values is not None:
+            match param:
+                case CalldataDescriptorParamTrustedNameV1():
+                    # the device resolves the value to an address before comparing (it compares the
+                    # address, not the resolved name), whatever the ABI type of the field
+                    type_family = CalldataDescriptorTypeFamily.ADDRESS
+                    type_size: int | None = ADDRESS_LENGTH
+                    value_width: int | None = ADDRESS_LENGTH
+                case CalldataDescriptorParamRawV1():
+                    type_family = param.value.type_family
+                    type_size = param.value.type_size
+                    value_width = _constrained_value_width(param.value)
+                case _:
+                    # Only format_param_raw and format_param_trusted_name read FIELD->VISIBLE in
+                    # app-ethereum (see format_field): every other formatter ignores the tag, so the
+                    # field would still be displayed and a mustMatch would not be enforced at all.
+                    return out.error(
+                        title="Unsupported visibility conditions",
+                        message=f"""Visibility conditions are only supported on "raw" and "addressName" fields, """
+                        f"""the device ignores them on "{field.format}" fields.""",
+                    )
+            if (
+                constraints := _convert_v2_constraints(
+                    values=condition_values,
+                    type_family=type_family,
+                    type_size=type_size,
+                    value_width=value_width,
+                    out=out,
+                )
+            ) is None:
+                return None
+
+        return [
+            CalldataDescriptorInstructionFieldV1(name=name, param=param, visibility=visibility, constraints=constraints)
+        ]
     elif isinstance(field, ResolvedFieldGroup):
         # In v1 protocol, nested fields are flattened
         instructions: list[CalldataDescriptorInstructionFieldV1] = []
@@ -304,6 +372,212 @@ def _convert_v2_field(
             title="Unknown field type",
             message=f"Unexpected field type: {type(field)}",
         )
+
+
+def _constrained_value_width(value: CalldataDescriptorValueV1) -> int | None:
+    """
+    Byte length the device will compare a constraint against, when it can be determined statically.
+
+    A static ABI leaf is read as a whole calldata chunk, so a ``bytesN`` value carries its ABI zero
+    padding and a constraint has to carry it too. Dynamic leaves, slices and constants only get their
+    length at signing time, so their width is left to the descriptor author.
+
+    :param value: the value the field formatter reads
+    :return: width in bytes, or None if it is not known at conversion time
+    """
+    if not isinstance(value, CalldataDescriptorValuePathV1):
+        return None
+    if not isinstance(value.binary_path, CalldataDescriptorDataPathV1):
+        return None
+    match value.binary_path.elements[-1]:
+        case CalldataDescriptorPathElementLeafV1(leaf_type=CalldataDescriptorPathLeafType.STATIC_LEAF):
+            return CALLDATA_CHUNK_SIZE
+        case _:
+            return None
+
+
+def _convert_v2_constraints(
+    values: list[ScalarType | None],
+    type_family: CalldataDescriptorTypeFamily,
+    type_size: int | None,
+    value_width: int | None,
+    out: OutputAdder,
+) -> list[str] | None:
+    """
+    Convert visibility condition values to CONSTRAINT tag payloads (raw bytes, hex encoded).
+
+    The device compares a constraint against the field value according to the type family of the
+    value, so a constraint is encoded for that type rather than for the JSON type it was written
+    with. Encoding it any other way builds a constraint that can never match, which silently turns
+    a ``mustMatch`` guard off and a ``ifNotIn`` rule into an unconditional display.
+
+    :param values: condition values from the descriptor
+    :param type_family: type family of the value the field formatter reads
+    :param type_size: declared width of that type, in bytes
+    :param value_width: width the device will compare on, when known (see _constrained_value_width)
+    :param out: error handler
+    :return: hex encoded constraint payloads, or None on error
+    """
+    if not values:
+        return out.error(
+            title="Empty visibility condition",
+            message="Visibility conditions must define at least one value.",
+        )
+    if len(values) > MAX_FIELD_CONSTRAINTS:
+        return out.error(
+            title="Too many visibility condition values",
+            message=f"At most {MAX_FIELD_CONSTRAINTS} values are supported per field, got {len(values)}.",
+        )
+
+    constraints: list[str] = []
+    for value in values:
+        if (
+            payload := _encode_v2_constraint(
+                value=value,
+                type_family=type_family,
+                type_size=type_size,
+                value_width=value_width,
+                out=out,
+            )
+        ) is None:
+            return None
+
+        if not 1 <= len(payload) <= 255:
+            return out.error(
+                title="Invalid visibility condition value",
+                message=f"Constraint value must encode to 1 to 255 bytes, {value} encodes to {len(payload)}.",
+            )
+        constraints.append(f"0x{payload.hex()}")
+
+    return constraints
+
+
+def _fits_unsigned(value: int, type_size: int | None) -> bool:
+    """Whether an unsigned value can be held by a field of the given width (an unknown width fits)."""
+    return type_size is None or value.bit_length() <= type_size * 8
+
+
+def _fits_signed(value: int, type_size: int) -> bool:
+    """Whether a signed value can be held by a field of the given width."""
+    bound = 1 << (type_size * 8 - 1)
+    return -bound <= value < bound
+
+
+def _encode_v2_constraint(
+    value: ScalarType | None,
+    type_family: CalldataDescriptorTypeFamily,
+    type_size: int | None,
+    value_width: int | None,
+    out: OutputAdder,
+) -> bytes | None:
+    """
+    Encode a single condition value for the way the device compares the given type family.
+
+    :param value: condition value from the descriptor
+    :param type_family: type family of the value the field formatter reads
+    :param type_size: declared width of that type, in bytes
+    :param value_width: width the device will compare on, when known
+    :param out: error handler
+    :return: raw constraint payload, or None on error
+    """
+
+    def unsupported(reason: str) -> bytes | None:
+        out.error(
+            title="Unsupported visibility condition value",
+            message=f"Value {value!r} cannot constrain a {type_family.name.lower()} field: {reason}.",
+        )
+        return None
+
+    # A string field carries its text in calldata, so a "0x" prefixed value is that text and never a
+    # hex payload — parsing it as one would reject a perfectly valid string constraint.
+    hex_payload: bytes | None = None
+    if isinstance(value, str) and value.startswith("0x") and type_family is not CalldataDescriptorTypeFamily.STRING:
+        try:
+            hex_payload = from_hex(value)
+        except ValueError:
+            return out.error(
+                title="Invalid visibility condition value",
+                message=f"Value {value} is not valid hexadecimal.",
+            )
+
+    match type_family:
+        # compared numerically on 256 bits, so any width encodes the same value, but a value the
+        # field is too narrow to ever hold can never match
+        case CalldataDescriptorTypeFamily.UINT:
+            if hex_payload is not None:
+                if not _fits_unsigned(int.from_bytes(hex_payload, byteorder="big"), type_size):
+                    return unsupported(f"it does not fit in the {type_size} bytes of the field")
+                return hex_payload
+            if isinstance(value, bool):
+                return bytes([1 if value else 0])
+            if isinstance(value, int):
+                if value < 0:
+                    return unsupported("an unsigned field cannot match a negative value")
+                if not _fits_unsigned(value, type_size):
+                    return unsupported(f"it does not fit in the {type_size} bytes of the field")
+                return value.to_bytes(max(1, (value.bit_length() + 7) // 8), byteorder="big")
+            return unsupported("expected an integer or a hexadecimal string")
+
+        # compared as decimal strings, and the device only reads a constraint as signed when it is
+        # exactly as wide as the type, so a negative value has to carry its sign extension, and a
+        # positive one the type cannot hold would be read back with the opposite sign
+        case CalldataDescriptorTypeFamily.INT:
+            if hex_payload is not None:
+                # a constraint wider than the type fails to format on the device, and is skipped
+                if type_size is not None and len(hex_payload) > type_size:
+                    return unsupported(f"it is wider than the {type_size} bytes of the field")
+                return hex_payload
+            if isinstance(value, bool) or not isinstance(value, int):
+                return unsupported("expected an integer or a hexadecimal string")
+            if type_size is None:
+                return unsupported("the width of the field is unknown, so the value cannot be encoded")
+            if not _fits_signed(value, type_size):
+                return unsupported(f"it does not fit in the {type_size} bytes of the field")
+            if value >= 0:
+                return value.to_bytes(max(1, (value.bit_length() + 7) // 8), byteorder="big")
+            return value.to_bytes(type_size, byteorder="big", signed=True)
+
+        # right aligned on 20 bytes before comparison, so any width up to 20 encodes the same address
+        case CalldataDescriptorTypeFamily.ADDRESS:
+            if hex_payload is None:
+                return unsupported("expected a hexadecimal string")
+            if len(hex_payload) > ADDRESS_LENGTH:
+                return unsupported(f"an address constraint is at most {ADDRESS_LENGTH} bytes")
+            return hex_payload
+
+        # any non zero byte reads as true, so a single byte is enough
+        case CalldataDescriptorTypeFamily.BOOL:
+            if isinstance(value, bool):
+                return bytes([1 if value else 0])
+            if isinstance(value, int) and value in (0, 1):
+                return bytes([value])
+            return unsupported("expected a boolean")
+
+        # compared byte for byte against the whole value, so the constraint has to be exactly as wide
+        case CalldataDescriptorTypeFamily.BYTES:
+            if hex_payload is None:
+                return unsupported("expected a hexadecimal string, the device compares bytes byte for byte")
+            if type_size is not None and len(hex_payload) > type_size:
+                return unsupported(f"it is wider than the {type_size} bytes of the field")
+            if value_width is None:
+                return hex_payload
+            if len(hex_payload) > value_width:
+                return unsupported(f"it is wider than the {value_width} bytes the device compares")
+            # a static bytesN is left aligned in its calldata chunk and compared on the whole chunk
+            return hex_payload.ljust(value_width, b"\x00")
+
+        # compared byte for byte against the whole value: a "0x" prefixed value is the text itself,
+        # not a hex payload, because that is what a string field carries in calldata
+        case CalldataDescriptorTypeFamily.STRING:
+            if not isinstance(value, str):
+                return unsupported("expected a string")
+            return value.encode("utf-8")
+
+        case CalldataDescriptorTypeFamily.UFIXED | CalldataDescriptorTypeFamily.FIXED:
+            return unsupported("fixed precision numbers are not supported")
+
+        case _:
+            return unsupported("unsupported type family")
 
 
 def _convert_v2_value(

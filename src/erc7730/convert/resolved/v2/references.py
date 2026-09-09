@@ -100,7 +100,7 @@ def resolve_reference(
 
 def is_field_hidden(resolved_visible: str | dict[str, Any] | None) -> bool:
     """Check whether resolved visibility rules make the field hidden (never displayed)."""
-    return resolved_visible == "never" or (isinstance(resolved_visible, dict) and "mustBe" in resolved_visible)
+    return resolved_visible == "never" or (isinstance(resolved_visible, dict) and "mustMatch" in resolved_visible)
 
 
 def _resolve_visibility(reference: InputReference) -> str | dict[str, Any] | None:
@@ -113,8 +113,8 @@ def _resolve_visibility(reference: InputReference) -> str | dict[str, Any] | Non
         visibility_dict: dict[str, Any] = {}
         if reference.visible.ifNotIn is not None:
             visibility_dict["ifNotIn"] = reference.visible.ifNotIn
-        if reference.visible.mustBe is not None:
-            visibility_dict["mustBe"] = reference.visible.mustBe
+        if reference.visible.mustMatch is not None:
+            visibility_dict["mustMatch"] = reference.visible.mustMatch
         return visibility_dict
     return None
 

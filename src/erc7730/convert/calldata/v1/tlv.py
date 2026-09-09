@@ -12,6 +12,7 @@ from erc7730.common.binary import from_hex, tlv
 from erc7730.common.pydantic import pydantic_enum_by_name
 from erc7730.model.calldata.types import TrustedNameSource, TrustedNameType
 from erc7730.model.calldata.v1.instruction import (
+    CalldataDescriptorFieldVisibilityV1,
     CalldataDescriptorInstructionEnumValueV1,
     CalldataDescriptorInstructionFieldV1,
     CalldataDescriptorInstructionTransactionInfoV1,
@@ -79,6 +80,8 @@ class CalldataDescriptorFieldTag(IntEnum):
     NAME = 0x01
     PARAM_TYPE = 0x02
     PARAM = 0x03
+    VISIBLE = 0x04
+    CONSTRAINT = 0x05
 
 
 @pydantic_enum_by_name
@@ -312,6 +315,13 @@ def tlv_field(obj: CalldataDescriptorInstructionFieldV1) -> bytes:
 
     out += tlv(CalldataDescriptorFieldTag.PARAM_TYPE, param_type.value.to_bytes(1))
     out += tlv(CalldataDescriptorFieldTag.PARAM, param_value)
+
+    # VISIBLE defaults to ALWAYS when absent, so it is omitted in that case to keep payloads stable.
+    # It must be serialized before any CONSTRAINT, which the device rejects otherwise.
+    if obj.visibility is not CalldataDescriptorFieldVisibilityV1.ALWAYS:
+        out += tlv(CalldataDescriptorFieldTag.VISIBLE, obj.visibility.value.to_bytes(1))
+        for constraint in obj.constraints or []:
+            out += tlv(CalldataDescriptorFieldTag.CONSTRAINT, from_hex(constraint))
 
     return out
 
