@@ -181,7 +181,8 @@ def _component_to_abi_tree(inp: InputOutput | Component) -> ABITree:
                     type_size = (tp.sub or 8) // 8
                 case "bytes":
                     type_family = CalldataDescriptorTypeFamily.BYTES
-                    type_size = tp.sub // 8 if tp.sub else None
+                    # unlike int/uint, the "bytesN" sub type is already a byte count, not a bit count
+                    type_size = tp.sub if tp.sub else None
                 case "string":
                     type_family = CalldataDescriptorTypeFamily.STRING
                     type_size = tp.sub // 8 if tp.sub else None

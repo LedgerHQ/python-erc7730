@@ -73,7 +73,7 @@ UPDATE_REFERENCES = False
         TestCase(
             id="field_with_visibility_conditions",
             label="field with visibility conditions",
-            description="using visibility conditions with ifNotIn/mustBe",
+            description="using visibility conditions with ifNotIn/mustMatch",
         ),
         TestCase(
             id="field_with_separator",
@@ -152,8 +152,8 @@ UPDATE_REFERENCES = False
         ),
         TestCase(
             id="definition_no_label_visible_must_be",
-            label="definition without label - visible mustBe",
-            description="definition without label is allowed when reference sets visible with mustBe condition",
+            label="definition without label - visible mustMatch",
+            description="definition without label is allowed when reference sets visible with mustMatch condition",
         ),
     ],
     ids=case_id,

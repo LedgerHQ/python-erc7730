@@ -1,46 +1,57 @@
 {
-    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "version": "2.0.0",
     "type": "object",
     "description": "ERC7730 Clear Signing Specification Schema. Specification located at https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs",
+
     "properties": {
+
         "$schema": {
             "title": "Schema",
             "type": "string",
             "format": "uri-reference",
             "description": "The schema that the document should conform to. This should be the URL of a version of the clear signing JSON schemas available under https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/master/specs"
         },
+
         "$comment": {
             "title": "Schema",
             "type": "string",
             "description": "An optional comment string that can be used to document the purpose of the file."
         },
+
         "includes": {
             "title": "External includes",
             "type": "string",
             "format": "uri-reference",
             "description": "An URL of another ERC 7730 file that should be merged into this one. Includes are merged into this file before analysis. This can be used to manage interfaces definitions without redundancy."
         },
+
         "context": {
             "$ref": "#/$context/main"
         },
+
         "metadata": {
             "$ref": "#/$metadata/main"
         },
+
         "display": {
             "$ref": "#/$display/main"
         }
     },
     "additionalProperties": false,
-    "$context": {
-        "main": {
+
+    "$context" : {
+        "main" : {
             "title": "Binding Context Section",
             "type": "object",
             "description": "The binding context is a set of constraints that are used to bind the ERC7730 file to a specific structured data being displayed. Currently, supported contexts include contract-specific constraints or EIP712 message specific constraints.",
+
             "properties": {
-                "$id": {
+                "$id" : {
                     "$ref": "#/$definitions/id"
                 }
             },
+
             "oneOf": [
                 {
                     "$ref": "#/$context/contract"
@@ -51,13 +62,16 @@
             ],
             "unevaluatedProperties": false
         },
+
         "contract": {
             "type": "object",
+
             "properties": {
                 "contract": {
                     "title": "Contract Binding Context",
                     "type": "object",
                     "description": "The contract binding context is a set constraints that are used to bind the ERC7730 file to a specific smart contract.",
+
                     "properties": {
                         "abi": {
                             "description": "[Deprecated] ABI definition bound to this file. Continue providing it for backward compatibility only; new specs should rely on display formats."
@@ -85,6 +99,7 @@
                             ],
                             "additionalProperties": false
                         }
+
                     },
                     "additionalProperties": false
                 }
@@ -93,14 +108,16 @@
                 "contract"
             ]
         },
+
         "EIP712": {
             "type": "object",
             "properties": {
-                "eip712": {
+                "eip712" : {
                     "title": "EIP 712 Binding",
                     "type": "object",
                     "description": "The EIP-712 binding context is a set of constraints that must be verified by the message being signed.",
-                    "properties": {
+
+                    "properties" : {
                         "schemas": {
                             "description": "[Deprecated] Schema definition bound to this file. Continue providing it for backward compatibility only; new specs should rely on display formats."
                         },
@@ -108,6 +125,7 @@
                             "title": "EIP 712 Domain Binding constraint",
                             "type": "object",
                             "description": "Each value of the domain constraint MUST match the corresponding eip 712 message domain value.",
+
                             "properties": {
                                 "name": {
                                     "type": "string"
@@ -142,6 +160,7 @@
                 "eip712"
             ]
         },
+
         "deployments": {
             "title": "Deployments constraint",
             "type": "array",
@@ -160,40 +179,51 @@
             }
         }
     },
+
     "$metadata": {
         "main": {
             "title": "Metadata Section",
             "type": "object",
             "description": "The metadata section contains information about constant values relevant in the scope of the current contract / message (as matched by the `context` section)",
+
             "properties": {
+
                 "owner": {
                     "title": "Owner display name",
                     "type": "string",
                     "description": "The display name of the owner or target of the contract / message to be clear signed."
                 },
+
                 "contractName": {
                     "title": "Contract Name",
                     "type": "string",
                     "description": "The name of the contract targeted by the transaction or message."
                 },
+
                 "info": {
                     "$ref": "#/$metadata/info"
                 },
+
                 "token": {
                     "$ref": "#/$metadata/token"
                 },
+
                 "constants": {
                     "$ref": "#/$metadata/constants"
                 },
+
                 "enums": {
                     "$ref": "#/$metadata/enums"
                 }
             }
+
         },
-        "info": {
+
+        "info" : {
             "title": "Main contract's owner detailed information",
             "type": "object",
             "description": "The owner info section contains detailed information about the owner or target of the contract / message to be clear signed.",
+
             "properties": {
                 "deploymentDate": {
                     "title": "Deployment date of the contract / message",
@@ -213,10 +243,12 @@
             ],
             "additionalProperties": false
         },
-        "token": {
+
+        "token" : {
             "title": "Token Description",
             "type": "object",
             "description": "A description of an ERC20 token exported by this format, that should be trusted. Not mandatory if the corresponding metadata can be fetched from the contract itself.",
+
             "properties": {
                 "name": {
                     "title": "Token Name",
@@ -239,38 +271,39 @@
                 "decimals"
             ],
             "additionalProperties": false
+
         },
+
         "constants": {
             "title": "Constant values",
             "type": "object",
             "description": "A set of values that can be used in format parameters. Can be referenced with a path expression like $.metadata.constants.CONSTANT_NAME",
             "additionalProperties": {
-                "type": [
-                    "string",
-                    "integer",
-                    "number",
-                    "boolean",
-                    "null"
-                ]
+                "type": ["string", "integer", "number", "boolean", "null"]
             }
         },
-        "enums": {
+
+        "enums" : {
             "title": "Enums",
             "type": "object",
             "description": "A set of enums that are used to format fields replacing values with human readable strings.",
+
             "additionalProperties": {
                 "title": "Enumeration",
                 "type": "object",
                 "description": "A set of values that will be used to replace a field value with a human readable string. Enumeration keys are the field values and enumeration values are the displayable strings",
+
                 "additionalProperties": {
                     "type": "string"
                 }
             }
         },
+
         "maps": {
             "title": "Maps",
             "type": "object",
-            "description": "A set of maps that are used to manage context dependent constants. Maps can be used in place of constants, and the corresponding constant is based on the map key resolved value. Each key is a map name that can be used as a reference.",
+            "description": "A set of maps that are used to manage context dependant constants. Maps can be used in place of constants, and the correpsonding constant is based on the map key resolved value. Each key is a map name that can be used as a reference.",
+
             "additionalProperties": {
                 "type": "object",
                 "properties": {
@@ -283,14 +316,9 @@
                         "title": "Map Values",
                         "type": "object",
                         "description": "A set of values that can be used as constants based on the resolved key. Each key is a possible key value, and each value is the corresponding constant value.",
+
                         "additionalProperties": {
-                            "type": [
-                                "string",
-                                "integer",
-                                "number",
-                                "boolean",
-                                "null"
-                            ]
+                            "type": ["string", "integer", "number", "boolean", "null"]
                         }
                     },
                     "unresolvedProperties": false
@@ -298,12 +326,15 @@
             }
         }
     },
+
     "$display": {
         "main": {
             "title": "Display Formatting Info Section",
             "type": "object",
             "description": "The display section contains all the information needed to format the data in a human readable way. It contains the constants and formatters used to display the data contained in the bound structure.",
+
             "properties": {
+
                 "definitions": {
                     "type": "object",
                     "title": "Common Formatter Definitions",
@@ -312,24 +343,20 @@
                         "$ref": "#/$format/field"
                     }
                 },
+
                 "formats": {
                     "title": "List of field formats",
                     "description": "The list includes formatting info for each field of a structure. For contract bindings, entries are keyed by the full function signature with parameter names; for EIP712 bindings, entries are keyed by the string returned by EIP 712 encodeType on the primary type.",
                     "type": "object",
                     "propertyNames": {
-                        "anyOf": [
-                            {
-                                "pattern": "^[A-Za-z_][A-Za-z0-9_]*\\(\\s*(?:(?:(?:tuple(?:\\s*\\((?:[^()]|\\([^()]*\\))*\\))?|[A-Za-z0-9_]+)(?:\\[[0-9]*\\])*(?:\\s+(?:memory|calldata|storage))?\\s+[A-Za-z_][A-Za-z0-9_]*)(?:\\s*,\\s*(?:(?:tuple(?:\\s*\\((?:[^()]|\\([^()]*\\))*\\))?|[A-Za-z0-9_]+)(?:\\[[0-9]*\\])*(?:\\s+(?:memory|calldata|storage))?\\s+[A-Za-z_][A-Za-z0-9_]*))*\\s*)?\\)$"
-                            },
-                            {
-                                "pattern": "^\\s*[A-Za-z_][A-Za-z0-9_]*\\s*\\(\\s*(?:[A-Za-z_][A-Za-z0-9_]*(?:\\[\\])?\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:,\\s*[A-Za-z_][A-Za-z0-9_]*(?:\\[\\])?\\s+[A-Za-z_][A-Za-z0-9_]*\\s*)*)?\\)\\s*(?:\\s+[A-Za-z_][A-Za-z0-9_]*\\s*\\(\\s*(?:[A-Za-z_][A-Za-z0-9_]*(?:\\[\\])?\\s+[A-Za-z_][A-Za-z0-9_]*\\s*(?:,\\s*[A-Za-z_][A-Za-z0-9_]*(?:\\[\\])?\\s+[A-Za-z_][A-Za-z0-9_]*\\s*)*)?\\)\\s*)*$"
-                            }
-                        ]
+                        "pattern": "^\\s*[A-Za-z_][A-Za-z0-9_:]*\\s*\\(.*\\)$"
                     },
+
                     "additionalProperties": {
                         "title": "A structured data format specification",
                         "description": "A structured data format specification contains formatting information of fields in a single type of message.",
                         "type": "object",
+
                         "properties": {
                             "$id": {
                                 "$ref": "#/$definitions/id"
@@ -368,6 +395,7 @@
                         "type": "string"
                     }
                 }
+
             ]
         },
         "interpolatedIntent": {
@@ -379,6 +407,7 @@
             "title": "Field Formats set",
             "type": "array",
             "description": "An array containing the ordered definitions of fields formats. See the specification for more details.",
+
             "items": {
                 "oneOf": [
                     {
@@ -398,6 +427,7 @@
             "title": "A group of field formats, allowing recursivity in the schema and control over grouping and iteration.",
             "description": "A set of field formats used to group whole definitions for structures for instance. This allows nesting definitions of formats, but note that support for deep nesting will be device dependent.",
             "type": "object",
+
             "properties": {
                 "$id": {
                     "$ref": "#/$definitions/id"
@@ -414,10 +444,7 @@
                     "title": "Group arrays iteration mode",
                     "description": "Specifies how iteration over arrays in the group should be handled. Sequential mode displays elements grouped by array, ie arr_0[0] ... arr_0[N] arr_1[0] ... arr_1[M]. Bundled mode displays elements of the arrays grouped by index, ie arr_0[0] arr_1[0] arr_0[1] arr_1[1] ... arr_0[N] arr_1[N]. In bundled mode, all arrays MUST be of the same length.",
                     "type": "string",
-                    "enum": [
-                        "sequential",
-                        "bundled"
-                    ]
+                    "enum": [ "sequential", "bundled" ]
                 },
                 "fields": {
                     "$ref": "#/$display/fields"
@@ -438,36 +465,42 @@
                 "value": {
                     "$ref": "#/$format/value"
                 },
+                "label": {
+                    "description": "This value overrides the label in the referenced definition if set.",
+                    "type": "string"
+                },
                 "$ref": {
-                    "title": "Internal Definition",
                     "description": "An internal definition that should be used as the field formatting definition. The value is the key in the display definitions section, as a path expression $.display.definitions.DEFINITION_NAME.",
                     "type": "string"
                 },
                 "params": {
-                    "title": "Parameters",
                     "description": "Parameters override. These values takes precedence over the ones in the definition itself",
                     "type": "object",
-                    "additionalProperties": {
-                        "type": "string"
-                    }
+                    "additionalProperties": { "type": "string" }
+                },
+                "separator": {
+                    "description": "Separator override for the referenced definition.",
+                    "type": "string"
+                },
+                "visible": {
+                    "description": "Visibility override for the referenced definition.",
+                    "$ref": "#/$format/rules"
+                },
+                "encryption": {
+                    "description": "Encryption override for the referenced definition.",
+                    "$ref": "#/$format/encryptionParameters"
                 }
             },
-            "required": [
-                "$ref"
-            ],
+            "required": [ "$ref" ],
             "allOf": [
                 {
-                    "not": {
-                        "required": [
-                            "path",
-                            "value"
-                        ]
-                    }
+                    "not": { "required": [ "path", "value" ] }
                 }
             ],
             "additionalProperties": false
         }
     },
+
     "$format": {
         "path": {
             "title": "Path",
@@ -476,18 +509,15 @@
         },
         "value": {
             "title": "Value",
-            "type": [
-                "string",
-                "integer",
-                "number",
-                "boolean"
-            ],
+            "type": ["string", "integer", "number", "boolean"],
             "description": "A literal value on which the format should be applied instead of looking up a field in the structured data."
         },
+
         "field": {
             "title": "Field formatter",
             "description": "A field formatter contains formatting information of a single field in a message.",
             "type": "object",
+
             "properties": {
                 "$id": {
                     "$ref": "#/$definitions/id"
@@ -520,158 +550,81 @@
                 "encryption": {
                     "$ref": "#/$format/encryptionParameters",
                     "description": "If present, the field value is encrypted. The format specifies how to display the decrypted value."
-                }
+                  }
             },
-            "allOf": [
+            "allOf" : [
                 {
-                    "not": {
-                        "required": [
-                            "path",
-                            "value"
-                        ]
-                    }
+                    "not": { "required": [ "path", "value" ] }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "addressName"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "addressName" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/addressNameParameters"
-                            }
+                            "params": { "$ref": "#/$format/addressNameParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "interoperableAddressName"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "interoperableAddressName" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/interoperableAddressNameParameters"
-                            }
+                            "params": { "$ref": "#/$format/interoperableAddressNameParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "calldata"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "calldata" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/calldataParameters"
-                            }
+                            "params": { "$ref": "#/$format/calldataParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "tokenAmount"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "tokenAmount" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/tokenAmountParameters"
-                            }
+                            "params": { "$ref": "#/$format/tokenAmountParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "tokenTicker"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "tokenTicker" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/tokenTickerParameters"
-                            }
+                            "params": { "$ref": "#/$format/tokenTickerParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "nftName"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "nftName" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/nftNameParameters"
-                            }
+                            "params": { "$ref": "#/$format/nftNameParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "date"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "date" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/dateParameters"
-                            }
+                            "params": { "$ref": "#/$format/dateParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "unit"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "unit" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/unitParameters"
-                            }
+                            "params": { "$ref": "#/$format/unitParameters" }
                         }
                     }
                 },
                 {
-                    "if": {
-                        "properties": {
-                            "format": {
-                                "const": "enum"
-                            }
-                        }
-                    },
+                    "if": { "properties": { "format": { "const": "enum" } } },
                     "then": {
                         "properties": {
-                            "params": {
-                                "$ref": "#/$format/enumParameters"
-                            }
+                            "params": { "$ref": "#/$format/enumParameters" }
                         }
                     }
                 }
@@ -684,63 +637,46 @@
             "oneOf": [
                 {
                     "type": "string",
-                    "enum": [
-                        "always",
-                        "never",
-                        "optional"
-                    ],
+                    "enum": ["always", "never", "optional"],
                     "description": "Simple display rule: 'always' means always display, 'never' means always skip display, 'optional' means display only if wallet can."
                 },
                 {
-                    "type": "object",
-                    "properties": {
-                        "ifNotIn": {
-                            "type": "array",
-                            "description": "Display the field only if its value is NOT in this list.",
-                            "items": {
-                                "type": [
-                                    "string",
-                                    "number",
-                                    "boolean",
-                                    "null"
-                                ]
-                            },
-                            "minItems": 1
+                "type": "object",
+                "properties": {
+                    "ifNotIn": {
+                        "type": "array",
+                        "description": "Display the field only if its value is NOT in this list.",
+                        "items": {
+                            "type": ["string", "number", "boolean", "null"]
                         },
-                        "mustBe": {
-                            "type": "array",
-                            "description": "Always skip display, but value MUST match one of these values.",
-                            "items": {
-                                "type": [
-                                    "string",
-                                    "number",
-                                    "boolean",
-                                    "null"
-                                ]
-                            },
-                            "minItems": 1
-                        }
+                        "minItems": 1
                     },
-                    "additionalProperties": false,
-                    "allOf": [
-                        {
-                            "not": {
-                                "required": [
-                                    "notIn",
-                                    "mustBe"
-                                ]
-                            }
-                        }
-                    ],
-                    "description": "Conditional display rules. Either 'notIn' or 'mustBe' must be defined, but not both."
+                    "mustMatch": {
+                        "type": "array",
+                        "description": "Always skip display, but value MUST match one of these values.",
+                        "items": {
+                            "type": ["string", "number", "boolean", "null"]
+                        },
+                        "minItems": 1
+                    }
+                },
+                "additionalProperties": false,
+                "allOf": [
+                    {
+                    "not": {
+                        "required": ["ifNotIn", "mustMatch"]
+                    }
+                    }
+                ],
+                "description": "Conditional display rules. Either 'ifNotIn' or 'mustMatch' must be defined, but not both."
                 }
-            ]
+            ]    
         },
         "mapReference": {
             "title": "Map Reference",
             "type": "object",
             "properties": {
-                "map": {
+                "map": { 
                     "type": "string",
                     "description": "The path to the referenced map."
                 },
@@ -771,6 +707,7 @@
                     "title": "bytes format",
                     "const": "calldata",
                     "description": "The field is itself a calldata embedded in main call. Another ERC 7730 should be used to parse this field. If not available or not supported, the wallet MAY display a hash of the embedded calldata instead."
+
                 },
                 {
                     "title": "integer format",
@@ -819,7 +756,7 @@
                 }
             ]
         },
-        "addressNameParameters": {
+        "addressNameParameters" : {
             "title": "Address Names Formatting Parameters",
             "type": "object",
             "properties": {
@@ -829,13 +766,7 @@
                     "description": "The types of address to display. Restrict allowable sources of names and MAY lead to additional checks from wallets.",
                     "items": {
                         "type": "string",
-                        "enum": [
-                            "wallet",
-                            "eoa",
-                            "contract",
-                            "token",
-                            "collection"
-                        ]
+                        "enum": [ "wallet", "eoa", "contract", "token", "collection" ]
                     }
                 },
                 "sources": {
@@ -865,23 +796,16 @@
             },
             "additionalProperties": false
         },
-        "calldataParameters": {
+        "calldataParameters" : {
             "title": "Embedded Calldata Formatting Parameters",
             "type": "object",
             "properties": {
                 "callee": {
                     "title": "Callee Address",
-                    "type": [
-                        "string",
-                        "object"
-                    ],
+                    "type": ["string", "object"],
                     "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "string" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "The address of the contract being called by this embedded calldata."
                 },
@@ -892,17 +816,10 @@
                 },
                 "selector": {
                     "title": "Called Selector (Optional)",
-                    "type": [
-                        "string",
-                        "object"
-                    ],
+                    "type": ["string", "object"],
                     "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "string" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "The selector being called, if not contained in the calldata. Hex string representation."
                 },
@@ -913,17 +830,10 @@
                 },
                 "amount": {
                     "title": "Amount (Optional)",
-                    "type": [
-                        "integer",
-                        "object"
-                    ],
+                    "type": ["integer", "object"],
                     "anyOf": [
-                        {
-                            "type": "integer"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "integer" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "The associated amount in native currency, if the calldata can be associated with a container value."
                 },
@@ -934,17 +844,10 @@
                 },
                 "spender": {
                     "title": "Spender Path (Optional)",
-                    "type": [
-                        "string",
-                        "object"
-                    ],
+                    "type": ["string", "object"],
                     "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "string" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "The associated spender, if the calldata can be associated with a container value."
                 },
@@ -955,50 +858,14 @@
                 }
             },
             "anyOf": [
-                {
-                    "required": [
-                        "callee"
-                    ]
-                },
-                {
-                    "required": [
-                        "calleePath"
-                    ]
-                }
+                {"required": ["callee"]},
+                {"required": ["calleePath"]}
             ],
             "allOf": [
-                {
-                    "not": {
-                        "required": [
-                            "callee",
-                            "calleePath"
-                        ]
-                    }
-                },
-                {
-                    "not": {
-                        "required": [
-                            "selector",
-                            "selectorPath"
-                        ]
-                    }
-                },
-                {
-                    "not": {
-                        "required": [
-                            "amount",
-                            "amountPath"
-                        ]
-                    }
-                },
-                {
-                    "not": {
-                        "required": [
-                            "spender",
-                            "spenderPath"
-                        ]
-                    }
-                }
+                {"not": { "required": ["callee", "calleePath"] }},
+                {"not": { "required": ["selector", "selectorPath"] }},
+                {"not": { "required": ["amount", "amountPath"] }},
+                {"not": { "required": ["spender", "spenderPath"] }}
             ],
             "additionalProperties": false
         },
@@ -1008,17 +875,10 @@
             "properties": {
                 "token": {
                     "title": "Token",
-                    "type": [
-                        "string",
-                        "object"
-                    ],
+                    "type": ["string", "object"],
                     "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "string" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "The token address, or a path to a constant in the ERC 7730 file."
                 },
@@ -1055,17 +915,10 @@
                 },
                 "chainId": {
                     "title": "Chain ID",
-                    "type": [
-                        "integer",
-                        "object"
-                    ],
+                    "type": ["integer", "object"],
                     "anyOf": [
-                        {
-                            "type": "integer"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "integer" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "Optional. The chain on which the token is deployed (constant, or a map reference). When present, the wallet SHOULD resolve token metadata (ticker, decimals) for this chain. Useful for cross-chain swap clear signing where the same token address may refer to different chains."
                 },
@@ -1076,22 +929,8 @@
                 }
             },
             "allOf": [
-                {
-                    "not": {
-                        "required": [
-                            "token",
-                            "tokenPath"
-                        ]
-                    }
-                },
-                {
-                    "not": {
-                        "required": [
-                            "chainId",
-                            "chainIdPath"
-                        ]
-                    }
-                }
+                { "not": { "required": ["token", "tokenPath"] } },
+                { "not": { "required": ["chainId", "chainIdPath"] } }
             ],
             "additionalProperties": false
         },
@@ -1101,17 +940,10 @@
             "properties": {
                 "chainId": {
                     "title": "Chain ID",
-                    "type": [
-                        "integer",
-                        "object"
-                    ],
+                    "type": ["integer", "object"],
                     "anyOf": [
-                        {
-                            "type": "integer"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "integer" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "Optional. The chain on which the token is deployed (constant, or a map reference). When present, the wallet SHOULD resolve the token ticker for this chain. Useful for cross-chain swap clear signing."
                 },
@@ -1122,34 +954,20 @@
                 }
             },
             "allOf": [
-                {
-                    "not": {
-                        "required": [
-                            "chainId",
-                            "chainIdPath"
-                        ]
-                    }
-                }
+                { "not": { "required": ["chainId", "chainIdPath"] } }
             ],
             "additionalProperties": false
         },
-        "nftNameParameters": {
+        "nftNameParameters" : {
             "title": "NFT Names Formatting Parameters",
             "type": "object",
             "properties": {
                 "collection": {
                     "title": "Collection Address",
-                    "type": [
-                        "string",
-                        "object"
-                    ],
+                    "type": ["string", "object"],
                     "anyOf": [
-                        {
-                            "type": "string"
-                        },
-                        {
-                            "$ref": "#/$format/mapReference"
-                        }
+                        { "type": "string" },
+                        { "$ref": "#/$format/mapReference" }
                     ],
                     "description": "The collection address, or a path to a constant in the ERC 7730 file."
                 },
@@ -1160,22 +978,11 @@
                 }
             },
             "anyOf": [
-                {
-                    "required": [
-                        "collection"
-                    ]
-                },
-                {
-                    "required": [
-                        "collectionPath"
-                    ]
-                }
+                {"required": ["collection"]},
+                {"required": ["collectionPath"]}
             ],
             "not": {
-                "required": [
-                    "collection",
-                    "collectionPath"
-                ]
+                "required": ["collection", "collectionPath"]
             },
             "additionalProperties": false
         },
@@ -1198,6 +1005,7 @@
             ],
             "additionalProperties": false
         },
+
         "unitParameters": {
             "title": "Unit Formatting Parameters",
             "type": "object",
@@ -1223,6 +1031,7 @@
             ],
             "additionalProperties": false
         },
+
         "enumParameters": {
             "title": "Enum Formatting Parameters",
             "type": "object",
@@ -1238,7 +1047,7 @@
             ],
             "additionalProperties": false
         },
-        "interoperableAddressNameParameters": {
+        "interoperableAddressNameParameters" : {
             "title": "Interoperable Address Names Formatting Parameters",
             "type": "object",
             "properties": {
@@ -1248,13 +1057,7 @@
                     "description": "The types of address to display. Restrict allowable sources of names and MAY lead to additional checks from wallets.",
                     "items": {
                         "type": "string",
-                        "enum": [
-                            "wallet",
-                            "eoa",
-                            "contract",
-                            "token",
-                            "collection"
-                        ]
+                        "enum": [ "wallet", "eoa", "contract", "token", "collection" ]
                     }
                 },
                 "sources": {
@@ -1288,25 +1091,25 @@
             "title": "Encrypted Value Parameters",
             "type": "object",
             "properties": {
-                "scheme": {
-                    "type": "string",
-                    "description": "The encryption scheme used to produce the handle."
-                },
-                "plaintextType": {
-                    "type": "string",
-                    "description": "Solidity type of the decrypted value (the handle does not encode this)."
-                },
-                "fallbackLabel": {
-                    "type": "string",
-                    "description": "Optional label to display when decryption is not possible. Defaults to \"[Encrypted]\"."
-                }
+              "scheme": {
+                "type": "string",
+                "description": "The encryption scheme used to produce the handle."
+              },
+              "plaintextType": {
+                "type": "string",
+                "description": "Solidity type of the decrypted value (the handle does not encode this)."
+              },
+              "fallbackLabel": {
+                "type": "string",
+                "description": "Optional label to display when decryption is not possible. Defaults to \"[Encrypted]\"."
+              }
             },
-            "required": [
-                "scheme"
-            ],
+            "required": ["scheme"],
             "additionalProperties": false
         }
+
     },
+
     "$definitions": {
         "id": {
             "title": "ID",
