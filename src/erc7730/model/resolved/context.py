@@ -1,4 +1,6 @@
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 from pydantic_string_url import HttpUrl
 
 from erc7730.model.abi import ABI
@@ -111,7 +113,21 @@ class ResolvedEIP712(ResolvedBindingContext):
         description="The domain separator value that must be matched by the message. In hex string representation.",
     )
 
+    deployments: list[ResolvedDeployment] = Field(
+        default_factory=list,
+        title="Deployments",
+        description="An array of deployments describing where the message is used. May be omitted when the descriptor "
+        "binds through domainSeparator, which is the only option available to a domain that carries the chain id in "
+        "salt and so has no chainId member.",
+    )
+
     schemas: list[EIP712Schema] = Field(title="EIP-712 messages schemas", description="Schemas of all messages.")
+
+    @model_validator(mode="after")
+    def _validate_binding(self) -> Self:
+        if not self.deployments and self.domainSeparator is None:
+            raise ValueError("EIP-712 context must set at least one of deployments or domainSeparator.")
+        return self
 
 
 class ResolvedContractContext(Model):
