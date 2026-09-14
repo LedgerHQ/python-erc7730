@@ -70,14 +70,19 @@ def generate_descriptor(
     """
 
     context, trees = _generate_context(chain_id, contract_address, abi, eip712_schema)
-    metadata = _generate_metadata(legal_name, owner, url)
+    metadata = _generate_metadata(owner, legal_name, url)
     display = _generate_display(trees)
 
     return InputERC7730Descriptor(context=context, metadata=metadata, display=display)
 
 
 def _generate_metadata(owner: str | None, legal_name: str | None, url: HttpUrl | None) -> InputMetadata:
-    info = OwnerInfo(legalName=legal_name, url=url) if legal_name is not None and url is not None else None
+    info = None
+    if legal_name is not None or url is not None:
+        # OwnerInfo requires a legal name, so fall back to the display name when only a
+        # URL is supplied, rather than dropping the URL.
+        if (name := legal_name if legal_name is not None else owner) is not None:
+            info = OwnerInfo(legalName=name, url=url)
     return InputMetadata(owner=owner, info=info)
 
 

@@ -158,6 +158,53 @@ def test_generate_multidimensional_arrays() -> None:
         assert field.path.elements[0].identifier == field_name
 
 
+def test_generate_metadata_owner_and_legal_name() -> None:
+    """owner is the display name, legal_name the full legal name of that owner."""
+    with open(DATA / "abis_array_struct.json", "rb") as f:
+        descriptor = generate_descriptor(
+            chain_id=1,
+            contract_address=Address("0x0000000000000000000000000000000000000000"),
+            abi=f.read(),
+            owner="Display Name",
+            legal_name="Legal Name Ltd",
+            url="https://example.com",
+        )
+
+    assert descriptor.metadata.owner == "Display Name"
+    assert descriptor.metadata.info is not None
+    assert descriptor.metadata.info.legalName == "Legal Name Ltd"
+    assert str(descriptor.metadata.info.url) == "https://example.com"
+
+
+def test_generate_metadata_owner_without_legal_name() -> None:
+    """owner alone must reach metadata.owner, and must not swallow the url."""
+    with open(DATA / "abis_array_struct.json", "rb") as f:
+        descriptor = generate_descriptor(
+            chain_id=1,
+            contract_address=Address("0x0000000000000000000000000000000000000000"),
+            abi=f.read(),
+            owner="Display Name",
+            url="https://example.com",
+        )
+
+    assert descriptor.metadata.owner == "Display Name"
+    assert descriptor.metadata.info is not None
+    assert str(descriptor.metadata.info.url) == "https://example.com"
+
+
+def test_generate_metadata_owner_only() -> None:
+    """owner alone, with no url, must still reach metadata.owner."""
+    with open(DATA / "abis_array_struct.json", "rb") as f:
+        descriptor = generate_descriptor(
+            chain_id=1,
+            contract_address=Address("0x0000000000000000000000000000000000000000"),
+            abi=f.read(),
+            owner="Display Name",
+        )
+
+    assert descriptor.metadata.owner == "Display Name"
+
+
 def _assert_descriptor_valid(descriptor: InputERC7730Descriptor) -> None:
     print(descriptor.to_json_string())
     assert len(get_deployments(descriptor)) == 1
