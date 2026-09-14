@@ -23,11 +23,9 @@ ERC7730_REGISTRY = ERC7730_REGISTRY_ROOT / ERC_7730_REGISTRY_DIRECTORY
 
 
 def _is_registry_descriptor(path: Path) -> bool:
-    """Return true for descriptor files, not nested test fixture files."""
-    return (
-        "tests" not in path.relative_to(ERC7730_REGISTRY).parts
-        and "testsv2" not in path.relative_to(ERC7730_REGISTRY).parts
-    )
+    """Return true for descriptor files, not nested test fixture or signature files."""
+    parts = path.relative_to(ERC7730_REGISTRY).parts
+    return "tests" not in parts and "testsv2" not in parts and "sigs" not in parts
 
 
 ERC7730_CALLDATA_DESCRIPTORS = sorted(
