@@ -3,9 +3,9 @@ Object model for ERC-7730 v2 descriptors `context` section.
 
 """
 
-from typing import Any
+from typing import Any, Self
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_string_url import HttpUrl
 
 from erc7730.model.base import Model
@@ -120,6 +120,14 @@ class InputEIP712(InputBindingContext):
         description="The domain separator value that must be matched by the message. In hex string representation.",
     )
 
+    deployments: list[InputDeployment] = Field(
+        default_factory=list,
+        title="Deployments",
+        description="An array of deployments describing where the message is used. May be omitted when the descriptor "
+        "binds through domainSeparator, which is the only option available to a domain that carries the chain id in "
+        "salt and so has no chainId member.",
+    )
+
     schemas: Any | None = Field(
         None,
         title="EIP-712 messages schemas",
@@ -129,6 +137,13 @@ class InputEIP712(InputBindingContext):
             "The address book should be used to resolve EIP-712 schemas."
         ),
     )
+
+    @model_validator(mode="after")
+    def _validate_binding(self) -> Self:
+        # an empty domainSeparator is no more a binding than a missing one
+        if not self.deployments and not self.domainSeparator:
+            raise ValueError("EIP-712 context must set at least one of deployments or domainSeparator.")
+        return self
 
 
 class InputContractContext(Model):
