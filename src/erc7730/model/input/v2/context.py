@@ -140,7 +140,8 @@ class InputEIP712(InputBindingContext):
 
     @model_validator(mode="after")
     def _validate_binding(self) -> Self:
-        if not self.deployments and self.domainSeparator is None:
+        # an empty domainSeparator is no more a binding than a missing one
+        if not self.deployments and not self.domainSeparator:
             raise ValueError("EIP-712 context must set at least one of deployments or domainSeparator.")
         return self
 

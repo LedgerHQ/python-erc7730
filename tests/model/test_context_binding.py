@@ -53,6 +53,23 @@ def test_eip712_requires_one_binding(model: Any) -> None:
     assert "at least one of deployments or domainSeparator" in str(error.value)
 
 
+@pytest.mark.parametrize("model", EIP712_MODELS)
+def test_eip712_rejects_an_empty_domain_separator(model: Any) -> None:
+    """`domainSeparator` is an unconstrained str, and "" binds nothing."""
+    with pytest.raises(ValidationError) as error:
+        model(domainSeparator="")
+
+    assert "at least one of deployments or domainSeparator" in str(error.value)
+
+
+@pytest.mark.parametrize("model", EIP712_MODELS)
+def test_eip712_accepts_an_empty_domain_separator_beside_a_deployment(model: Any) -> None:
+    """The empty value is only fatal when it is the only binding on offer."""
+    context = model(deployments=DEPLOYMENTS, domainSeparator="")
+
+    assert len(context.deployments) == 1
+
+
 def test_contract_still_requires_deployments() -> None:
     """Only the EIP-712 context is relaxed; a contract must still declare where it lives."""
     with pytest.raises(ValidationError):
