@@ -77,12 +77,10 @@ def generate_descriptor(
 
 
 def _generate_metadata(owner: str | None, legal_name: str | None, url: HttpUrl | None) -> InputMetadata:
-    info = None
-    if legal_name is not None or url is not None:
-        # OwnerInfo requires a legal name, so fall back to the display name when only a
-        # URL is supplied, rather than dropping the URL.
-        if (name := legal_name if legal_name is not None else owner) is not None:
-            info = OwnerInfo(legalName=name, url=url)
+    # OwnerInfo needs both a legal name and a URL. Fall back to the display name when
+    # only a URL is supplied, rather than dropping the URL.
+    name = legal_name if legal_name is not None else owner
+    info = OwnerInfo(legalName=name, url=url) if url is not None and name else None
     return InputMetadata(owner=owner, info=info)
 
 

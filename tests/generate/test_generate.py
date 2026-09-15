@@ -189,7 +189,23 @@ def test_generate_metadata_owner_without_legal_name() -> None:
 
     assert descriptor.metadata.owner == "Display Name"
     assert descriptor.metadata.info is not None
+    assert descriptor.metadata.info.legalName == "Display Name"
     assert str(descriptor.metadata.info.url) == "https://example.com"
+
+
+def test_generate_metadata_legal_name_without_url() -> None:
+    """OwnerInfo requires a url, so a legal name alone leaves info unset rather than raising."""
+    with open(DATA / "abis_array_struct.json", "rb") as f:
+        descriptor = generate_descriptor(
+            chain_id=1,
+            contract_address=Address("0x0000000000000000000000000000000000000000"),
+            abi=f.read(),
+            owner="Display Name",
+            legal_name="Legal Name Ltd",
+        )
+
+    assert descriptor.metadata.owner == "Display Name"
+    assert descriptor.metadata.info is None
 
 
 def test_generate_metadata_owner_only() -> None:
