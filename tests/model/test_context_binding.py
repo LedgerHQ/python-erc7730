@@ -56,4 +56,5 @@ def test_eip712_requires_one_binding(model: Any) -> None:
 def test_contract_still_requires_deployments() -> None:
     """Only the EIP-712 context is relaxed; a contract must still declare where it lives."""
     with pytest.raises(ValidationError):
-        InputContract(abi=[])
+        # the omission is the assertion; mypy sees the field is required too
+        InputContract(abi=[])  # type: ignore[call-arg]
