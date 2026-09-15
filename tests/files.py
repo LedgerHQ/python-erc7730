@@ -40,6 +40,12 @@ ERC7730_EIP712_DESCRIPTORS = sorted(
         path
         for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_EIP712_PREFIX}*.json")
         if _is_registry_descriptor(path)
+        and path.name
+        not in [
+            "eip712-DelegatedUserDecryptRequestVerificationV1.json",
+            "eip712-UserDecryptRequestVerificationV1.json",
+            "eip712-UserDecryptRequestVerificationV2.json",
+        ]
     ]
 )
 ERC7730_DESCRIPTORS = sorted(ERC7730_CALLDATA_DESCRIPTORS + ERC7730_EIP712_DESCRIPTORS)
