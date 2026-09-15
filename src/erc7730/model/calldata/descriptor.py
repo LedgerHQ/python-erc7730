@@ -12,15 +12,16 @@ from typing import Annotated
 from pydantic import Field
 
 from erc7730.model.calldata.v1.descriptor import (
+    CalldataDescriptorEIP712V1,
     CalldataDescriptorV1,
 )
 
 CalldataDescriptor = Annotated[
-    CalldataDescriptorV1,
+    CalldataDescriptorV1 | CalldataDescriptorEIP712V1,
     Field(
         title="Calldata descriptor",
-        description="A clear signing descriptor for a smart contract function calldata. Also referred to as a "
-        """"generic parser descriptor".""",
-        discriminator="version",
+        description="A clear signing descriptor for a smart contract function calldata (or an EIP-712 message). Also "
+        """referred to as a "generic parser descriptor".""",
+        discriminator="type",
     ),
 ]

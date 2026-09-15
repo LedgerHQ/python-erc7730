@@ -187,6 +187,25 @@ def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, 
     return primary_type, types
 
 
+def to_encode_type(primary_type: str, types: dict[str, list[tuple[str, str]]]) -> str:
+    """Build the canonical EIP-712 ``encodeType`` string for a primary type.
+
+    Per EIP-712, the primary type is encoded first, followed by all referenced struct types sorted alphabetically by
+    name. This is the inverse of :func:`parse_encode_type` and normalizes the ordering of the input.
+
+    :param primary_type: the primary (root) struct type name
+    :param types: struct name -> ordered list of (type, name) field tuples, including the primary type
+    :return: the canonical ``encodeType`` string
+    :raises KeyError: if ``primary_type`` is not present in ``types``
+    """
+
+    def encode_one(name: str) -> str:
+        return f"{name}(" + ",".join(f"{typ} {field_name}" for typ, field_name in types[name]) + ")"
+
+    dependencies = sorted(name for name in types if name != primary_type)
+    return encode_one(primary_type) + "".join(encode_one(name) for name in dependencies)
+
+
 class ABIDataType(StrEnum):
     """Solidity data type."""
 
