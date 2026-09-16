@@ -58,3 +58,32 @@ def test_a_group_does_not_hide_the_labels_inside_it() -> None:
     ValidateMaxLengthLinter._collect_long_labels(group, out)
 
     assert out == {LONG}
+
+
+@pytest.mark.parametrize(
+    "intent,expected",
+    [
+        pytest.param("Withdraw {_amounts.[]}", 9, id="one_placeholder"),
+        pytest.param("Send {sharesAmount} to {recipient}", 9, id="two_placeholders"),
+        pytest.param("Stake ETH with SSV", 18, id="no_placeholder"),
+        pytest.param("{_approved} unstETH NFTs", 13, id="leading_placeholder"),
+    ],
+)
+def test_literal_length_counts_only_what_is_certain_to_be_displayed(intent: str, expected: int) -> None:
+    """A `{path}` is template syntax, and the value replacing it has no length known here."""
+    assert ValidateMaxLengthLinter._literal_length(intent) == expected
+
+
+def test_a_long_path_inside_a_placeholder_does_not_make_the_intent_long() -> None:
+    """`{execution.desc.minReturnAmount}` is 32 characters of path that never reaches a screen."""
+    intent = "Swap for at least {execution.desc.minReturnAmount}"
+
+    assert len(intent) > 30
+    assert ValidateMaxLengthLinter._literal_length(intent) == 18
+
+
+def test_literal_text_over_the_limit_is_still_measured() -> None:
+    """Literal text alone over the limit truncates whatever the values render to."""
+    intent = "Authorize decryption on behalf of {delegator} for {contracts} for {days} days"
+
+    assert ValidateMaxLengthLinter._literal_length(intent) > 30

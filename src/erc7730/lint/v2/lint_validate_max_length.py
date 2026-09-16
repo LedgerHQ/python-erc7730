@@ -4,6 +4,7 @@ V2 linter that validates string lengths against Ledger device display limits.
 Adapted from v1 ValidateMaxLengthLinter to use v2 model types.
 """
 
+import re
 from typing import final, override
 
 from erc7730.common.ledger import (
@@ -86,8 +87,8 @@ class ValidateMaxLengthLinter(ERC7730Linter):
         for fmt in descriptor.display.formats.values():
             if fmt.intent is not None and isinstance(fmt.intent, str) and len(fmt.intent) > OPERATION_TYPE_MAX_LENGTH:
                 too_long_intents.add(fmt.intent)
-            if fmt.interpolatedIntent is not None and len(fmt.interpolatedIntent) > OPERATION_TYPE_MAX_LENGTH:
-                too_long_intents.add(fmt.interpolatedIntent)
+            if (ii := fmt.interpolatedIntent) is not None and cls._literal_length(ii) > OPERATION_TYPE_MAX_LENGTH:
+                too_long_intents.add(ii)
             if fmt.id is not None and len(fmt.id) > OPERATION_TYPE_MAX_LENGTH:
                 too_long_ids.add(fmt.id)
 
@@ -124,6 +125,20 @@ class ValidateMaxLengthLinter(ERC7730Linter):
         if visible == VisibilityRule.NEVER:
             return True
         return isinstance(visible, ResolvedVisibilityConditions) and visible.mustMatch is not None
+
+    _PLACEHOLDER = re.compile(r"\{[^}]*\}")
+
+    @classmethod
+    def _literal_length(cls, interpolated_intent: str) -> int:
+        """Length of the text an interpolated intent is guaranteed to display.
+
+        `{path}` is template syntax. Neither the braces nor the path inside them reaches a
+        screen, and the length of the value that replaces them is not known here -- an amount
+        may render as "1 ETH" or as eighteen decimal places. Only the literal text around the
+        placeholders is certain to be displayed, so it is the only part that can be measured.
+        Over the limit on that alone means the intent truncates whatever the values are.
+        """
+        return len(cls._PLACEHOLDER.sub("", interpolated_intent))
 
     @classmethod
     def _collect_long_labels(cls, field: ResolvedField, too_long: set[str]) -> None:
