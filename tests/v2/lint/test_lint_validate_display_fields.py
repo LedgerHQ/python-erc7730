@@ -38,3 +38,40 @@ def test_every_declared_name_is_accepted_when_the_reference_abi_names_nothing() 
 
 def test_no_name_is_accepted_when_the_format_key_is_a_selector() -> None:
     assert unnamed_parameter_names(reference_abi("", "", ""), declared_abi=None) == set()
+
+
+def coverage(unavailable: list[str] | None = None, not_reached: list[str] | None = None) -> str:
+    return ValidateDisplayFieldsLinter._coverage_message(
+        "https://etherscan.io//address/0xabc#code", unavailable or [], not_reached or []
+    )
+
+
+def test_coverage_names_the_reference_it_validated_against() -> None:
+    assert coverage() == "Display fields validated against the ABI of https://etherscan.io//address/0xabc#code."
+
+
+def test_coverage_reports_deployments_it_never_compared() -> None:
+    """One ABI validates the fields, so the other deployments are not covered and must be named."""
+    message = coverage(not_reached=["chain id 137 address 0xdead", "chain id 10 address 0xbeef"])
+
+    assert "Not compared against 2 further deployment(s)" in message
+    assert "chain id 137 address 0xdead" in message
+    assert "chain id 10 address 0xbeef" in message
+
+
+def test_coverage_keeps_the_reason_an_earlier_deployment_had_no_abi() -> None:
+    """The reason is what tells a reviewer whether to go and verify the contract."""
+    message = coverage(unavailable=["chain id 1 address 0xaaa: no verified source found"])
+
+    assert "No ABI available for 1 earlier deployment(s)" in message
+    assert "no verified source found" in message
+
+
+def test_coverage_reports_both_kinds_of_gap_together() -> None:
+    message = coverage(
+        unavailable=["chain id 1 address 0xaaa: no verified source found"],
+        not_reached=["chain id 10 address 0xbeef"],
+    )
+
+    assert "No ABI available" in message
+    assert "Not compared against" in message
