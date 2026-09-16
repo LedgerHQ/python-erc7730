@@ -5,7 +5,9 @@ Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/m
 JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/master/specs/erc7730-v2.schema.json
 """
 
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 
 from erc7730.model.base import Model
 from erc7730.model.types import Address, Id
@@ -116,7 +118,22 @@ class ResolvedEIP712(ResolvedBindingContext):
         description="The domain separator value that must be matched by the message. In hex string representation.",
     )
 
+    deployments: list[ResolvedDeployment] = Field(
+        default_factory=list,
+        title="Deployments",
+        description="An array of deployments describing where the message is used. May be omitted when the descriptor "
+        "binds through domainSeparator, which is the only option available to a domain that carries the chain id in "
+        "salt and so has no chainId member.",
+    )
+
     # Schemas are deprecated, so dropped from resolved model.
+
+    @model_validator(mode="after")
+    def _validate_binding(self) -> Self:
+        # an empty domainSeparator is no more a binding than a missing one
+        if not self.deployments and not self.domainSeparator:
+            raise ValueError("EIP-712 context must set at least one of deployments or domainSeparator.")
+        return self
 
 
 class ResolvedContractContext(Model):
