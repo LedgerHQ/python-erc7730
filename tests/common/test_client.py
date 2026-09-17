@@ -9,9 +9,9 @@ def test_get_supported_chains() -> None:
     result = client.get_supported_chains()
     assert result is not None
     assert len(result) >= 50
-    names = {chain.chainname for chain in result}
+    names = {chain.name for chain in result}
     assert "Ethereum Mainnet" in names
-    assert "Sepolia Testnet" in names
+    assert "Ethereum Sepolia Testnet" in names
     assert "BNB Smart Chain Mainnet" in names
     assert "BNB Smart Chain Testnet" in names
     assert "Polygon Mainnet" in names
@@ -39,6 +39,11 @@ def test_get_supported_chains() -> None:
     assert "opBNB Mainnet" in names
     assert "opBNB Testnet" in names
     assert "Taiko Mainnet" in names
+
+
+def test_get_contract_explorer_url() -> None:
+    result = client.get_contract_explorer_url(chain_id=1, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d")
+    assert result == "https://repo.sourcify.dev/1/0x06012c8cf97bead5deae237070f9587f8e7a266d"
 
 
 def test_get_contract_abis() -> None:
@@ -94,7 +99,7 @@ def test_get_contract_abis_unverified_proxy_implementation(monkeypatch: pytest.M
     monkeypatch.setattr(
         client, "get", lambda model, url, **params: proxy if url.endswith("eb48") else real_get(model, url, **params)
     )
-    with pytest.raises(client.ProxyImplementationError, match="0x0000000000000000000000000000000000000001"):
+    with pytest.raises(Exception, match="0x0000000000000000000000000000000000000001"):
         client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
 
 

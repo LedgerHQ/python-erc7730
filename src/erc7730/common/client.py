@@ -27,13 +27,13 @@ SOURCIFY = "sourcify.dev"
 _T = TypeVar("_T")
 
 
-class EtherscanChain(Model):
-    """Etherscan supported chain info."""
+class SourcifyChain(Model):
+    """Sourcify chain info, restricted to the fields used by this library."""
 
     model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
-    chainname: str
-    chainid: int
-    blockexplorer: HttpUrl
+    name: str
+    chainId: int
+    supported: bool = False
 
 
 class SourcifyImplementation(Model):
@@ -59,44 +59,29 @@ class SourcifyContract(Model):
     proxyResolution: SourcifyProxyResolution | None = None
 
 
-class ProxyImplementationError(Exception):
-    """The ABIs of a proxy implementation could not be fetched."""
-
-
 @cache
-def get_supported_chains() -> list[EtherscanChain]:
+def get_supported_chains() -> list[SourcifyChain]:
     """
-    Get supported chains from Etherscan.
+    Get supported chains from Sourcify.
 
-    :return: Etherscan supported chains, with name/chain id/block explorer URL
+    :return: Sourcify supported chains, with name/chain id
     """
-    return get(url=HttpUrl(f"https://{ETHERSCAN}/v2/chainlist"), model=list[EtherscanChain])
+    chains = get(url=HttpUrl(f"https://{SOURCIFY}/server/chains"), model=list[SourcifyChain])
+    return [chain for chain in chains if chain.supported]
 
 
 def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
     """
-    Get contract ABIs from Sourcify, falling back to Etherscan if the contract is not available on Sourcify.
-
-    Proxies are followed on Sourcify only, see `get_contract_abis_from_sourcify`.
+    Get contract ABIs from Sourcify.
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs
-    :raises Exception: if contract source is not available, API key not setup, or unexpected response
+    :raises Exception: if contract source is not available, or unexpected response
     """
-    try:
-        if (abis := get_contract_abis_from_sourcify(chain_id, contract_address)) is not None:
-            return abis
-        sourcify_error = "contract source is not available on Sourcify"
-    except ProxyImplementationError:
-        raise  # no fallback, Etherscan would only return the ABIs of the proxy
-    except Exception as e:
-        sourcify_error = str(e)
-
-    try:
-        return get_contract_abis_from_etherscan(chain_id, contract_address)
-    except Exception as e:
-        raise Exception(f"{sourcify_error}, and fetching from Etherscan failed: {e}") from e
+    if (abis := get_contract_abis_from_sourcify(chain_id, contract_address)) is None:
+        raise Exception("contract source is not available on Sourcify")
+    return abis
 
 
 def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) -> list[ABI] | None:
@@ -109,7 +94,7 @@ def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) ->
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs, or None if chain is not supported or contract source is not available
-    :raises ProxyImplementationError: if contract is a proxy and the ABIs of an implementation could not be fetched
+    :raises Exception: if contract is a proxy and the ABIs of an implementation could not be fetched
     :raises Exception: if unexpected response
     """
     if (contract := _get_sourcify_contract(chain_id, contract_address)) is None or contract.abi is None:
@@ -125,9 +110,9 @@ def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) ->
         try:
             implementation = _get_sourcify_contract(chain_id, address)
         except Exception as e:
-            raise ProxyImplementationError(f"fetching proxy implementation {address} from Sourcify failed: {e}") from e
+            raise Exception(f"fetching proxy implementation {address} from Sourcify failed: {e}") from e
         if implementation is None or implementation.abi is None:
-            raise ProxyImplementationError(f"proxy implementation {address} source is not available on Sourcify")
+            raise Exception(f"proxy implementation {address} source is not available on Sourcify")
         abis.extend(implementation.abi)
         pending.extend(_get_implementation_addresses(implementation))
     return abis
@@ -156,32 +141,6 @@ def _get_sourcify_contract(chain_id: int, contract_address: Address) -> Sourcify
         raise e
 
 
-def get_contract_abis_from_etherscan(chain_id: int, contract_address: Address) -> list[ABI]:
-    """
-    Get contract ABIs from Etherscan.
-
-    :param chain_id: EIP-155 chain ID
-    :param contract_address: EVM contract address
-    :return: deserialized list of ABIs
-    :raises Exception: if chain id not supported, API key not setup, or unexpected response
-    """
-    try:
-        return get(
-            url=HttpUrl(f"https://{ETHERSCAN}/v2/api"),
-            chainid=chain_id,
-            module="contract",
-            action="getabi",
-            address=contract_address,
-            model=list[ABI],
-        )
-    except Exception as e:
-        if "Contract source code not verified" in str(e):
-            raise Exception("contract source is not available on Etherscan") from e
-        if "Max calls per sec rate limit reached" in str(e):
-            raise Exception("Etherscan rate limit exceeded, please retry") from e
-        raise e
-
-
 def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpUrl:
     """
     Get contract explorer site URL (for opening in a browser).
@@ -192,11 +151,9 @@ def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpU
     :raises NotImplementedError: if chain id not supported
     """
     for chain in get_supported_chains():
-        if chain.chainid == chain_id:
-            return HttpUrl(f"{chain.blockexplorer}/address/{contract_address}#code")
-    raise NotImplementedError(
-        f"Chain ID {chain_id} is not supported, please report this to authors of python-erc7730 library"
-    )
+        if chain.chainId == chain_id:
+            return HttpUrl(f"https://repo.{SOURCIFY}/{chain_id}/{contract_address}")
+    raise NotImplementedError(f"Chain ID {chain_id} is not supported by Sourcify")
 
 
 def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
