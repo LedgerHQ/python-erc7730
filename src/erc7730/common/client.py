@@ -10,7 +10,7 @@ from httpx._content import IteratorByteStream
 from httpx_file import FileTransport
 from httpx_retries import RetryTransport
 from limiter import Limiter
-from pydantic import ConfigDict, TypeAdapter, ValidationError
+from pydantic import ConfigDict, Field, TypeAdapter, ValidationError
 from pydantic_string_url import FileUrl, HttpUrl
 from xdg_base_dirs import xdg_cache_home
 
@@ -19,6 +19,7 @@ from erc7730.model.base import Model
 from erc7730.model.types import Address
 
 # ruff: noqa: UP047
+# ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 ETHERSCAN = "api.etherscan.io"
 SOURCIFY = "sourcify.dev"
@@ -35,11 +36,31 @@ class EtherscanChain(Model):
     blockexplorer: HttpUrl
 
 
+class SourcifyImplementation(Model):
+    """Sourcify proxy implementation, restricted to the fields used by this library."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    address: Address
+
+
+class SourcifyProxyResolution(Model):
+    """Sourcify proxy resolution, restricted to the fields used by this library."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    isProxy: bool = False
+    implementations: list[SourcifyImplementation] = Field(default_factory=list)
+
+
 class SourcifyContract(Model):
     """Sourcify verified contract, restricted to the fields used by this library."""
 
     model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
     abi: list[ABI] | None = None
+    proxyResolution: SourcifyProxyResolution | None = None
+
+
+class ProxyImplementationError(Exception):
+    """The ABIs of a proxy implementation could not be fetched."""
 
 
 @cache
@@ -56,6 +77,8 @@ def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
     """
     Get contract ABIs from Sourcify, falling back to Etherscan if the contract is not available on Sourcify.
 
+    Proxies are followed on Sourcify only, see `get_contract_abis_from_sourcify`.
+
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs
@@ -65,6 +88,8 @@ def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
         if (abis := get_contract_abis_from_sourcify(chain_id, contract_address)) is not None:
             return abis
         sourcify_error = "contract source is not available on Sourcify"
+    except ProxyImplementationError:
+        raise  # no fallback, Etherscan would only return the ABIs of the proxy
     except Exception as e:
         sourcify_error = str(e)
 
@@ -78,17 +103,49 @@ def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) ->
     """
     Get contract ABIs from Sourcify.
 
+    If Sourcify resolves the contract as a proxy, the ABIs of its implementations are appended to the ABIs of the
+    proxy, following nested proxies.
+
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs, or None if chain is not supported or contract source is not available
+    :raises ProxyImplementationError: if contract is a proxy and the ABIs of an implementation could not be fetched
     :raises Exception: if unexpected response
     """
+    if (contract := _get_sourcify_contract(chain_id, contract_address)) is None or contract.abi is None:
+        return None
+
+    abis = list(contract.abi)
+    visited = {contract_address.lower()}
+    pending = _get_implementation_addresses(contract)
+    while pending:
+        if (address := pending.pop(0)).lower() in visited:
+            continue
+        visited.add(address.lower())
+        try:
+            implementation = _get_sourcify_contract(chain_id, address)
+        except Exception as e:
+            raise ProxyImplementationError(f"fetching proxy implementation {address} from Sourcify failed: {e}") from e
+        if implementation is None or implementation.abi is None:
+            raise ProxyImplementationError(f"proxy implementation {address} source is not available on Sourcify")
+        abis.extend(implementation.abi)
+        pending.extend(_get_implementation_addresses(implementation))
+    return abis
+
+
+def _get_implementation_addresses(contract: SourcifyContract) -> list[Address]:
+    if (resolution := contract.proxyResolution) is None or not resolution.isProxy:
+        return []
+    return [implementation.address for implementation in resolution.implementations]
+
+
+def _get_sourcify_contract(chain_id: int, contract_address: Address) -> SourcifyContract | None:
     try:
         return get(
             url=HttpUrl(f"https://{SOURCIFY}/server/v2/contract/{chain_id}/{contract_address}"),
-            fields="abi",
+            fields="abi,proxyResolution",
             model=SourcifyContract,
-        ).abi
+        )
     except HTTPStatusError as e:
         if e.response.status_code == codes.NOT_FOUND:
             return None  # contract source is not available on Sourcify

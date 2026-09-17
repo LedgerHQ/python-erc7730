@@ -1,3 +1,4 @@
+import pytest
 from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
@@ -66,6 +67,35 @@ def test_get_contract_abis_from_sourcify_unsupported_chain() -> None:
         chain_id=99999999, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d"
     )
     assert result is None
+
+
+def test_get_contract_abis_from_sourcify_proxy() -> None:
+    # USDC is a proxy, transfer() is only defined in the ABI of its implementation
+    result = client.get_contract_abis_from_sourcify(
+        chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    )
+    assert result is not None
+    names = {abi.name for abi in result if abi.type == "function"}
+    assert "upgradeTo" in names
+    assert "transfer" in names
+
+
+def test_get_contract_abis_unverified_proxy_implementation(monkeypatch: pytest.MonkeyPatch) -> None:
+    proxy = client.SourcifyContract.model_validate(
+        {
+            "abi": [],
+            "proxyResolution": {
+                "isProxy": True,
+                "implementations": [{"address": "0x0000000000000000000000000000000000000001"}],
+            },
+        }
+    )
+    real_get = client.get
+    monkeypatch.setattr(
+        client, "get", lambda model, url, **params: proxy if url.endswith("eb48") else real_get(model, url, **params)
+    )
+    with pytest.raises(client.ProxyImplementationError, match="0x0000000000000000000000000000000000000001"):
+        client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
 
 
 def test_get_from_github() -> None:

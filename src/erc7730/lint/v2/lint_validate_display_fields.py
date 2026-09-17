@@ -84,12 +84,6 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         if reference_abis is None:
             return
 
-        if reference_abis.proxy:
-            return out.info(
-                title="Proxy contract",
-                message=f"Contract {explorer_url} is likely to be a proxy, validation of display fields skipped",
-            )
-
         # Build ABI paths by selector
         abi_paths_by_selector: dict[str, set[DataPath]] = {}
         for selector, abi in reference_abis.functions.items():

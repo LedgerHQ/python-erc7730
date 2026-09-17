@@ -54,12 +54,6 @@ class ValidateABILinter(ERC7730Linter):
             except NotImplementedError:
                 url = f"<chain id {deployment.chainId} address {deployment.address}>"
 
-            if reference_abis.proxy:
-                return out.info(
-                    title="Proxy contract",
-                    message=f"Contract {url} is likely to be a proxy, validation of descriptor ABIs skipped",
-                )
-
             for selector, abi in descriptor_abis.functions.items():
                 if selector not in reference_abis.functions:
                     out.warning(
