@@ -4,7 +4,7 @@ from abc import ABC
 from functools import cache
 from typing import Any, TypeVar, final, override
 
-from hishel import CacheTransport, FileStorage
+from hishel import CacheTransport, Controller, FileStorage
 from httpx import URL, BaseTransport, Client, HTTPStatusError, HTTPTransport, Request, Response, codes
 from httpx._content import IteratorByteStream
 from httpx_file import FileTransport
@@ -70,6 +70,7 @@ def get_supported_chains() -> list[SourcifyChain]:
     return [chain for chain in chains if chain.supported]
 
 
+@cache
 def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
     """
     Get contract ABIs from Sourcify.
@@ -183,11 +184,13 @@ def _client() -> Client:
     :return:
     """
     cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=7 * 24 * 3600, check_ttl_every=24 * 3600)
+    # Sourcify responses have no caching headers, force caching so that they are stored (until storage TTL expires)
+    cache_controller = Controller(force_cache=True)
     http_transport = HTTPTransport()
     http_transport = GithubTransport(http_transport)
     http_transport = EtherscanTransport(http_transport)
     http_transport = RetryTransport(transport=http_transport)
-    http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
+    http_transport = CacheTransport(transport=http_transport, storage=cache_storage, controller=cache_controller)
     file_transport = FileTransport()
     # TODO file storage: authorize relative paths only
     transports = {"https://": http_transport, "file://": file_transport}

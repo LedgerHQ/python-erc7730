@@ -96,6 +96,7 @@ def test_get_contract_abis_unverified_proxy_implementation(monkeypatch: pytest.M
         }
     )
     real_get = client.get
+    client.get_contract_abis.cache_clear()
     monkeypatch.setattr(
         client, "get", lambda model, url, **params: proxy if url.endswith("eb48") else real_get(model, url, **params)
     )
