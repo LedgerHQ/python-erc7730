@@ -9,6 +9,26 @@ from erc7730.model.metadata import EnumDefinition
 from erc7730.model.resolved.context import ResolvedDeployment
 from erc7730.model.types import Id, Selector
 
+# A bool holds 0 or 1 in calldata, and an enum key is the field value it matches, so these are
+# the keys a descriptor writes for a bool field. JSON has no bool object key, so they arrive as
+# text, and the casing follows whoever wrote the descriptor rather than any rule.
+BOOLEAN_ORDINALS = {"true": 1, "false": 0}
+
+
+def enum_ordinal(ordinal: str) -> int:
+    """Value the device compares an enum entry against.
+
+    :param ordinal: enum key, as written in the descriptor
+    :return: the numeric field value it stands for
+    :raises ValueError: if the key is neither decimal nor a boolean literal
+    """
+    try:
+        return int(ordinal)
+    except ValueError:
+        if (value := BOOLEAN_ORDINALS.get(ordinal.strip().lower())) is not None:
+            return value
+        raise
+
 
 def convert_enums(
     deployment: ResolvedDeployment, selector: Selector, enums: dict[Id, EnumDefinition] | None
@@ -29,7 +49,7 @@ def convert_enums(
             selector=selector,
             id=i,
             enum_id=enum_id,
-            value=int(ordinal),
+            value=enum_ordinal(ordinal),
             name=name,
         )
         for i, (enum_id, enum) in enumerate(enums.items())
