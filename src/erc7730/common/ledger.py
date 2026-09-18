@@ -63,6 +63,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "velas_evm"
         case 108:
             return "thundercore"
+        case 130:
+            return "unichain"
         case 137:
             return "polygon"
         case 143:
@@ -121,6 +123,8 @@ def ledger_network_id(chain_id: int) -> str | None:
             return "moonbeam"
         case 1285:
             return "moonriver"
+        case 1301:
+            return "unichain_sepolia"
         case 1329:
             return "sei_evm"
         case 1442:
