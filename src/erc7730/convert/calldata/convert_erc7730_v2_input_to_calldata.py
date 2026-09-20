@@ -99,6 +99,23 @@ CALLDATA_CHUNK_SIZE = 32
 ADDRESS_LENGTH = 20
 
 
+def _describe(input_descriptor: InputERC7730Descriptor, source: HttpUrl | None) -> str:
+    """Name a descriptor in a diagnostic.
+
+    ``source`` is optional and is None for a local file, which is the usual case for the CLI,
+    so fall back to what the descriptor calls itself -- the same identifier the converted
+    output carries as its contract name.
+
+    :param input_descriptor: descriptor being converted
+    :param source: source URL, if one was supplied
+    :return: the most specific identifier available
+    """
+    name = input_descriptor.metadata.contractName or getattr(input_descriptor.context, "id", None)
+    if name is not None and source is not None:
+        return f"{name} ({source})"
+    return str(name or source or "<unidentified>")
+
+
 def erc7730_v2_descriptor_to_calldata_descriptors(
     input_descriptor: InputERC7730Descriptor,
     source: HttpUrl | None = None,
@@ -186,7 +203,7 @@ def erc7730_v2_descriptor_to_calldata_descriptors(
         return output_descriptors
 
     except Exception as e:
-        out.warning(f"Error processing v2 ERC-7730 file {source}, skipping it")
+        out.warning(f"Error processing v2 ERC-7730 descriptor {_describe(input_descriptor, source)}, skipping it")
         exception_to_output(e, out)
 
     return []
