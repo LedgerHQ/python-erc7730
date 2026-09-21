@@ -23,11 +23,11 @@ from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 
 
-def lint_all_and_print_errors(paths: list[Path], gha: bool = False) -> bool:
+def lint_all_and_print_errors(paths: list[Path], gha: bool = False, require_verified: bool = False) -> bool:
     """Lint all ERC-7730 v2 descriptor files at given paths and print results."""
     out = GithubAnnotationsAdder() if gha else DropFileOutputAdder(delegate=ConsoleOutputAdder())
 
-    count = lint_all(paths, out)
+    count = lint_all(paths, out, require_verified=require_verified)
 
     if out.has_errors:
         print(f"[bold][red]checked {count} v2 descriptor files, some errors found ❌[/red][/bold]")
@@ -41,7 +41,7 @@ def lint_all_and_print_errors(paths: list[Path], gha: bool = False) -> bool:
     return True
 
 
-def lint_all(paths: list[Path], out: OutputAdder) -> int:
+def lint_all(paths: list[Path], out: OutputAdder, require_verified: bool = False) -> int:
     """
     Lint all ERC-7730 v2 descriptor files at given paths.
 
@@ -49,11 +49,12 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
 
     :param paths: paths to apply linter on
     :param out: output adder
+    :param require_verified: report contracts that are not verified on Sourcify as errors instead of warnings
     :return: number of files checked
     """
     linter = MultiLinter(
         [
-            ValidateDisplayFieldsLinter(),
+            ValidateDisplayFieldsLinter(require_verified=require_verified),
             ValidateEIP712KeysLinter(),
             ClassifyTransactionTypeLinter(),
             ValidateMaxLengthLinter(),

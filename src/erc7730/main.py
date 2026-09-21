@@ -105,15 +105,21 @@ def command_lint(
     skip_abi_validation: Annotated[
         bool, Option("--skip-abi-validation", help="Skip ABI comparison with Sourcify reference data")
     ] = False,
+    require_verified: Annotated[
+        bool,
+        Option("--require-verified", help="Report contracts that are not verified on Sourcify as errors"),
+    ] = False,
     v2: Annotated[
         bool, Option("--v2", help="Use v2 model for validation (auto-detected from $schema if not set)")
     ] = False,
 ) -> None:
     if v2 or _any_v2_descriptor(paths):
-        if not lint_all_and_print_errors_v2(paths, gha):
+        if not lint_all_and_print_errors_v2(paths, gha, require_verified=require_verified):
             raise Exit(1)
     else:
-        if not lint_all_and_print_errors_v1(paths, gha, skip_abi_validation=skip_abi_validation):
+        if not lint_all_and_print_errors_v1(
+            paths, gha, skip_abi_validation=skip_abi_validation, require_verified=require_verified
+        ):
             raise Exit(1)
 
 
