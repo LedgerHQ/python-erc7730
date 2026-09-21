@@ -104,6 +104,24 @@ def test_get_contract_abis_unverified_proxy_implementation(monkeypatch: pytest.M
         client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
 
 
+def test_get_contract_abis_proxy_resolution_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    contract = client.SourcifyContract.model_validate(
+        {
+            "abi": [],
+            "proxyResolution": {
+                "proxyResolutionError": {
+                    "customCode": "proxy_resolution_error",
+                    "message": "Error while running proxy detection and implementation resolution",
+                }
+            },
+        }
+    )
+    client.get_contract_abis.cache_clear()
+    monkeypatch.setattr(client, "get", lambda model, url, **params: contract)
+    with pytest.raises(Exception, match="could not resolve whether"):
+        client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+
+
 def test_get_from_github() -> None:
     result1 = client.get(
         url=HttpUrl(

@@ -43,12 +43,21 @@ class SourcifyImplementation(Model):
     address: Address
 
 
+class SourcifyError(Model):
+    """Sourcify error, restricted to the fields used by this library."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    customCode: str
+    message: str
+
+
 class SourcifyProxyResolution(Model):
     """Sourcify proxy resolution, restricted to the fields used by this library."""
 
     model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
     isProxy: bool = False
     implementations: list[SourcifyImplementation] = Field(default_factory=list)
+    proxyResolutionError: SourcifyError | None = None
 
 
 class SourcifyContract(Model):
@@ -127,7 +136,7 @@ def _get_implementation_addresses(contract: SourcifyContract) -> list[Address]:
 
 def _get_sourcify_contract(chain_id: int, contract_address: Address) -> SourcifyContract | None:
     try:
-        return get(
+        contract = get(
             url=HttpUrl(f"https://{SOURCIFY}/server/v2/contract/{chain_id}/{contract_address}"),
             fields="abi,proxyResolution",
             model=SourcifyContract,
@@ -140,6 +149,10 @@ def _get_sourcify_contract(chain_id: int, contract_address: Address) -> Sourcify
         if e.response.status_code == codes.TOO_MANY_REQUESTS:
             raise Exception("Sourcify rate limit exceeded, please retry") from e
         raise e
+    # proxy resolution is computed at request time, a failure must not be mistaken for a regular contract
+    if (resolution := contract.proxyResolution) is not None and (error := resolution.proxyResolutionError) is not None:
+        raise Exception(f"Sourcify could not resolve whether {contract_address} is a proxy: {error.message}")
+    return contract
 
 
 def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpUrl:
