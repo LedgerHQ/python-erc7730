@@ -98,6 +98,8 @@ ABIs are fetched from [Sourcify](https://sourcify.dev), which requires no API ke
 implementations, if it is a proxy) must be verified on Sourcify. Sourcify responses are cached for one hour in
 `~/.cache/erc7730` (or `$XDG_CACHE_HOME/erc7730`), set `ERC7730_NO_CACHE=1` to disable the cache.
 
+If you have a Sourcify API token, set `SOURCIFY_TOKEN` and it is sent with every Sourcify request.
+
 Please note that while the generator does its best to guess the right format based on fields name/type, the generated
 descriptor should be considered a starting point to refine.
 
