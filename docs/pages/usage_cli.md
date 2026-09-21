@@ -67,9 +67,9 @@ excluded, please add it to `excluded` list to avoid this warning.
 
 ➡️ checking tether/calldata-usdt.json…
 🟠 warning: Function mismatch: Function approve(address,uint256) (selector: 0x095ea7b3) defined in descriptor ABIs does not match
-reference ABI (see https://etherscan.io/address/0xdac17f958d2ee523a2206206994597c13d831ec7#code)
+reference ABI (see https://repo.sourcify.dev/1/0xdac17f958d2ee523a2206206994597c13d831ec7)
 🟠 warning: Function mismatch: Function transfer(address,uint256) (selector: 0xa9059cbb) defined in descriptor ABIs does not match
-reference ABI (see https://etherscan.io/address/0xdac17f958d2ee523a2206206994597c13d831ec7#code)
+reference ABI (see https://repo.sourcify.dev/1/0xdac17f958d2ee523a2206206994597c13d831ec7)
 🔴 error: Invalid data path: "0xdAC17F958D2ee523a2206206994597C13D831ec7" is invalid, it must contain a data path to the address in the
 transaction data. It seems you are trying to use a constant address value instead, please note this feature is not supported (yet).
 
@@ -78,13 +78,13 @@ checked 61 descriptor files, some errors found ❌
 
 It can be called with single files or directories, in which case all descriptors will be checked.
 
-Use `--skip-abi-validation` to disable external ABI comparisons against Sourcify/Etherscan (useful for offline runs or faster local checks).
+Use `--skip-abi-validation` to disable external ABI comparisons against Sourcify (useful for offline runs or faster local checks).
 
 ### `erc7730 generate`
 
 The `generate` command bootstraps a new descriptor file from ABIs or message schemas:
 ```shell
-# fetch ABIs from sourcify/etherscan and generate a new calldata descriptor
+# fetch ABIs from sourcify and generate a new calldata descriptor
 erc7730 generate --chain-id=1 --address=0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45
 
 # generate a new calldata descriptor using given ABI file
@@ -94,12 +94,9 @@ erc7730 generate --chain-id=1 --address=0x00000000000000000000000000000000000000
 erc7730 generate --chain-id=1 --address=0x0000000000000000000000000000000000000000 --schema schemas.json
 ```
 
-ABIs are fetched from [Sourcify](https://sourcify.dev) first, which requires no API key. If the contract is not
-verified on Sourcify, Etherscan is used as a fallback, which requires
-[setting up an Etherscan API key](https://docs.etherscan.io/getting-started/viewing-api-usage-statistics):
-```shell
-export ETHERSCAN_API_KEY=XXXXXX
-```
+ABIs are fetched from [Sourcify](https://sourcify.dev), which requires no API key. The contract (and its
+implementations, if it is a proxy) must be verified on Sourcify. Sourcify responses are cached for one hour in
+`~/.cache/erc7730` (or `$XDG_CACHE_HOME/erc7730`), set `ERC7730_NO_CACHE=1` to disable the cache.
 
 Please note that while the generator does its best to guess the right format based on fields name/type, the generated
 descriptor should be considered a starting point to refine.

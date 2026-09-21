@@ -1,8 +1,8 @@
 """
-V2 linter that validates display fields against reference ABIs fetched from Sourcify or Etherscan.
+V2 linter that validates display fields against reference ABIs fetched from Sourcify.
 
 In v2, ABI and EIP-712 schemas are NOT embedded in the descriptor. Instead:
-  - For contract context: fetch ABI from Sourcify or Etherscan, validate display field paths match ABI params,
+  - For contract context: fetch ABI from Sourcify, validate display field paths match ABI params,
     and check selector exhaustiveness.
   - For EIP-712 context: no schema to validate against (no-op).
 """
@@ -26,10 +26,10 @@ from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 @final
 class ValidateDisplayFieldsLinter(ERC7730Linter):
     """
-    Validates display fields against reference ABIs fetched from Sourcify or Etherscan.
+    Validates display fields against reference ABIs fetched from Sourcify.
 
     For contract context:
-      - Fetches ABI from Sourcify or Etherscan for each deployment
+      - Fetches ABI from Sourcify for each deployment
       - Validates that display field paths exist in the ABI
       - Validates that all ABI function params have display fields
       - Checks that all selectors in the ABI have corresponding display formats
@@ -59,36 +59,35 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         if (deployments := context.contract.deployments) is None:
             return
 
-        # Try to fetch ABI from Sourcify or Etherscan for the first deployment that succeeds
+        # Try to fetch ABI from Sourcify for the first deployment that succeeds
         reference_abis = None
         explorer_url = None
         for deployment in deployments:
+            skipped = "display fields will not be validated against ABI"
             try:
-                if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
-                    continue
+                abis = client.get_contract_abis(deployment.chainId, deployment.address)
+            except client.ProxyImplementationNotVerifiedError as e:
+                out.warning(title="Proxy implementation not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ContractNotVerifiedError as e:
+                out.warning(title="Contract not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ChainNotSupportedError as e:
+                out.info(title="Chain not supported", message=f"{e}, {skipped}")
+                continue
             except Exception as e:
                 out.warning(
                     title="Could not fetch ABI",
-                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, display fields will "
-                    f"not be validated against ABI: {e}",
+                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, {skipped}: {e}",
                 )
                 continue
 
             reference_abis = get_functions(abis)
-            try:
-                explorer_url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
-            except NotImplementedError:
-                explorer_url = f"<chain id {deployment.chainId} address {deployment.address}>"
+            explorer_url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
             break
 
         if reference_abis is None:
             return
-
-        if reference_abis.proxy:
-            return out.info(
-                title="Proxy contract",
-                message=f"Contract {explorer_url} is likely to be a proxy, validation of display fields skipped",
-            )
 
         # Build ABI paths by selector
         abi_paths_by_selector: dict[str, set[DataPath]] = {}
