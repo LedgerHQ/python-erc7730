@@ -1,5 +1,7 @@
 # Linter checks list
 ## ABI checks
+The three "not verified" / "not supported" checks below are reported as errors instead when `--require-verified` is passed.
+
 ### Contract not verified
 - **Level**: ⚠️ Warning 
 - **Message**: `contract <address> on chain <chain_id> is not verified on Sourcify, descriptor ABIs will not be validated`

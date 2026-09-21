@@ -16,6 +16,12 @@ class ValidateABILinter(ERC7730Linter):
     - => compares the two ABIs
     """
 
+    def __init__(self, require_verified: bool = False) -> None:
+        """
+        :param require_verified: report a contract that is not verified on Sourcify as an error instead of a warning
+        """
+        self.require_verified = require_verified
+
     @override
     def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor.context, ResolvedEIP712Context):
@@ -28,8 +34,7 @@ class ValidateABILinter(ERC7730Linter):
     def _validate_eip712_schemas(cls, context: ResolvedEIP712Context, out: OutputAdder) -> None:
         pass  # not implemented
 
-    @classmethod
-    def _validate_contract_abis(cls, context: ResolvedContractContext, out: OutputAdder) -> None:
+    def _validate_contract_abis(self, context: ResolvedContractContext, out: OutputAdder) -> None:
         if not isinstance(context.contract.abi, list):
             raise ValueError("Contract ABIs should have been resolved")
 
@@ -37,16 +42,18 @@ class ValidateABILinter(ERC7730Linter):
             return
         for deployment in deployments:
             skipped = "descriptor ABIs will not be validated"
+            unverified = out.error if self.require_verified else out.warning
+            unsupported = out.error if self.require_verified else out.info
             try:
                 abis = client.get_contract_abis(deployment.chainId, deployment.address)
             except client.ProxyImplementationNotVerifiedError as e:
-                out.warning(title="Proxy implementation not verified", message=f"{e}, {skipped}")
+                unverified(title="Proxy implementation not verified", message=f"{e}, {skipped}")
                 continue
             except client.ContractNotVerifiedError as e:
-                out.warning(title="Contract not verified", message=f"{e}, {skipped}")
+                unverified(title="Contract not verified", message=f"{e}, {skipped}")
                 continue
             except client.ChainNotSupportedError as e:
-                out.info(title="Chain not supported", message=f"{e}, {skipped}")
+                unsupported(title="Chain not supported", message=f"{e}, {skipped}")
                 continue
             except Exception as e:
                 out.warning(

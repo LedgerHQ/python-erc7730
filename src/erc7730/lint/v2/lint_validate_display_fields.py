@@ -38,6 +38,12 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
       - No schema available in v2 resolved model, so no validation is performed
     """
 
+    def __init__(self, require_verified: bool = False) -> None:
+        """
+        :param require_verified: report a contract that is not verified on Sourcify as an error instead of a warning
+        """
+        self.require_verified = require_verified
+
     @override
     def lint(
         self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
@@ -48,9 +54,8 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             case ResolvedContractContext():
                 self._validate_contract_display_fields(input_descriptor, descriptor, out)
 
-    @classmethod
     def _validate_contract_display_fields(
-        cls, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+        self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
     ) -> None:
         context = descriptor.context
         if not isinstance(context, ResolvedContractContext):
@@ -64,16 +69,18 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         explorer_url = None
         for deployment in deployments:
             skipped = "display fields will not be validated against ABI"
+            unverified = out.error if self.require_verified else out.warning
+            unsupported = out.error if self.require_verified else out.info
             try:
                 abis = client.get_contract_abis(deployment.chainId, deployment.address)
             except client.ProxyImplementationNotVerifiedError as e:
-                out.warning(title="Proxy implementation not verified", message=f"{e}, {skipped}")
+                unverified(title="Proxy implementation not verified", message=f"{e}, {skipped}")
                 continue
             except client.ContractNotVerifiedError as e:
-                out.warning(title="Contract not verified", message=f"{e}, {skipped}")
+                unverified(title="Contract not verified", message=f"{e}, {skipped}")
                 continue
             except client.ChainNotSupportedError as e:
-                out.info(title="Chain not supported", message=f"{e}, {skipped}")
+                unsupported(title="Chain not supported", message=f"{e}, {skipped}")
                 continue
             except Exception as e:
                 out.warning(
@@ -95,7 +102,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             abi_paths_by_selector[selector] = compute_abi_schema_paths(abi)
 
         # Parse the input format keys, which carry the parameter names resolution reduced to selectors
-        declared_abis_by_selector = cls._parse_declared_abis(input_descriptor)
+        declared_abis_by_selector = self._parse_declared_abis(input_descriptor)
 
         # Validate display field paths against ABI paths
         for selector, fmt in descriptor.display.formats.items():
@@ -109,7 +116,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
 
             format_paths = compute_format_schema_paths(fmt)
             abi_paths = abi_paths_by_selector[selector]
-            unnamed_parameter_names = cls._unnamed_parameter_names(
+            unnamed_parameter_names = self._unnamed_parameter_names(
                 reference_abis.functions[selector], declared_abis_by_selector.get(selector)
             )
 
@@ -118,7 +125,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             # (e.g. defining a field for an array root covers all nested elements).
             for path in format_paths.data_paths - abi_paths:
                 if not any(data_path_starts_with(abi_path, path) for abi_path in abi_paths):
-                    if cls._root_name(path) in unnamed_parameter_names:
+                    if self._root_name(path) in unnamed_parameter_names:
                         continue
                     out.error(
                         title="Invalid display field",

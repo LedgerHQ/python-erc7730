@@ -31,10 +31,12 @@ from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 
 
-def lint_all_and_print_errors(paths: list[Path], gha: bool = False, skip_abi_validation: bool = False) -> bool:
+def lint_all_and_print_errors(
+    paths: list[Path], gha: bool = False, skip_abi_validation: bool = False, require_verified: bool = False
+) -> bool:
     out = GithubAnnotationsAdder() if gha else DropFileOutputAdder(delegate=ConsoleOutputAdder())
 
-    count = lint_all(paths, out, skip_abi_validation=skip_abi_validation)
+    count = lint_all(paths, out, skip_abi_validation=skip_abi_validation, require_verified=require_verified)
 
     if out.has_errors:
         print(f"[bold][red]checked {count} descriptor files, some errors found ❌[/red][/bold]")
@@ -48,7 +50,9 @@ def lint_all_and_print_errors(paths: list[Path], gha: bool = False, skip_abi_val
     return True
 
 
-def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = False) -> int:
+def lint_all(
+    paths: list[Path], out: OutputAdder, skip_abi_validation: bool = False, require_verified: bool = False
+) -> int:
     """
     Lint all ERC-7730 descriptor files at given paths.
 
@@ -56,6 +60,8 @@ def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = Fa
 
     :param paths: paths to apply linter on
     :param out: output adder
+    :param skip_abi_validation: skip ABI comparison with Sourcify reference data
+    :param require_verified: report contracts that are not verified on Sourcify as errors instead of warnings
     :return: number of files checked
     """
     linters = [
@@ -65,7 +71,7 @@ def lint_all(paths: list[Path], out: OutputAdder, skip_abi_validation: bool = Fa
         ValidateMaxLengthLinter(),
     ]
     if not skip_abi_validation:
-        linters.insert(0, ValidateABILinter())
+        linters.insert(0, ValidateABILinter(require_verified=require_verified))
     linter = MultiLinter(linters)
 
     files = list(get_erc7730_files(*paths, out=out))
