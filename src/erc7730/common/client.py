@@ -186,13 +186,9 @@ def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpU
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
-    :return: URL to the contract explorer site
-    :raises NotImplementedError: if chain id not supported
+    :return: URL to the contract on the Sourcify repository
     """
-    for chain in get_supported_chains():
-        if chain.chainId == chain_id:
-            return HttpUrl(f"https://repo.{SOURCIFY}/{chain_id}/{contract_address}")
-    raise NotImplementedError(f"Chain ID {chain_id} is not supported by Sourcify")
+    return HttpUrl(f"https://repo.{SOURCIFY}/{chain_id}/{contract_address}")
 
 
 def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:

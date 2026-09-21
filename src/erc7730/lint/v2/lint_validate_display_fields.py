@@ -83,10 +83,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 continue
 
             reference_abis = get_functions(abis)
-            try:
-                explorer_url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
-            except NotImplementedError:
-                explorer_url = f"<chain id {deployment.chainId} address {deployment.address}>"
+            explorer_url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
             break
 
         if reference_abis is None:
