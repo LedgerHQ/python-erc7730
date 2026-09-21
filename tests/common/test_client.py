@@ -1,4 +1,7 @@
+from typing import Any
+
 import pytest
+from httpx import HTTPStatusError, Request, Response, codes
 from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
@@ -95,11 +98,15 @@ def test_get_contract_abis_unverified_proxy_implementation(monkeypatch: pytest.M
             },
         }
     )
-    real_get = client.get
+
+    def get(model: Any, url: str, **params: Any) -> Any:
+        if url.endswith("eb48"):
+            return proxy
+        response = Response(status_code=codes.NOT_FOUND, request=Request("GET", url))
+        raise HTTPStatusError("not verified", request=response.request, response=response)
+
     client.get_contract_abis.cache_clear()
-    monkeypatch.setattr(
-        client, "get", lambda model, url, **params: proxy if url.endswith("eb48") else real_get(model, url, **params)
-    )
+    monkeypatch.setattr(client, "get", get)
     with pytest.raises(client.ProxyImplementationNotVerifiedError, match="0x0000000000000000000000000000000000000001"):
         client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
 
