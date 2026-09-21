@@ -32,12 +32,12 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
     def lint(
         self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
     ) -> None:
-        if (tx_class := self._determine_tx_class(descriptor)) is None:
+        if (tx_class := self._determine_tx_class(descriptor, out)) is None:
             return None
         DisplayFormatChecker(tx_class, descriptor.display).check(out)
 
     @classmethod
-    def _determine_tx_class(cls, descriptor: ResolvedERC7730Descriptor) -> TxClass | None:
+    def _determine_tx_class(cls, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> TxClass | None:
         match descriptor.context:
             case ResolvedEIP712Context():
                 # In v2, no schemas — classify from format keys (primaryType)
@@ -47,18 +47,24 @@ class ClassifyTransactionTypeLinter(ERC7730Linter):
                 return None
             case ResolvedContractContext():
                 # Try to classify from fetched ABI
-                return cls._classify_from_fetched_abi(descriptor.context)
+                return cls._classify_from_fetched_abi(descriptor.context, out)
 
     @classmethod
-    def _classify_from_fetched_abi(cls, context: ResolvedContractContext) -> TxClass | None:
+    def _classify_from_fetched_abi(cls, context: ResolvedContractContext, out: OutputAdder) -> TxClass | None:
         if (deployments := context.contract.deployments) is None:
             return None
         for deployment in deployments:
             try:
-                if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is not None:
-                    return ABIClassifier().classify(list(abis))
-            except Exception:  # nosec B112 - intentional: try next deployment on failure
+                abis = client.get_contract_abis(deployment.chainId, deployment.address)
+            except Exception as e:
+                # the display fields linter already reports the failure, only trace which deployment was skipped
+                out.debug(
+                    title="Transaction type not classified",
+                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, trying next deployment: "
+                    f"{e}",
+                )
                 continue
+            return ABIClassifier().classify(list(abis))
         return None
 
 
