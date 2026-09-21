@@ -229,6 +229,7 @@ def _client() -> Client:
     http_transport: BaseTransport = HTTPTransport()
     http_transport = GithubTransport(http_transport)
     http_transport = EtherscanTransport(http_transport)
+    http_transport = SourcifyTransport(http_transport)
     http_transport = RetryTransport(transport=http_transport)
     if os.environ.get(ERC7730_NO_CACHE) is None:
         cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=CACHE_TTL, check_ttl_every=CACHE_TTL)
@@ -269,6 +270,23 @@ class GithubTransport(DelegateTransport):
         # adapt URL
         request.url = URL(str(request.url).replace(self.GITHUB, self.GITHUB_RAW).replace("/blob/", "/"))
         request.headers.update({"Host": self.GITHUB_RAW})
+        return super().handle_request(request)
+
+
+@final
+class SourcifyTransport(DelegateTransport):
+    """Sourcify specific transport for handling token header injection."""
+
+    SOURCIFY_TOKEN = "SOURCIFY_TOKEN"  # nosec B105 - environment variable name, not a secret
+
+    @override
+    def handle_request(self, request: Request) -> Response:
+        if request.url.host != SOURCIFY:
+            return super().handle_request(request)
+
+        # add token if provided, it exempts the caller from rate limiting
+        if (token := os.environ.get(self.SOURCIFY_TOKEN)) is not None:
+            request.headers.update({"X-Sourcify-Token": token})
         return super().handle_request(request)
 
 

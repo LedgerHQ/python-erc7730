@@ -1,7 +1,7 @@
 from typing import Any
 
 import pytest
-from httpx import HTTPStatusError, Request, Response, codes
+from httpx import BaseTransport, HTTPStatusError, Request, Response, codes
 from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
@@ -127,6 +127,38 @@ def test_get_contract_abis_proxy_resolution_error(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(client, "get", lambda model, url, **params: contract)
     with pytest.raises(Exception, match="could not resolve whether"):
         client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+
+
+class _RecordingTransport(BaseTransport):
+    """Transport that records the requests it receives and answers with an empty JSON list."""
+
+    def __init__(self) -> None:
+        self.requests: list[Request] = []
+
+    def handle_request(self, request: Request) -> Response:
+        self.requests.append(request)
+        return Response(status_code=codes.OK, json=[])
+
+
+@pytest.mark.parametrize(
+    ("token", "url", "expected"),
+    [
+        ("secret", "https://sourcify.dev/server/chains", "secret"),
+        (None, "https://sourcify.dev/server/chains", None),
+        ("secret", "https://api.etherscan.io/v2/chainlist", None),
+    ],
+)
+def test_sourcify_transport_token_header(
+    monkeypatch: pytest.MonkeyPatch, token: str | None, url: str, expected: str | None
+) -> None:
+    if token is None:
+        monkeypatch.delenv(client.SourcifyTransport.SOURCIFY_TOKEN, raising=False)
+    else:
+        monkeypatch.setenv(client.SourcifyTransport.SOURCIFY_TOKEN, token)
+    delegate = _RecordingTransport()
+    client.SourcifyTransport(delegate).handle_request(Request("GET", url))
+    assert len(delegate.requests) == 1
+    assert delegate.requests[0].headers.get("X-Sourcify-Token") == expected
 
 
 def test_get_from_github() -> None:
