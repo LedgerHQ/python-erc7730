@@ -4,7 +4,7 @@ from abc import ABC
 from functools import cache
 from typing import Any, TypeVar, final, override
 
-from hishel import CacheTransport, Controller, FileStorage
+from hishel import CacheTransport, FileStorage
 from httpx import URL, BaseTransport, Client, HTTPStatusError, HTTPTransport, Request, Response, codes
 from httpx._content import IteratorByteStream
 from httpx_file import FileTransport
@@ -23,6 +23,9 @@ from erc7730.model.types import Address
 
 ETHERSCAN = "api.etherscan.io"
 SOURCIFY = "sourcify.dev"
+
+ERC7730_NO_CACHE = "ERC7730_NO_CACHE"
+CACHE_TTL = 3600
 
 _T = TypeVar("_T")
 
@@ -87,7 +90,7 @@ def get_supported_chains() -> list[SourcifyChain]:
 
     :return: Sourcify supported chains, with name/chain id
     """
-    chains = get(url=HttpUrl(f"https://{SOURCIFY}/server/chains"), model=list[SourcifyChain])
+    chains = get(url=HttpUrl(f"https://{SOURCIFY}/server/chains"), model=list[SourcifyChain], force_cache=True)
     return [chain for chain in chains if chain.supported]
 
 
@@ -153,6 +156,7 @@ def _get_sourcify_contract(chain_id: int, contract_address: Address) -> Sourcify
             url=HttpUrl(f"https://{SOURCIFY}/server/v2/contract/{chain_id}/{contract_address}"),
             fields="abi,proxyResolution",
             model=SourcifyContract,
+            force_cache=True,
         )
     except HTTPStatusError as e:
         if e.response.status_code == codes.NOT_FOUND:
@@ -191,7 +195,7 @@ def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpU
     return HttpUrl(f"https://repo.{SOURCIFY}/{chain_id}/{contract_address}")
 
 
-def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
+def get(model: type[_T], url: HttpUrl | FileUrl, *, force_cache: bool = False, **params: Any) -> _T:
     """
     Fetch data from a file or an HTTP URL and deserialize it.
 
@@ -199,13 +203,18 @@ def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
      - GitHub: adaptation to "raw.githubusercontent.com"
      - Etherscan: rate limiting, API key parameter injection, "result" field unwrapping
 
+    Responses are cached on disk according to their caching headers, unless the ERC7730_NO_CACHE environment variable
+    is set.
+
     :param url: URL to get data from
     :param model: Pydantic model to deserialize the data
+    :param force_cache: cache the response even if it has no caching headers (for CACHE_TTL seconds)
+    :param params: query parameters
     :return: deserialized response
     :raises Exception: if URL type is not supported, API key not setup, or unexpected response
     """
     with _client() as client:
-        response = client.get(url, params=params).raise_for_status().content
+        response = client.get(url, params=params, extensions={"force_cache": force_cache}).raise_for_status().content
     try:
         return TypeAdapter(model).validate_json(response)
     except ValidationError as e:
@@ -217,14 +226,13 @@ def _client() -> Client:
     Create a new HTTP client with GitHub and Etherscan specific transports.
     :return:
     """
-    cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=7 * 24 * 3600, check_ttl_every=24 * 3600)
-    # Sourcify responses have no caching headers, force caching so that they are stored (until storage TTL expires)
-    cache_controller = Controller(force_cache=True)
-    http_transport = HTTPTransport()
+    http_transport: BaseTransport = HTTPTransport()
     http_transport = GithubTransport(http_transport)
     http_transport = EtherscanTransport(http_transport)
     http_transport = RetryTransport(transport=http_transport)
-    http_transport = CacheTransport(transport=http_transport, storage=cache_storage, controller=cache_controller)
+    if os.environ.get(ERC7730_NO_CACHE) is None:
+        cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=CACHE_TTL, check_ttl_every=CACHE_TTL)
+        http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
     file_transport = FileTransport()
     # TODO file storage: authorize relative paths only
     transports = {"https://": http_transport, "file://": file_transport}

@@ -95,7 +95,8 @@ erc7730 generate --chain-id=1 --address=0x00000000000000000000000000000000000000
 ```
 
 ABIs are fetched from [Sourcify](https://sourcify.dev), which requires no API key. The contract (and its
-implementations, if it is a proxy) must be verified on Sourcify.
+implementations, if it is a proxy) must be verified on Sourcify. Sourcify responses are cached for one hour in
+`~/.cache/erc7730` (or `$XDG_CACHE_HOME/erc7730`), set `ERC7730_NO_CACHE=1` to disable the cache.
 
 Please note that while the generator does its best to guess the right format based on fields name/type, the generated
 descriptor should be considered a starting point to refine.
