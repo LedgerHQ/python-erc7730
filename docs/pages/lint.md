@@ -1,14 +1,24 @@
 # Linter checks list
 ## ABI checks
+### Contract not verified
+- **Level**: ⚠️ Warning 
+- **Message**: `contract <address> on chain <chain_id> is not verified on Sourcify, descriptor ABIs will not be validated`
+- **Description**: The contract is not verified on Sourcify, so there is no reference ABI. Subsequent checks are skipped for the current deployment.
+
+### Proxy implementation not verified
+- **Level**: ⚠️ Warning 
+- **Message**: `contract <address> on chain <chain_id> is a proxy, and its implementation <address> is not verified on Sourcify, descriptor ABIs will not be validated`
+- **Description**: Sourcify resolved the contract as a proxy, but one of its implementations is not verified, so the reference ABI would be incomplete. Subsequent checks are skipped for the current deployment.
+
+### Chain not supported
+- **Level**: ℹ️ Info 
+- **Message**: `chain <chain_id> is not supported by Sourcify, descriptor ABIs will not be validated`
+- **Description**: Sourcify does not support the chain of the deployment, so no reference ABI can be fetched. Subsequent checks are skipped for the current deployment.
+
 ### Could not fetch ABI
 - **Level**: ⚠️ Warning 
 - **Message**: `Fetching reference ABI for chain id <chain_id> failed, descriptor ABIs will not be validated: <error>`
-- **Description**: ABI fetch from Sourcify has failed. Subsequents checks are skipped for the current deployment.
-
-### Proxy Contract
-- **Level**: ⚠️ Warning 
-- **Message**: `Contract <url> is likely to be a proxy, validation of descriptor ABIs skipped`
-- **Description**: Contract detected as a potential proxy contract based on a simple heuristic. Subsequents checks are skipped.
+- **Description**: ABI fetch from Sourcify has failed for another reason, such as a rate limit, a network error or a proxy resolution error. Subsequent checks are skipped for the current deployment.
 
 ### Extra function
 - **Level**: ⚠️ Warning 

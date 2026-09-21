@@ -61,17 +61,17 @@ def test_get_contract_abis_from_sourcify() -> None:
 
 
 def test_get_contract_abis_from_sourcify_unverified_contract() -> None:
-    result = client.get_contract_abis_from_sourcify(
-        chain_id=1, contract_address="0x0000000000000000000000000000000000000001"
-    )
-    assert result is None
+    with pytest.raises(client.ContractNotVerifiedError):
+        client.get_contract_abis_from_sourcify(
+            chain_id=1, contract_address="0x0000000000000000000000000000000000000001"
+        )
 
 
 def test_get_contract_abis_from_sourcify_unsupported_chain() -> None:
-    result = client.get_contract_abis_from_sourcify(
-        chain_id=99999999, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d"
-    )
-    assert result is None
+    with pytest.raises(client.ChainNotSupportedError):
+        client.get_contract_abis_from_sourcify(
+            chain_id=99999999, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d"
+        )
 
 
 def test_get_contract_abis_from_sourcify_proxy() -> None:
@@ -100,7 +100,7 @@ def test_get_contract_abis_unverified_proxy_implementation(monkeypatch: pytest.M
     monkeypatch.setattr(
         client, "get", lambda model, url, **params: proxy if url.endswith("eb48") else real_get(model, url, **params)
     )
-    with pytest.raises(Exception, match="0x0000000000000000000000000000000000000001"):
+    with pytest.raises(client.ProxyImplementationNotVerifiedError, match="0x0000000000000000000000000000000000000001"):
         client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
 
 

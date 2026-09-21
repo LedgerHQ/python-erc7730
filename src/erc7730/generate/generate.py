@@ -109,8 +109,8 @@ def _generate_context_calldata(
     if abi is not None:
         abis = TypeAdapter(list[ABI]).validate_json(abi)
 
-    elif (abis := get_contract_abis(chain_id, contract_address)) is None:
-        raise Exception("Failed to fetch contract ABIs")
+    else:
+        abis = get_contract_abis(chain_id, contract_address)
 
     functions = list(get_functions(abis, include_read_only=True).functions.values())
 

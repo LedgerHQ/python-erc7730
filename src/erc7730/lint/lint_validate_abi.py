@@ -36,14 +36,22 @@ class ValidateABILinter(ERC7730Linter):
         if (deployments := context.contract.deployments) is None:
             return
         for deployment in deployments:
+            skipped = "descriptor ABIs will not be validated"
             try:
-                if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
-                    continue
+                abis = client.get_contract_abis(deployment.chainId, deployment.address)
+            except client.ProxyImplementationNotVerifiedError as e:
+                out.warning(title="Proxy implementation not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ContractNotVerifiedError as e:
+                out.warning(title="Contract not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ChainNotSupportedError as e:
+                out.info(title="Chain not supported", message=f"{e}, {skipped}")
+                continue
             except Exception as e:
                 out.warning(
                     title="Could not fetch ABI",
-                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, descriptor ABIs will "
-                    f"not be validated: {e}",
+                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, {skipped}: {e}",
                 )
                 continue
 

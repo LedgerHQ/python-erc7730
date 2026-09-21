@@ -63,14 +63,22 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         reference_abis = None
         explorer_url = None
         for deployment in deployments:
+            skipped = "display fields will not be validated against ABI"
             try:
-                if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
-                    continue
+                abis = client.get_contract_abis(deployment.chainId, deployment.address)
+            except client.ProxyImplementationNotVerifiedError as e:
+                out.warning(title="Proxy implementation not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ContractNotVerifiedError as e:
+                out.warning(title="Contract not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ChainNotSupportedError as e:
+                out.info(title="Chain not supported", message=f"{e}, {skipped}")
+                continue
             except Exception as e:
                 out.warning(
                     title="Could not fetch ABI",
-                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, display fields will "
-                    f"not be validated against ABI: {e}",
+                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, {skipped}: {e}",
                 )
                 continue
 

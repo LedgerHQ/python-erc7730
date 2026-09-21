@@ -64,8 +64,20 @@ class SourcifyContract(Model):
     """Sourcify verified contract, restricted to the fields used by this library."""
 
     model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
-    abi: list[ABI] | None = None
+    abi: list[ABI]
     proxyResolution: SourcifyProxyResolution | None = None
+
+
+class ContractNotVerifiedError(Exception):
+    """Contract is not verified on Sourcify."""
+
+
+class ProxyImplementationNotVerifiedError(ContractNotVerifiedError):
+    """Contract is a proxy, and one of its implementations is not verified on Sourcify."""
+
+
+class ChainNotSupportedError(Exception):
+    """Chain is not supported by Sourcify."""
 
 
 @cache
@@ -87,14 +99,14 @@ def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs
-    :raises Exception: if contract source is not available, or unexpected response
+    :raises ContractNotVerifiedError: if contract, or one of its proxy implementations, is not verified on Sourcify
+    :raises ChainNotSupportedError: if chain is not supported by Sourcify
+    :raises Exception: if unexpected response
     """
-    if (abis := get_contract_abis_from_sourcify(chain_id, contract_address)) is None:
-        raise Exception("contract source is not available on Sourcify")
-    return abis
+    return get_contract_abis_from_sourcify(chain_id, contract_address)
 
 
-def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) -> list[ABI] | None:
+def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) -> list[ABI]:
     """
     Get contract ABIs from Sourcify.
 
@@ -103,13 +115,13 @@ def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) ->
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
-    :return: deserialized list of ABIs, or None if chain is not supported or contract source is not available
-    :raises Exception: if contract is a proxy and the ABIs of an implementation could not be fetched
+    :return: deserialized list of ABIs
+    :raises ContractNotVerifiedError: if contract is not verified on Sourcify
+    :raises ProxyImplementationNotVerifiedError: if contract is a proxy and an implementation is not verified
+    :raises ChainNotSupportedError: if chain is not supported by Sourcify
     :raises Exception: if unexpected response
     """
-    if (contract := _get_sourcify_contract(chain_id, contract_address)) is None or contract.abi is None:
-        return None
-
+    contract = _get_sourcify_contract(chain_id, contract_address)
     abis = list(contract.abi)
     visited = {contract_address.lower()}
     pending = _get_implementation_addresses(contract)
@@ -119,10 +131,11 @@ def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) ->
         visited.add(address.lower())
         try:
             implementation = _get_sourcify_contract(chain_id, address)
-        except Exception as e:
-            raise Exception(f"fetching proxy implementation {address} from Sourcify failed: {e}") from e
-        if implementation is None or implementation.abi is None:
-            raise Exception(f"proxy implementation {address} source is not available on Sourcify")
+        except ContractNotVerifiedError as e:
+            raise ProxyImplementationNotVerifiedError(
+                f"contract {contract_address} on chain {chain_id} is a proxy, and its implementation {address} is not "
+                f"verified on Sourcify"
+            ) from e
         abis.extend(implementation.abi)
         pending.extend(_get_implementation_addresses(implementation))
     return abis
@@ -134,7 +147,7 @@ def _get_implementation_addresses(contract: SourcifyContract) -> list[Address]:
     return [implementation.address for implementation in resolution.implementations]
 
 
-def _get_sourcify_contract(chain_id: int, contract_address: Address) -> SourcifyContract | None:
+def _get_sourcify_contract(chain_id: int, contract_address: Address) -> SourcifyContract:
     try:
         contract = get(
             url=HttpUrl(f"https://{SOURCIFY}/server/v2/contract/{chain_id}/{contract_address}"),
@@ -143,9 +156,14 @@ def _get_sourcify_contract(chain_id: int, contract_address: Address) -> Sourcify
         )
     except HTTPStatusError as e:
         if e.response.status_code == codes.NOT_FOUND:
-            return None  # contract source is not available on Sourcify
+            raise ContractNotVerifiedError(
+                f"contract {contract_address} on chain {chain_id} is not verified on Sourcify"
+            ) from e
         if e.response.status_code == codes.BAD_REQUEST:
-            return None  # chain id is not supported by Sourcify
+            error = _parse_sourcify_error(e.response)
+            if error is not None and error.customCode == "unsupported_chain":
+                raise ChainNotSupportedError(f"chain {chain_id} is not supported by Sourcify") from e
+            raise Exception(f"Sourcify rejected the request: {error.message if error else e}") from e
         if e.response.status_code == codes.TOO_MANY_REQUESTS:
             raise Exception("Sourcify rate limit exceeded, please retry") from e
         raise e
@@ -153,6 +171,13 @@ def _get_sourcify_contract(chain_id: int, contract_address: Address) -> Sourcify
     if (resolution := contract.proxyResolution) is not None and (error := resolution.proxyResolutionError) is not None:
         raise Exception(f"Sourcify could not resolve whether {contract_address} is a proxy: {error.message}")
     return contract
+
+
+def _parse_sourcify_error(response: Response) -> SourcifyError | None:
+    try:
+        return SourcifyError.model_validate_json(response.read())
+    except ValidationError:
+        return None
 
 
 def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpUrl:
