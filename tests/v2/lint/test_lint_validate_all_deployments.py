@@ -32,7 +32,7 @@ def titles(out: ListOutputAdder, title: str) -> int:
 
 def test_deployments_with_the_same_abi_are_validated_once(monkeypatch: pytest.MonkeyPatch) -> None:
     out = lint_with(monkeypatch, lambda chain_id: [TRANSFER, APPROVE])
-    assert titles(out, "Deployments differ") == 0
+    assert titles(out, "Deployment ABIs differ") == 0
     assert titles(out, "Invalid display field") == 0
 
 
@@ -40,7 +40,7 @@ def test_deployments_with_different_abis_are_reported_and_each_validated(monkeyp
     out = lint_with(
         monkeypatch, lambda chain_id: [TRANSFER, APPROVE] if chain_id == 1 else [TRANSFER_RENAMED, APPROVE_RENAMED]
     )
-    assert titles(out, "Deployments differ") == 1
+    assert titles(out, "Deployment ABIs differ") == 1
     # the chain 137 ABI names the parameters differently, so the 4 display fields are invalid against it only
     assert titles(out, "Invalid display field") == 4
 
@@ -53,5 +53,5 @@ def test_a_deployment_that_cannot_be_fetched_does_not_stop_the_others(monkeypatc
 
     out = lint_with(monkeypatch, abis_of)
     assert titles(out, "Contract not verified") == 1
-    assert titles(out, "Deployments differ") == 0
+    assert titles(out, "Deployment ABIs differ") == 0
     assert titles(out, "Invalid display field") == 4

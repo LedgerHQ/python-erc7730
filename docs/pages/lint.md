@@ -22,9 +22,9 @@ The three "not verified" / "not supported" checks below are reported as errors i
 - **Message**: `Fetching reference ABI for chain id <chain_id> failed, descriptor ABIs will not be validated: <error>`
 - **Description**: ABI fetch from Sourcify has failed for another reason, such as a rate limit, a network error or a proxy resolution error. Subsequent checks are skipped for the current deployment.
 
-### Deployments differ
+### Deployment ABIs differ
 - **Level**: ⚠️ Warning 
-- **Message**: `Deployments do not all expose the same functions, display fields are validated against each distinct reference ABI: <chain id>:<address>, ...; <chain id>:<address>, ...`
+- **Message**: `The reference ABIs of the deployments do not all expose the same functions, display fields are validated against each distinct reference ABI: <chain id>:<address>, ...; <chain id>:<address>, ...`
 - **Description**: The deployments of the descriptor do not have the same reference ABI. Display fields are validated once per distinct ABI, so findings may apply to some chains only (the contract URL in each finding tells which).
 
 ### Extra function

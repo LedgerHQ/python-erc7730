@@ -95,9 +95,9 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
 
         if len(groups) > 1:
             out.warning(
-                title="Deployments differ",
-                message="Deployments do not all expose the same functions, display fields are validated against each "
-                "distinct reference ABI: "
+                title="Deployment ABIs differ",
+                message="The reference ABIs of the deployments do not all expose the same functions, display fields "
+                "are validated against each distinct reference ABI: "
                 + "; ".join(", ".join(f"{d.chainId}:{d.address}" for d in ds) for _, ds in groups.values()),
             )
 
