@@ -7,14 +7,15 @@ In v2, ABI and EIP-712 schemas are NOT embedded in the descriptor. Instead:
   - For EIP-712 context: no schema to validate against (no-op).
 """
 
-from typing import final, override
+import json
+from typing import Any, final, override
 
 from erc7730.common import client
 from erc7730.common.abi import Functions, compute_signature, get_functions, parse_signature, signature_to_selector
 from erc7730.common.output import OutputAdder
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.lint.v2.path_schemas import compute_format_schema_paths
-from erc7730.model.abi import Function
+from erc7730.model.abi import Component, Function, InputOutput
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.paths import DataPath, Field
 from erc7730.model.paths.path_ops import data_path_starts_with
@@ -66,7 +67,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
 
         # Fetch the reference ABI of every deployment, and group deployments exposing the same functions, so that
         # each distinct ABI is validated once and deployments diverging from the others are reported
-        groups: list[tuple[Functions, list[ResolvedDeployment]]] = []
+        groups: dict[str, tuple[Functions, list[ResolvedDeployment]]] = {}
         for deployment in deployments:
             skipped = "display fields will not be validated against ABI"
             unverified = out.error if self.require_verified else out.warning
@@ -90,24 +91,50 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 continue
 
             reference_abis = get_functions(abis)
-            for group_abis, group_deployments in groups:
-                if group_abis.functions == reference_abis.functions:
-                    group_deployments.append(deployment)
-                    break
-            else:
-                groups.append((reference_abis, [deployment]))
+            groups.setdefault(self._external_abi_key(reference_abis), (reference_abis, []))[1].append(deployment)
 
         if len(groups) > 1:
             out.warning(
                 title="Deployments differ",
                 message="Deployments do not all expose the same functions, display fields are validated against each "
                 "distinct reference ABI: "
-                + "; ".join(", ".join(f"{d.chainId}:{d.address}" for d in ds) for _, ds in groups),
+                + "; ".join(", ".join(f"{d.chainId}:{d.address}" for d in ds) for _, ds in groups.values()),
             )
 
-        for reference_abis, group_deployments in groups:
+        for reference_abis, group_deployments in groups.values():
             explorer_url = client.get_contract_explorer_url(group_deployments[0].chainId, group_deployments[0].address)
             self._validate_display_fields(input_descriptor, descriptor, reference_abis, explorer_url, out)
+
+    @classmethod
+    def _external_abi_key(cls, reference_abis: Functions) -> str:
+        """
+        Compute a key identifying the functions as seen by a caller of the contract.
+
+        Compiler details such as internal types, or legacy fields, are left out, so that deployments compiled from
+        slightly different sources but exposing the same functions are grouped together.
+
+        :param reference_abis: functions of a reference ABI
+        :return: key equal for two ABIs exposing the same functions
+        """
+        return json.dumps(
+            {
+                selector: {
+                    "name": abi.name,
+                    "inputs": [cls._external_parameter(param) for param in abi.inputs or []],
+                    "outputs": [cls._external_parameter(param) for param in abi.outputs or []],
+                    "stateMutability": abi.stateMutability,
+                }
+                for selector, abi in sorted(reference_abis.functions.items())
+            }
+        )
+
+    @classmethod
+    def _external_parameter(cls, param: InputOutput | Component) -> dict[str, Any]:
+        return {
+            "name": param.name,
+            "type": param.type,
+            "components": [cls._external_parameter(component) for component in param.components or []],
+        }
 
     def _validate_display_fields(
         self,
