@@ -10,6 +10,8 @@ In v2, ABI and EIP-712 schemas are NOT embedded in the descriptor. Instead:
 import json
 from typing import Any, final, override
 
+from pydantic_string_url import HttpUrl
+
 from erc7730.common import client
 from erc7730.common.abi import Functions, compute_signature, get_functions, parse_signature, signature_to_selector
 from erc7730.common.output import OutputAdder
@@ -141,7 +143,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         input_descriptor: InputERC7730Descriptor,
         descriptor: ResolvedERC7730Descriptor,
         reference_abis: Functions,
-        explorer_url: str,
+        explorer_url: HttpUrl,
         out: OutputAdder,
     ) -> None:
         # Build ABI paths by selector
