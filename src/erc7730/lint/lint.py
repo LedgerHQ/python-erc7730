@@ -61,7 +61,8 @@ def lint_all(
     :param paths: paths to apply linter on
     :param out: output adder
     :param skip_abi_validation: skip ABI comparison with Sourcify reference data
-    :param require_verified: report contracts that are not verified on Sourcify as errors instead of warnings
+    :param require_verified: report contracts that are not verified on Sourcify, and reference ABIs that could not be
+        fetched, as errors instead of warnings
     :return: number of files checked
     """
     linters = [

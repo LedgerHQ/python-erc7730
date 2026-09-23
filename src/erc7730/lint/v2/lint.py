@@ -49,7 +49,8 @@ def lint_all(paths: list[Path], out: OutputAdder, require_verified: bool = False
 
     :param paths: paths to apply linter on
     :param out: output adder
-    :param require_verified: report contracts that are not verified on Sourcify as errors instead of warnings
+    :param require_verified: report contracts that are not verified on Sourcify, and reference ABIs that could not be
+        fetched, as errors instead of warnings
     :return: number of files checked
     """
     linter = MultiLinter(
