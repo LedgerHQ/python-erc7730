@@ -44,7 +44,11 @@ def test_unverified_contract_is_an_error_only_when_required(
     assert out.has_errors
 
 
-def test_transient_failure_stays_a_warning_when_verified_is_required(lint_descriptor: LintDescriptor) -> None:
-    out = lint_descriptor(raising(RATE_LIMITED), True)
+def test_fetch_failure_is_an_error_only_when_verified_is_required(lint_descriptor: LintDescriptor) -> None:
+    out = lint_descriptor(raising(RATE_LIMITED), False)
     assert level_of(out, "Could not fetch ABI") == Output.Level.WARNING
     assert not out.has_errors
+
+    out = lint_descriptor(raising(RATE_LIMITED), True)
+    assert level_of(out, "Could not fetch ABI") == Output.Level.ERROR
+    assert out.has_errors

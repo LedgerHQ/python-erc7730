@@ -1,6 +1,6 @@
 # Linter checks list
 ## ABI checks
-The three "not verified" / "not supported" checks below are reported as errors instead when `--require-verified` is passed.
+The four "not verified" / "not supported" / "could not fetch" checks below are reported as errors instead when `--require-verified` is passed, so that a strict run never passes without having checked every deployment.
 
 ### Contract not verified
 - **Level**: ⚠️ Warning 
