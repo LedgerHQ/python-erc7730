@@ -19,6 +19,7 @@ class ValidateABILinter(ERC7730Linter):
     def __init__(self, require_verified: bool = False) -> None:
         """
         :param require_verified: report a contract that is not verified on Sourcify as an error instead of a warning
+            (as well as a reference ABI that could not be fetched, for instance because of a rate limit)
         """
         self.require_verified = require_verified
 
@@ -44,6 +45,7 @@ class ValidateABILinter(ERC7730Linter):
             skipped = "descriptor ABIs will not be validated"
             unverified = out.error if self.require_verified else out.warning
             unsupported = out.error if self.require_verified else out.info
+            failed = out.error if self.require_verified else out.warning
             try:
                 abis = client.get_contract_abis(deployment.chainId, deployment.address)
             except client.ProxyImplementationNotVerifiedError as e:
@@ -56,7 +58,7 @@ class ValidateABILinter(ERC7730Linter):
                 unsupported(title="Chain not supported", message=f"{e}, {skipped}")
                 continue
             except Exception as e:
-                out.warning(
+                failed(
                     title="Could not fetch ABI",
                     message=f"Fetching reference ABI for chain id {deployment.chainId} failed, {skipped}: {e}",
                 )

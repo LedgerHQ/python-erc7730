@@ -107,7 +107,11 @@ def command_lint(
     ] = False,
     require_verified: Annotated[
         bool,
-        Option("--require-verified", help="Report contracts that are not verified on Sourcify as errors"),
+        Option(
+            "--require-verified",
+            help="Report contracts that are not verified on Sourcify, and reference ABIs that could not be fetched, "
+            "as errors",
+        ),
     ] = False,
     v2: Annotated[
         bool, Option("--v2", help="Use v2 model for validation (auto-detected from $schema if not set)")

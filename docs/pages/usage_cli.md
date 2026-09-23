@@ -80,7 +80,7 @@ It can be called with single files or directories, in which case all descriptors
 
 Use `--skip-abi-validation` to disable external ABI comparisons against Sourcify (useful for offline runs or faster local checks).
 
-Use `--require-verified` to report contracts (or proxy implementations) that are not verified on Sourcify as errors instead of warnings.
+Use `--require-verified` to report contracts (or proxy implementations) that are not verified on Sourcify as errors instead of warnings. With the flag, a reference ABI that could not be fetched (rate limit, network error, proxy resolution failure) is an error too.
 
 ### `erc7730 generate`
 
