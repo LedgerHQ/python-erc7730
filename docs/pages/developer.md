@@ -19,9 +19,13 @@ brew install mise
 1. **Clone the repository:**
 
 ```bash
-git clone --recursive git@github.com:LedgerHQ/python-erc7730.git
+git clone git@github.com:LedgerHQ/python-erc7730.git
 cd python-erc7730
+git submodule update --init --checkout tests/registries/clear-signing-erc7730-registry tests/registries/ledger-asset-dapps
 ```
+
+The test registries are git submodules that are skipped by a recursive submodule update (so that `pip` can install the
+library from git without an SSH key for a nested submodule), hence the explicit `--checkout`.
 
 2. **Install tools via mise:**
 

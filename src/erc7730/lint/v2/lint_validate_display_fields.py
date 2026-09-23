@@ -1,42 +1,52 @@
 """
-V2 linter that validates display fields against reference ABIs fetched from Sourcify or Etherscan.
+V2 linter that validates display fields against reference ABIs fetched from Sourcify.
 
 In v2, ABI and EIP-712 schemas are NOT embedded in the descriptor. Instead:
-  - For contract context: fetch ABI from Sourcify or Etherscan, validate display field paths match ABI params,
+  - For contract context: fetch ABI from Sourcify, validate display field paths match ABI params,
     and check selector exhaustiveness.
   - For EIP-712 context: no schema to validate against (no-op).
 """
 
-from typing import final, override
+import json
+from typing import Any, final, override
+
+from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
-from erc7730.common.abi import compute_signature, get_functions, parse_signature, signature_to_selector
+from erc7730.common.abi import Functions, compute_signature, get_functions, parse_signature, signature_to_selector
 from erc7730.common.output import OutputAdder
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.lint.v2.path_schemas import compute_format_schema_paths
-from erc7730.model.abi import Function
+from erc7730.model.abi import Component, Function, InputOutput
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.paths import DataPath, Field
 from erc7730.model.paths.path_ops import data_path_starts_with
 from erc7730.model.paths.path_schemas import compute_abi_schema_paths
-from erc7730.model.resolved.v2.context import ResolvedContractContext, ResolvedEIP712Context
+from erc7730.model.resolved.v2.context import ResolvedContractContext, ResolvedDeployment, ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 
 
 @final
 class ValidateDisplayFieldsLinter(ERC7730Linter):
     """
-    Validates display fields against reference ABIs fetched from Sourcify or Etherscan.
+    Validates display fields against reference ABIs fetched from Sourcify.
 
     For contract context:
-      - Fetches ABI from Sourcify or Etherscan for each deployment
-      - Validates that display field paths exist in the ABI
+      - Fetches ABI from Sourcify for each deployment, and reports deployments not exposing the same functions
+      - Validates that display field paths exist in the ABI (once per distinct reference ABI)
       - Validates that all ABI function params have display fields
       - Checks that all selectors in the ABI have corresponding display formats
 
     For EIP-712 context:
       - No schema available in v2 resolved model, so no validation is performed
     """
+
+    def __init__(self, require_verified: bool = False) -> None:
+        """
+        :param require_verified: report a contract that is not verified on Sourcify as an error instead of a warning
+            (as well as a reference ABI that could not be fetched, for instance because of a rate limit)
+        """
+        self.require_verified = require_verified
 
     @override
     def lint(
@@ -48,9 +58,8 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             case ResolvedContractContext():
                 self._validate_contract_display_fields(input_descriptor, descriptor, out)
 
-    @classmethod
     def _validate_contract_display_fields(
-        cls, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
+        self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
     ) -> None:
         context = descriptor.context
         if not isinstance(context, ResolvedContractContext):
@@ -59,44 +68,93 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         if (deployments := context.contract.deployments) is None:
             return
 
-        # Try to fetch ABI from Sourcify or Etherscan for the first deployment that succeeds
-        reference_abis = None
-        explorer_url = None
+        # Fetch the reference ABI of every deployment, and group deployments exposing the same functions, so that
+        # each distinct ABI is validated once and deployments diverging from the others are reported
+        groups: dict[str, tuple[Functions, list[ResolvedDeployment]]] = {}
         for deployment in deployments:
+            skipped = "display fields will not be validated against ABI"
+            unverified = out.error if self.require_verified else out.warning
+            unsupported = out.error if self.require_verified else out.info
+            failed = out.error if self.require_verified else out.warning
             try:
-                if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
-                    continue
+                abis = client.get_contract_abis(deployment.chainId, deployment.address)
+            except client.ProxyImplementationNotVerifiedError as e:
+                unverified(title="Proxy implementation not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ContractNotVerifiedError as e:
+                unverified(title="Contract not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ChainNotSupportedError as e:
+                unsupported(title="Chain not supported", message=f"{e}, {skipped}")
+                continue
             except Exception as e:
-                out.warning(
+                failed(
                     title="Could not fetch ABI",
-                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, display fields will "
-                    f"not be validated against ABI: {e}",
+                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, {skipped}: {e}",
                 )
                 continue
 
             reference_abis = get_functions(abis)
-            try:
-                explorer_url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
-            except NotImplementedError:
-                explorer_url = f"<chain id {deployment.chainId} address {deployment.address}>"
-            break
+            groups.setdefault(self._external_abi_key(reference_abis), (reference_abis, []))[1].append(deployment)
 
-        if reference_abis is None:
-            return
-
-        if reference_abis.proxy:
-            return out.info(
-                title="Proxy contract",
-                message=f"Contract {explorer_url} is likely to be a proxy, validation of display fields skipped",
+        if len(groups) > 1:
+            out.warning(
+                title="Deployment ABIs differ",
+                message="The reference ABIs of the deployments do not all expose the same functions, display fields "
+                "are validated against each distinct reference ABI: "
+                + "; ".join(", ".join(f"{d.chainId}:{d.address}" for d in ds) for _, ds in groups.values()),
             )
 
+        for reference_abis, group_deployments in groups.values():
+            explorer_url = client.get_contract_explorer_url(group_deployments[0].chainId, group_deployments[0].address)
+            self._validate_display_fields(input_descriptor, descriptor, reference_abis, explorer_url, out)
+
+    @classmethod
+    def _external_abi_key(cls, reference_abis: Functions) -> str:
+        """
+        Compute a key identifying the functions as seen by a caller of the contract.
+
+        Compiler details such as internal types, or legacy fields, are left out, so that deployments compiled from
+        slightly different sources but exposing the same functions are grouped together.
+
+        :param reference_abis: functions of a reference ABI
+        :return: key equal for two ABIs exposing the same functions
+        """
+        return json.dumps(
+            {
+                selector: {
+                    "name": abi.name,
+                    "inputs": [cls._external_parameter(param) for param in abi.inputs or []],
+                    "outputs": [cls._external_parameter(param) for param in abi.outputs or []],
+                    "stateMutability": abi.stateMutability,
+                }
+                for selector, abi in sorted(reference_abis.functions.items())
+            }
+        )
+
+    @classmethod
+    def _external_parameter(cls, param: InputOutput | Component) -> dict[str, Any]:
+        return {
+            "name": param.name,
+            "type": param.type,
+            "components": [cls._external_parameter(component) for component in param.components or []],
+        }
+
+    def _validate_display_fields(
+        self,
+        input_descriptor: InputERC7730Descriptor,
+        descriptor: ResolvedERC7730Descriptor,
+        reference_abis: Functions,
+        explorer_url: HttpUrl,
+        out: OutputAdder,
+    ) -> None:
         # Build ABI paths by selector
         abi_paths_by_selector: dict[str, set[DataPath]] = {}
         for selector, abi in reference_abis.functions.items():
             abi_paths_by_selector[selector] = compute_abi_schema_paths(abi)
 
         # Parse the input format keys, which carry the parameter names resolution reduced to selectors
-        declared_abis_by_selector = cls._parse_declared_abis(input_descriptor)
+        declared_abis_by_selector = self._parse_declared_abis(input_descriptor)
 
         # Validate display field paths against ABI paths
         for selector, fmt in descriptor.display.formats.items():
@@ -110,7 +168,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
 
             format_paths = compute_format_schema_paths(fmt)
             abi_paths = abi_paths_by_selector[selector]
-            unnamed_parameter_names = cls._unnamed_parameter_names(
+            unnamed_parameter_names = self._unnamed_parameter_names(
                 reference_abis.functions[selector], declared_abis_by_selector.get(selector)
             )
 
@@ -119,7 +177,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             # (e.g. defining a field for an array root covers all nested elements).
             for path in format_paths.data_paths - abi_paths:
                 if not any(data_path_starts_with(abi_path, path) for abi_path in abi_paths):
-                    if cls._root_name(path) in unnamed_parameter_names:
+                    if self._root_name(path) in unnamed_parameter_names:
                         continue
                     out.error(
                         title="Invalid display field",

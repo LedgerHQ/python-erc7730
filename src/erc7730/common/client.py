@@ -10,7 +10,7 @@ from httpx._content import IteratorByteStream
 from httpx_file import FileTransport
 from httpx_retries import RetryTransport
 from limiter import Limiter
-from pydantic import ConfigDict, TypeAdapter, ValidationError
+from pydantic import ConfigDict, Field, TypeAdapter, ValidationError
 from pydantic_string_url import FileUrl, HttpUrl
 from xdg_base_dirs import xdg_cache_home
 
@@ -19,110 +19,169 @@ from erc7730.model.base import Model
 from erc7730.model.types import Address
 
 # ruff: noqa: UP047
+# ruff: noqa: N815 - camel case field names are tolerated to match schema
 
 ETHERSCAN = "api.etherscan.io"
 SOURCIFY = "sourcify.dev"
 
+ERC7730_NO_CACHE = "ERC7730_NO_CACHE"
+CACHE_TTL = 3600
+
 _T = TypeVar("_T")
 
 
-class EtherscanChain(Model):
-    """Etherscan supported chain info."""
+class SourcifyChain(Model):
+    """Sourcify chain info, restricted to the fields used by this library."""
 
     model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
-    chainname: str
-    chainid: int
-    blockexplorer: HttpUrl
+    name: str
+    chainId: int
+    supported: bool = False
+
+
+class SourcifyImplementation(Model):
+    """Sourcify proxy implementation, restricted to the fields used by this library."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    address: Address
+
+
+class SourcifyError(Model):
+    """Sourcify error, restricted to the fields used by this library."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    customCode: str
+    message: str
+
+
+class SourcifyProxyResolution(Model):
+    """Sourcify proxy resolution, restricted to the fields used by this library."""
+
+    model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
+    isProxy: bool = False
+    implementations: list[SourcifyImplementation] = Field(default_factory=list)
+    proxyResolutionError: SourcifyError | None = None
 
 
 class SourcifyContract(Model):
     """Sourcify verified contract, restricted to the fields used by this library."""
 
     model_config = ConfigDict(strict=False, frozen=True, extra="ignore")
-    abi: list[ABI] | None = None
+    abi: list[ABI]
+    proxyResolution: SourcifyProxyResolution | None = None
+
+
+class ContractNotVerifiedError(Exception):
+    """Contract is not verified on Sourcify."""
+
+
+class ProxyImplementationNotVerifiedError(ContractNotVerifiedError):
+    """Contract is a proxy, and one of its implementations is not verified on Sourcify."""
+
+
+class ChainNotSupportedError(Exception):
+    """Chain is not supported by Sourcify."""
 
 
 @cache
-def get_supported_chains() -> list[EtherscanChain]:
+def get_supported_chains() -> list[SourcifyChain]:
     """
-    Get supported chains from Etherscan.
+    Get supported chains from Sourcify.
 
-    :return: Etherscan supported chains, with name/chain id/block explorer URL
+    :return: Sourcify supported chains, with name/chain id
     """
-    return get(url=HttpUrl(f"https://{ETHERSCAN}/v2/chainlist"), model=list[EtherscanChain])
+    chains = get(url=HttpUrl(f"https://{SOURCIFY}/server/chains"), model=list[SourcifyChain], force_cache=True)
+    return [chain for chain in chains if chain.supported]
 
 
+@cache
 def get_contract_abis(chain_id: int, contract_address: Address) -> list[ABI]:
-    """
-    Get contract ABIs from Sourcify, falling back to Etherscan if the contract is not available on Sourcify.
-
-    :param chain_id: EIP-155 chain ID
-    :param contract_address: EVM contract address
-    :return: deserialized list of ABIs
-    :raises Exception: if contract source is not available, API key not setup, or unexpected response
-    """
-    try:
-        if (abis := get_contract_abis_from_sourcify(chain_id, contract_address)) is not None:
-            return abis
-        sourcify_error = "contract source is not available on Sourcify"
-    except Exception as e:
-        sourcify_error = str(e)
-
-    try:
-        return get_contract_abis_from_etherscan(chain_id, contract_address)
-    except Exception as e:
-        raise Exception(f"{sourcify_error}, and fetching from Etherscan failed: {e}") from e
-
-
-def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) -> list[ABI] | None:
     """
     Get contract ABIs from Sourcify.
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
-    :return: deserialized list of ABIs, or None if chain is not supported or contract source is not available
+    :return: deserialized list of ABIs
+    :raises ContractNotVerifiedError: if contract, or one of its proxy implementations, is not verified on Sourcify
+    :raises ChainNotSupportedError: if chain is not supported by Sourcify
     :raises Exception: if unexpected response
     """
-    try:
-        return get(
-            url=HttpUrl(f"https://{SOURCIFY}/server/v2/contract/{chain_id}/{contract_address}"),
-            fields="abi",
-            model=SourcifyContract,
-        ).abi
-    except HTTPStatusError as e:
-        if e.response.status_code == codes.NOT_FOUND:
-            return None  # contract source is not available on Sourcify
-        if e.response.status_code == codes.BAD_REQUEST:
-            return None  # chain id is not supported by Sourcify
-        if e.response.status_code == codes.TOO_MANY_REQUESTS:
-            raise Exception("Sourcify rate limit exceeded, please retry") from e
-        raise e
+    return get_contract_abis_from_sourcify(chain_id, contract_address)
 
 
-def get_contract_abis_from_etherscan(chain_id: int, contract_address: Address) -> list[ABI]:
+def get_contract_abis_from_sourcify(chain_id: int, contract_address: Address) -> list[ABI]:
     """
-    Get contract ABIs from Etherscan.
+    Get contract ABIs from Sourcify.
+
+    If Sourcify resolves the contract as a proxy, the ABIs of its implementations are appended to the ABIs of the
+    proxy, following nested proxies.
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
     :return: deserialized list of ABIs
-    :raises Exception: if chain id not supported, API key not setup, or unexpected response
+    :raises ContractNotVerifiedError: if contract is not verified on Sourcify
+    :raises ProxyImplementationNotVerifiedError: if contract is a proxy and an implementation is not verified
+    :raises ChainNotSupportedError: if chain is not supported by Sourcify
+    :raises Exception: if unexpected response
     """
+    contract = _get_sourcify_contract(chain_id, contract_address)
+    abis = list(contract.abi)
+    visited = {contract_address.lower()}
+    pending = _get_implementation_addresses(contract)
+    while pending:
+        if (address := pending.pop(0)).lower() in visited:
+            continue
+        visited.add(address.lower())
+        try:
+            implementation = _get_sourcify_contract(chain_id, address)
+        except ContractNotVerifiedError as e:
+            raise ProxyImplementationNotVerifiedError(
+                f"contract {contract_address} on chain {chain_id} is a proxy, and its implementation {address} is not "
+                f"verified on Sourcify"
+            ) from e
+        abis.extend(implementation.abi)
+        pending.extend(_get_implementation_addresses(implementation))
+    return abis
+
+
+def _get_implementation_addresses(contract: SourcifyContract) -> list[Address]:
+    if (resolution := contract.proxyResolution) is None or not resolution.isProxy:
+        return []
+    return [implementation.address for implementation in resolution.implementations]
+
+
+def _get_sourcify_contract(chain_id: int, contract_address: Address) -> SourcifyContract:
     try:
-        return get(
-            url=HttpUrl(f"https://{ETHERSCAN}/v2/api"),
-            chainid=chain_id,
-            module="contract",
-            action="getabi",
-            address=contract_address,
-            model=list[ABI],
+        contract = get(
+            url=HttpUrl(f"https://{SOURCIFY}/server/v2/contract/{chain_id}/{contract_address}"),
+            fields="abi,proxyResolution",
+            model=SourcifyContract,
+            force_cache=True,
         )
-    except Exception as e:
-        if "Contract source code not verified" in str(e):
-            raise Exception("contract source is not available on Etherscan") from e
-        if "Max calls per sec rate limit reached" in str(e):
-            raise Exception("Etherscan rate limit exceeded, please retry") from e
+    except HTTPStatusError as e:
+        if e.response.status_code == codes.NOT_FOUND:
+            raise ContractNotVerifiedError(
+                f"contract {contract_address} on chain {chain_id} is not verified on Sourcify"
+            ) from e
+        if e.response.status_code == codes.BAD_REQUEST:
+            error = _parse_sourcify_error(e.response)
+            if error is not None and error.customCode == "unsupported_chain":
+                raise ChainNotSupportedError(f"chain {chain_id} is not supported by Sourcify") from e
+            raise Exception(f"Sourcify rejected the request: {error.message if error else e}") from e
+        if e.response.status_code == codes.TOO_MANY_REQUESTS:
+            raise Exception("Sourcify rate limit exceeded, please retry") from e
         raise e
+    # proxy resolution is computed at request time, a failure must not be mistaken for a regular contract
+    if (resolution := contract.proxyResolution) is not None and (error := resolution.proxyResolutionError) is not None:
+        raise Exception(f"Sourcify could not resolve whether {contract_address} is a proxy: {error.message}")
+    return contract
+
+
+def _parse_sourcify_error(response: Response) -> SourcifyError | None:
+    try:
+        return SourcifyError.model_validate_json(response.read())
+    except ValidationError:
+        return None
 
 
 def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpUrl:
@@ -131,18 +190,12 @@ def get_contract_explorer_url(chain_id: int, contract_address: Address) -> HttpU
 
     :param chain_id: EIP-155 chain ID
     :param contract_address: EVM contract address
-    :return: URL to the contract explorer site
-    :raises NotImplementedError: if chain id not supported
+    :return: URL to the contract on the Sourcify repository
     """
-    for chain in get_supported_chains():
-        if chain.chainid == chain_id:
-            return HttpUrl(f"{chain.blockexplorer}/address/{contract_address}#code")
-    raise NotImplementedError(
-        f"Chain ID {chain_id} is not supported, please report this to authors of python-erc7730 library"
-    )
+    return HttpUrl(f"https://repo.{SOURCIFY}/{chain_id}/{contract_address}")
 
 
-def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
+def get(model: type[_T], url: HttpUrl | FileUrl, *, force_cache: bool = False, **params: Any) -> _T:
     """
     Fetch data from a file or an HTTP URL and deserialize it.
 
@@ -150,13 +203,18 @@ def get(model: type[_T], url: HttpUrl | FileUrl, **params: Any) -> _T:
      - GitHub: adaptation to "raw.githubusercontent.com"
      - Etherscan: rate limiting, API key parameter injection, "result" field unwrapping
 
+    Responses are cached on disk according to their caching headers, unless the ERC7730_NO_CACHE environment variable
+    is set.
+
     :param url: URL to get data from
     :param model: Pydantic model to deserialize the data
+    :param force_cache: cache the response even if it has no caching headers (for CACHE_TTL seconds)
+    :param params: query parameters
     :return: deserialized response
     :raises Exception: if URL type is not supported, API key not setup, or unexpected response
     """
     with _client() as client:
-        response = client.get(url, params=params).raise_for_status().content
+        response = client.get(url, params=params, extensions={"force_cache": force_cache}).raise_for_status().content
     try:
         return TypeAdapter(model).validate_json(response)
     except ValidationError as e:
@@ -168,12 +226,14 @@ def _client() -> Client:
     Create a new HTTP client with GitHub and Etherscan specific transports.
     :return:
     """
-    cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=7 * 24 * 3600, check_ttl_every=24 * 3600)
-    http_transport = HTTPTransport()
+    http_transport: BaseTransport = HTTPTransport()
     http_transport = GithubTransport(http_transport)
     http_transport = EtherscanTransport(http_transport)
+    http_transport = SourcifyTransport(http_transport)
     http_transport = RetryTransport(transport=http_transport)
-    http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
+    if os.environ.get(ERC7730_NO_CACHE) is None:
+        cache_storage = FileStorage(base_path=xdg_cache_home() / "erc7730", ttl=CACHE_TTL, check_ttl_every=CACHE_TTL)
+        http_transport = CacheTransport(transport=http_transport, storage=cache_storage)
     file_transport = FileTransport()
     # TODO file storage: authorize relative paths only
     transports = {"https://": http_transport, "file://": file_transport}
@@ -210,6 +270,23 @@ class GithubTransport(DelegateTransport):
         # adapt URL
         request.url = URL(str(request.url).replace(self.GITHUB, self.GITHUB_RAW).replace("/blob/", "/"))
         request.headers.update({"Host": self.GITHUB_RAW})
+        return super().handle_request(request)
+
+
+@final
+class SourcifyTransport(DelegateTransport):
+    """Sourcify specific transport for handling token header injection."""
+
+    SOURCIFY_TOKEN = "SOURCIFY_TOKEN"  # nosec B105 - environment variable name, not a secret
+
+    @override
+    def handle_request(self, request: Request) -> Response:
+        if request.url.host != SOURCIFY:
+            return super().handle_request(request)
+
+        # add token if provided, it exempts the caller from rate limiting
+        if (token := os.environ.get(self.SOURCIFY_TOKEN)) is not None:
+            request.headers.update({"X-Sourcify-Token": token})
         return super().handle_request(request)
 
 

@@ -1,14 +1,31 @@
 # Linter checks list
 ## ABI checks
+The four "not verified" / "not supported" / "could not fetch" checks below are reported as errors instead when `--require-verified` is passed, so that a strict run never passes without having checked every deployment.
+
+### Contract not verified
+- **Level**: ⚠️ Warning 
+- **Message**: `contract <address> on chain <chain_id> is not verified on Sourcify, descriptor ABIs will not be validated`
+- **Description**: The contract is not verified on Sourcify, so there is no reference ABI. Subsequent checks are skipped for the current deployment.
+
+### Proxy implementation not verified
+- **Level**: ⚠️ Warning 
+- **Message**: `contract <address> on chain <chain_id> is a proxy, and its implementation <address> is not verified on Sourcify, descriptor ABIs will not be validated`
+- **Description**: Sourcify resolved the contract as a proxy, but one of its implementations is not verified, so the reference ABI would be incomplete. Subsequent checks are skipped for the current deployment.
+
+### Chain not supported
+- **Level**: ℹ️ Info 
+- **Message**: `chain <chain_id> is not supported by Sourcify, descriptor ABIs will not be validated`
+- **Description**: Sourcify does not support the chain of the deployment, so no reference ABI can be fetched. Subsequent checks are skipped for the current deployment.
+
 ### Could not fetch ABI
 - **Level**: ⚠️ Warning 
 - **Message**: `Fetching reference ABI for chain id <chain_id> failed, descriptor ABIs will not be validated: <error>`
-- **Description**: ABI fetch from external sources (Sourcify, then Etherscan as a fallback) has failed. Subsequents checks are skipped for the current deployment.
+- **Description**: ABI fetch from Sourcify has failed for another reason, such as a rate limit, a network error or a proxy resolution error. Subsequent checks are skipped for the current deployment.
 
-### Proxy Contract
+### Deployment ABIs differ
 - **Level**: ⚠️ Warning 
-- **Message**: `Contract <url> is likely to be a proxy, validation of descriptor ABIs skipped`
-- **Description**: Contract detected as a potential proxy contract based on a simple heuristic. Subsequents checks are skipped.
+- **Message**: `The reference ABIs of the deployments do not all expose the same functions, display fields are validated against each distinct reference ABI: <chain id>:<address>, ...; <chain id>:<address>, ...`
+- **Description**: The deployments of the descriptor do not have the same reference ABI. Display fields are validated once per distinct ABI, so findings may apply to some chains only (the contract URL in each finding tells which).
 
 ### Extra function
 - **Level**: ⚠️ Warning 

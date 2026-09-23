@@ -16,6 +16,13 @@ class ValidateABILinter(ERC7730Linter):
     - => compares the two ABIs
     """
 
+    def __init__(self, require_verified: bool = False) -> None:
+        """
+        :param require_verified: report a contract that is not verified on Sourcify as an error instead of a warning
+            (as well as a reference ABI that could not be fetched, for instance because of a rate limit)
+        """
+        self.require_verified = require_verified
+
     @override
     def lint(self, descriptor: ResolvedERC7730Descriptor, out: OutputAdder) -> None:
         if isinstance(descriptor.context, ResolvedEIP712Context):
@@ -28,37 +35,38 @@ class ValidateABILinter(ERC7730Linter):
     def _validate_eip712_schemas(cls, context: ResolvedEIP712Context, out: OutputAdder) -> None:
         pass  # not implemented
 
-    @classmethod
-    def _validate_contract_abis(cls, context: ResolvedContractContext, out: OutputAdder) -> None:
+    def _validate_contract_abis(self, context: ResolvedContractContext, out: OutputAdder) -> None:
         if not isinstance(context.contract.abi, list):
             raise ValueError("Contract ABIs should have been resolved")
 
         if (deployments := context.contract.deployments) is None:
             return
         for deployment in deployments:
+            skipped = "descriptor ABIs will not be validated"
+            unverified = out.error if self.require_verified else out.warning
+            unsupported = out.error if self.require_verified else out.info
+            failed = out.error if self.require_verified else out.warning
             try:
-                if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
-                    continue
+                abis = client.get_contract_abis(deployment.chainId, deployment.address)
+            except client.ProxyImplementationNotVerifiedError as e:
+                unverified(title="Proxy implementation not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ContractNotVerifiedError as e:
+                unverified(title="Contract not verified", message=f"{e}, {skipped}")
+                continue
+            except client.ChainNotSupportedError as e:
+                unsupported(title="Chain not supported", message=f"{e}, {skipped}")
+                continue
             except Exception as e:
-                out.warning(
+                failed(
                     title="Could not fetch ABI",
-                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, descriptor ABIs will "
-                    f"not be validated: {e}",
+                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, {skipped}: {e}",
                 )
                 continue
 
             reference_abis = get_functions(abis)
             descriptor_abis = get_functions(context.contract.abi)
-            try:
-                url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
-            except NotImplementedError:
-                url = f"<chain id {deployment.chainId} address {deployment.address}>"
-
-            if reference_abis.proxy:
-                return out.info(
-                    title="Proxy contract",
-                    message=f"Contract {url} is likely to be a proxy, validation of descriptor ABIs skipped",
-                )
+            url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
 
             for selector, abi in descriptor_abis.functions.items():
                 if selector not in reference_abis.functions:
