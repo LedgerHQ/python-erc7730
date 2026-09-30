@@ -4,6 +4,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from erc7730.common.abi import ABIDataType
 from erc7730.common.output import OutputAdder
+from erc7730.convert.resolved.address import resolved_address
 from erc7730.convert.resolved.constants import ConstantProvider
 from erc7730.model.display import FieldFormat
 from erc7730.model.input.display import InputFieldBase
@@ -97,6 +98,9 @@ def resolve_path_or_constant_value(
 
     if input_value is not None:
         if (value := constants.resolve(input_value, out)) is None:
+            return None
+
+        if abi_type == ABIDataType.ADDRESS and resolved_address(value, out) is None:
             return None
 
         if not isinstance(value, str | bool | int | float):

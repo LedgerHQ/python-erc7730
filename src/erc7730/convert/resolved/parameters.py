@@ -2,6 +2,7 @@ from typing import assert_never, cast
 
 from erc7730.common.abi import ABIDataType
 from erc7730.common.output import OutputAdder
+from erc7730.convert.resolved.address import resolved_address
 from erc7730.convert.resolved.constants import ConstantProvider
 from erc7730.convert.resolved.enums import get_enum, get_enum_id
 from erc7730.convert.resolved.values import resolve_path_or_constant_value
@@ -62,15 +63,21 @@ def resolve_field_parameters(
 def resolve_address_name_parameters(
     prefix: DataPath, params: InputAddressNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedAddressNameParameters | None:
-    sender_address: list[MixedCaseAddress] | None = None
+    sender_address: list[Address] | None = None
     if (sender_addr_input := params.senderAddress) is not None:
         resolved_sender = constants.resolve_or_none(sender_addr_input, out)
         if resolved_sender is None:
             sender_address = None
-        if isinstance(resolved_sender, str):
-            sender_address = [resolved_sender]
+        elif isinstance(resolved_sender, str):
+            if (address := resolved_address(resolved_sender, out)) is None:
+                return None
+            sender_address = [address]
         elif isinstance(resolved_sender, list):
-            sender_address = resolved_sender
+            sender_address = []
+            for addr in resolved_sender:
+                if (address := resolved_address(addr, out)) is None:
+                    return None
+                sender_address.append(address)
         else:
             raise Exception("Invalid senderAddress type")
 
@@ -155,11 +162,13 @@ def resolve_token_amount_parameters(
     elif isinstance(input_addresses, list):
         resolved_addresses = []
         for input_address in input_addresses:
-            if (resolved_address := constants.resolve(input_address, out)) is None:
+            if (address := resolved_address(constants.resolve(input_address, out), out)) is None:
                 return None
-            resolved_addresses.append(Address(resolved_address))
+            resolved_addresses.append(address)
     elif isinstance(input_addresses, str):
-        resolved_addresses = [Address(input_addresses)]
+        if (address := resolved_address(input_addresses, out)) is None:
+            return None
+        resolved_addresses = [address]
     else:
         raise Exception("Invalid nativeCurrencyAddress type")
 
