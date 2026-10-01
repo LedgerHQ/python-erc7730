@@ -84,7 +84,7 @@ class ConstantProvider(ABC):
                     if path.absolute:
                         return True
                     # the shape only: an address with a wrong checksum is still an address, not a path
-                    if ADDRESS_PATTERN.match(str(path)):
+                    if ADDRESS_PATTERN.fullmatch(str(path)):
                         out.error(
                             title="Invalid data path",
                             message=f""""{path}" is invalid, it must contain a data path to the address in the """

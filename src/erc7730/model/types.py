@@ -20,15 +20,15 @@ ADDRESS_PATTERN = re.compile(r"^0x[a-fA-F0-9]{40}$")
 
 def validate_address_checksum(value: str) -> str:
     """
-    Reject a mixed-case address whose letter cases do not form a valid EIP-55 checksum.
+    Reject an address that is neither in lowercase nor in its EIP-55 checksum form.
 
-    An address written in lowercase only, or in uppercase only, carries no checksum and is accepted as is. An address
-    that mixes both cases claims a checksum, so a mismatch is most likely a typo or a corrupted copy.
+    An address written in lowercase only carries no checksum and is accepted as is. An address with an uppercase
+    letter claims a checksum, so a mismatch is most likely a typo or a corrupted copy. This includes an address
+    written in uppercase only: EIP-55 does not define it as a form without checksum.
 
     The chain-specific checksum of EIP-1191 (used by Rootstock) is not supported: the type does not know the chain.
     """
-    hex_part = value[2:]
-    if not any(c.islower() for c in hex_part) or not any(c.isupper() for c in hex_part):
+    if value == value.lower():
         return value
     if value != (expected := to_checksum_address(value)):
         raise PydanticCustomError(
@@ -58,7 +58,7 @@ MixedCaseAddress = Annotated[
         description="An Ethereum contract address, can be lowercase or EIP-55.",
         min_length=42,
         max_length=42,
-        pattern=r"^0x[a-fA-F0-9]+$",
+        pattern=ADDRESS_PATTERN.pattern,
     ),
     ErrorTypeLabel(
         '20 bytes, hexadecimal Ethereum address prefixed with "0x" (EIP-55 or lowercase), such as '

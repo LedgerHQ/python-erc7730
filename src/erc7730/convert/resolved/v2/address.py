@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from typing import Any
 
 from pydantic import TypeAdapter, ValidationError
@@ -24,3 +25,19 @@ def resolved_address(value: Any, out: OutputAdder) -> Address | None:
         return Address(_ADDRESS.validate_python(value))
     except ValidationError as e:
         return out.error(title="Invalid address", message=e.errors()[0]["msg"])
+
+
+def resolved_addresses(values: Sequence[Any], out: OutputAdder) -> list[Address] | None:
+    """
+    Validate a list of values that a parameter resolved to as addresses.
+
+    :param values: resolved values
+    :param out: error handler
+    :return: the addresses, or None after the first error was reported
+    """
+    addresses: list[Address] = []
+    for value in values:
+        if (address := resolved_address(value, out)) is None:
+            return None
+        addresses.append(address)
+    return addresses
