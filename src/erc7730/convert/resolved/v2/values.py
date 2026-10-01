@@ -4,6 +4,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from erc7730.common.abi import ABIDataType
 from erc7730.common.output import OutputAdder
+from erc7730.convert.resolved.v2.address import resolved_address
 from erc7730.convert.resolved.v2.constants import ConstantProvider
 from erc7730.model.input.v2.display import InputFieldBase
 from erc7730.model.input.v2.format import FieldFormat
@@ -62,6 +63,9 @@ def resolve_field_value(
             abi_type=abi_type,
             constants=constants,
             out=out,
+            # an ERC-7930 interoperable address has the address type family, but is a longer binary value
+            evm_address=abi_type == ABIDataType.ADDRESS
+            and input_field_format != FieldFormat.INTEROPERABLE_ADDRESS_NAME,
         )
     ) is None:
         return out.error(title="Invalid field", message="Field must have either a path or a value.")
@@ -75,6 +79,7 @@ def resolve_path_or_constant_value(
     abi_type: ABIDataType,
     constants: ConstantProvider,
     out: OutputAdder,
+    evm_address: bool | None = None,
 ) -> ResolvedValue | None:
     """
     Resolve value, as a data path or constant value.
@@ -85,6 +90,8 @@ def resolve_path_or_constant_value(
     :param abi_type: expected encoded value data type
     :param constants: descriptor paths constants resolver
     :param out: error handler
+    :param evm_address: whether a constant value must be a 20 bytes address (shape and EIP-55 checksum); by default,
+        whether the data type is an address
     :return: resolved value or None if error or value resolves to None
     """
     if input_path is not None:
@@ -101,6 +108,11 @@ def resolve_path_or_constant_value(
 
     if input_value is not None:
         if (value := constants.resolve(input_value, out)) is None:
+            return None
+
+        if evm_address is None:
+            evm_address = abi_type == ABIDataType.ADDRESS
+        if evm_address and resolved_address(value, out) is None:
             return None
 
         if not isinstance(value, str | bool | int | float):

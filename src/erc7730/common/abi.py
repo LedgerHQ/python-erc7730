@@ -128,7 +128,6 @@ def function_to_selector(abi: Function) -> str:
 @dataclass(kw_only=True)
 class Functions:
     functions: dict[str, Function]
-    proxy: bool
 
 
 _READ_ONLY_MUTABILITIES = frozenset({StateMutability.pure, StateMutability.view})
@@ -141,14 +140,12 @@ def get_functions(abis: list[ABI], *, include_read_only: bool = False) -> Functi
     :param include_read_only: if False (default), filter out pure/view functions that cannot produce transactions
     :return: Functions dataclass with selector->Function mapping
     """
-    functions = Functions(functions={}, proxy=False)
+    functions = Functions(functions={})
     for abi in abis:
         if abi.type == "function":
             if not include_read_only and abi.stateMutability in _READ_ONLY_MUTABILITIES:
                 continue
             functions.functions[function_to_selector(abi)] = abi
-            if abi.name in ("proxyType", "getImplementation", "implementation", "proxy__getImplementation"):
-                functions.proxy = True
     return functions
 
 

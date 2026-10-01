@@ -1,3 +1,7 @@
+from typing import Any
+
+import pytest
+from httpx import BaseTransport, HTTPStatusError, Request, Response, codes
 from pydantic_string_url import HttpUrl
 
 from erc7730.common import client
@@ -8,9 +12,9 @@ def test_get_supported_chains() -> None:
     result = client.get_supported_chains()
     assert result is not None
     assert len(result) >= 50
-    names = {chain.chainname for chain in result}
+    names = {chain.name for chain in result}
     assert "Ethereum Mainnet" in names
-    assert "Sepolia Testnet" in names
+    assert "Ethereum Sepolia Testnet" in names
     assert "BNB Smart Chain Mainnet" in names
     assert "BNB Smart Chain Testnet" in names
     assert "Polygon Mainnet" in names
@@ -40,6 +44,11 @@ def test_get_supported_chains() -> None:
     assert "Taiko Mainnet" in names
 
 
+def test_get_contract_explorer_url() -> None:
+    result = client.get_contract_explorer_url(chain_id=1, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d")
+    assert result == "https://repo.sourcify.dev/1/0x06012c8cf97bead5deae237070f9587f8e7a266d"
+
+
 def test_get_contract_abis() -> None:
     result = client.get_contract_abis(chain_id=1, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d")
     assert result is not None
@@ -55,17 +64,101 @@ def test_get_contract_abis_from_sourcify() -> None:
 
 
 def test_get_contract_abis_from_sourcify_unverified_contract() -> None:
-    result = client.get_contract_abis_from_sourcify(
-        chain_id=1, contract_address="0x0000000000000000000000000000000000000001"
-    )
-    assert result is None
+    with pytest.raises(client.ContractNotVerifiedError):
+        client.get_contract_abis_from_sourcify(
+            chain_id=1, contract_address="0x0000000000000000000000000000000000000001"
+        )
 
 
 def test_get_contract_abis_from_sourcify_unsupported_chain() -> None:
+    with pytest.raises(client.ChainNotSupportedError):
+        client.get_contract_abis_from_sourcify(
+            chain_id=99999999, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d"
+        )
+
+
+def test_get_contract_abis_from_sourcify_proxy() -> None:
+    # USDC is a proxy, transfer() is only defined in the ABI of its implementation
     result = client.get_contract_abis_from_sourcify(
-        chain_id=99999999, contract_address="0x06012c8cf97bead5deae237070f9587f8e7a266d"
+        chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
     )
-    assert result is None
+    assert result is not None
+    names = {abi.name for abi in result if abi.type == "function"}
+    assert "upgradeTo" in names
+    assert "transfer" in names
+
+
+def test_get_contract_abis_unverified_proxy_implementation(monkeypatch: pytest.MonkeyPatch) -> None:
+    proxy = client.SourcifyContract.model_validate(
+        {
+            "abi": [],
+            "proxyResolution": {
+                "isProxy": True,
+                "implementations": [{"address": "0x0000000000000000000000000000000000000001"}],
+            },
+        }
+    )
+
+    def get(model: Any, url: str, **params: Any) -> Any:
+        if url.endswith("eb48"):
+            return proxy
+        response = Response(status_code=codes.NOT_FOUND, request=Request("GET", url))
+        raise HTTPStatusError("not verified", request=response.request, response=response)
+
+    client.get_contract_abis.cache_clear()
+    monkeypatch.setattr(client, "get", get)
+    with pytest.raises(client.ProxyImplementationNotVerifiedError, match="0x0000000000000000000000000000000000000001"):
+        client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+
+
+def test_get_contract_abis_proxy_resolution_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    contract = client.SourcifyContract.model_validate(
+        {
+            "abi": [],
+            "proxyResolution": {
+                "proxyResolutionError": {
+                    "customCode": "proxy_resolution_error",
+                    "message": "Error while running proxy detection and implementation resolution",
+                }
+            },
+        }
+    )
+    client.get_contract_abis.cache_clear()
+    monkeypatch.setattr(client, "get", lambda model, url, **params: contract)
+    with pytest.raises(Exception, match="could not resolve whether"):
+        client.get_contract_abis(chain_id=1, contract_address="0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48")
+
+
+class _RecordingTransport(BaseTransport):
+    """Transport that records the requests it receives and answers with an empty JSON list."""
+
+    def __init__(self) -> None:
+        self.requests: list[Request] = []
+
+    def handle_request(self, request: Request) -> Response:
+        self.requests.append(request)
+        return Response(status_code=codes.OK, json=[])
+
+
+@pytest.mark.parametrize(
+    ("token", "url", "expected"),
+    [
+        ("secret", "https://sourcify.dev/server/chains", "secret"),
+        (None, "https://sourcify.dev/server/chains", None),
+        ("secret", "https://api.etherscan.io/v2/chainlist", None),
+    ],
+)
+def test_sourcify_transport_token_header(
+    monkeypatch: pytest.MonkeyPatch, token: str | None, url: str, expected: str | None
+) -> None:
+    if token is None:
+        monkeypatch.delenv(client.SourcifyTransport.SOURCIFY_TOKEN, raising=False)
+    else:
+        monkeypatch.setenv(client.SourcifyTransport.SOURCIFY_TOKEN, token)
+    delegate = _RecordingTransport()
+    client.SourcifyTransport(delegate).handle_request(Request("GET", url))
+    assert len(delegate.requests) == 1
+    assert delegate.requests[0].headers.get("X-Sourcify-Token") == expected
 
 
 def test_get_from_github() -> None:

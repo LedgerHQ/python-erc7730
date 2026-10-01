@@ -28,7 +28,13 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          submodules: "recursive"
+
+      - name: Checkout test registries
+        timeout-minutes: 10
+        run: >-
+          git submodule update --init --checkout
+          tests/registries/clear-signing-erc7730-registry
+          tests/registries/ledger-asset-dapps
 
       - name: Setup mise
         timeout-minutes: 10
