@@ -2,6 +2,7 @@ from typing import Any, assert_never, cast
 
 from erc7730.common.abi import ABIDataType
 from erc7730.common.output import OutputAdder
+from erc7730.convert.resolved.v2.address import resolved_addresses
 from erc7730.convert.resolved.v2.constants import ConstantProvider
 from erc7730.convert.resolved.v2.enums import get_enum, get_enum_id
 from erc7730.convert.resolved.v2.values import resolve_path_or_constant_value
@@ -89,10 +90,10 @@ def resolve_address_name_parameters(
             resolved_sender = constants.resolve_or_none(sender_addr_input, out)
             if resolved_sender is None:
                 sender_address = None
-            elif isinstance(resolved_sender, str):
-                sender_address = [Address(resolved_sender)]
-            elif isinstance(resolved_sender, list):
-                sender_address = [Address(addr) for addr in resolved_sender]
+            elif isinstance(resolved_sender, str | list):
+                senders = [resolved_sender] if isinstance(resolved_sender, str) else resolved_sender
+                if (sender_address := resolved_addresses(senders, out)) is None:
+                    return None
             else:
                 raise Exception("Invalid senderAddress type")
 
@@ -119,10 +120,10 @@ def resolve_interoperable_address_name_parameters(
             resolved_sender = constants.resolve_or_none(sender_addr_input, out)
             if resolved_sender is None:
                 sender_address = None
-            elif isinstance(resolved_sender, str):
-                sender_address = [Address(resolved_sender)]
-            elif isinstance(resolved_sender, list):
-                sender_address = [Address(addr) for addr in resolved_sender]
+            elif isinstance(resolved_sender, str | list):
+                senders = [resolved_sender] if isinstance(resolved_sender, str) else resolved_sender
+                if (sender_address := resolved_addresses(senders, out)) is None:
+                    return None
             else:
                 raise Exception("Invalid senderAddress type")
 
@@ -241,17 +242,15 @@ def resolve_token_amount_parameters(
         list[DescriptorPathStr | MixedCaseAddress] | MixedCaseAddress | None,
         constants.resolve_or_none(params.nativeCurrencyAddress, out),
     )
-    resolved_addresses: list[Address] | None
+    native_addresses: list[Address] | None
     if input_addresses is None:
-        resolved_addresses = None
-    elif isinstance(input_addresses, list):
-        resolved_addresses = []
-        for input_address in input_addresses:
-            if (resolved_address := constants.resolve(input_address, out)) is None:
-                return None
-            resolved_addresses.append(Address(resolved_address))
-    elif isinstance(input_addresses, str):
-        resolved_addresses = [Address(input_addresses)]
+        native_addresses = None
+    elif isinstance(input_addresses, str | list):
+        inputs = [input_addresses] if isinstance(input_addresses, str) else input_addresses
+        # an element of the list can be a path to a constant
+        resolved_inputs = [constants.resolve(i, out) for i in inputs]
+        if None in resolved_inputs or (native_addresses := resolved_addresses(resolved_inputs, out)) is None:
+            return None
     else:
         raise Exception("Invalid nativeCurrencyAddress type")
 
@@ -279,7 +278,7 @@ def resolve_token_amount_parameters(
 
     return ResolvedTokenAmountParameters(
         token=token_resolved,
-        nativeCurrencyAddress=resolved_addresses,
+        nativeCurrencyAddress=native_addresses,
         threshold=resolved_threshold,
         message=constants.resolve_or_none(params.message, out),
         chainId=resolved_chain_id,

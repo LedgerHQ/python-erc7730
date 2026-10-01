@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from typing import Any, assert_never, override
 
-from pydantic import TypeAdapter, ValidationError
+from pydantic import TypeAdapter
 from typing_extensions import TypeVar
 
 from erc7730.common.output import OutputAdder
@@ -12,7 +12,7 @@ from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.input.v2.display import InputMapReference
 from erc7730.model.paths import ROOT_DESCRIPTOR_PATH, ArrayElement, ContainerPath, DataPath, DescriptorPath, Field
 from erc7730.model.paths.path_ops import descriptor_path_append, to_absolute
-from erc7730.model.types import MixedCaseAddress
+from erc7730.model.types import ADDRESS_PATTERN
 
 _T = TypeVar("_T", covariant=True)
 
@@ -83,8 +83,8 @@ class ConstantProvider(ABC):
                 case DataPath():
                     if path.absolute:
                         return True
-                    try:
-                        TypeAdapter(MixedCaseAddress).validate_strings(str(path))
+                    # the shape only: an address with a wrong checksum is still an address, not a path
+                    if ADDRESS_PATTERN.fullmatch(str(path)):
                         out.error(
                             title="Invalid data path",
                             message=f""""{path}" is invalid, it must contain a data path to the address in the """
@@ -92,8 +92,7 @@ class ConstantProvider(ABC):
                             "use the adequate parameter to provide a constant value.",
                         )
                         return False
-                    except ValidationError:
-                        return True
+                    return True
                 case _:
                     assert_never(path)
 
