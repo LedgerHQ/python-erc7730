@@ -223,6 +223,178 @@ def test_convert_token_amount_resolves_token_path() -> None:
     assert field.param.token is not None
 
 
+MAP_ADDRESSES = {
+    1: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    8453: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+}
+MAP_SELECTORS = {1: "0xa9059cbb", 8453: "0x095ea7b3"}
+MAP_AMOUNTS = {1: 1000, 8453: 2000}
+
+
+def map_ref(map_name: str, key_path: str = "@.chainId") -> dict[str, str]:
+    return {"map": f"$.metadata.maps.{map_name}", "keyPath": key_path}
+
+
+def convert_with_maps(signature: str, field: dict[str, Any], chain_id: int) -> list[Any]:
+    """Build a 2 deployments descriptor around a single display field using maps, and convert it for a chain."""
+    descriptor = InputERC7730Descriptor.model_validate_json(
+        json.dumps(
+            {
+                "$schema": "specs/erc7730-v2.schema.json",
+                "context": {
+                    "$id": "test",
+                    "contract": {
+                        "deployments": [
+                            {"chainId": 1, "address": DEFAULT_ADDRESS},
+                            {"chainId": 8453, "address": "0x0000000000000000000000000000000000000002"},
+                        ]
+                    },
+                },
+                "metadata": {
+                    "owner": "Test Owner",
+                    "maps": {
+                        "addresses": {"values": {str(k): v for k, v in MAP_ADDRESSES.items()}},
+                        "selectors": {"values": {str(k): v for k, v in MAP_SELECTORS.items()}},
+                        "amounts": {"values": {str(k): v for k, v in MAP_AMOUNTS.items()}},
+                    },
+                },
+                "display": {"formats": {signature: {"intent": "Test intent", "fields": [field]}}},
+            }
+        )
+    )
+    return erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=chain_id)
+
+
+def convert_map_token_descriptor(key_path: str, chain_id: int) -> list[Any]:
+    """Convert a token amount field looking up its token in a map, for a chain."""
+    return convert_with_maps(
+        "deposit(uint256 assets, uint256 key)",
+        {
+            "path": "assets",
+            "label": "Deposit asset",
+            "format": "tokenAmount",
+            "params": {"token": map_ref("addresses", key_path)},
+        },
+        chain_id,
+    )
+
+
+@pytest.mark.parametrize("chain_id", [1, 8453])
+def test_convert_token_amount_resolves_map_per_deployment(chain_id: int) -> None:
+    descriptors = convert_map_token_descriptor("@.chainId", chain_id)
+
+    assert len(descriptors) == 1
+    param = descriptors[0].fields[0].param
+    assert isinstance(param, CalldataDescriptorParamTokenAmountV1)
+    assert isinstance(param.token, CalldataDescriptorValueConstantV1)
+    assert param.token.value == MAP_ADDRESSES[chain_id]
+    assert param.token.type_family == CalldataDescriptorTypeFamily.ADDRESS
+
+
+def test_convert_token_amount_rejects_map_keyed_on_data() -> None:
+    # the key is only known when the transaction is signed, which the calldata descriptor cannot encode
+    assert convert_map_token_descriptor("key", 1) == []
+
+
+@pytest.mark.parametrize("chain_id", [1, 8453])
+def test_convert_calldata_resolves_maps_per_deployment(chain_id: int) -> None:
+    descriptors = convert_with_maps(
+        "execute(address target, bytes data)",
+        {
+            "path": "data",
+            "label": "Embedded call",
+            "format": "calldata",
+            "params": {
+                "callee": map_ref("addresses"),
+                "selector": map_ref("selectors"),
+                "amount": map_ref("amounts"),
+                "spender": map_ref("addresses"),
+            },
+        },
+        chain_id,
+    )
+
+    assert len(descriptors) == 1
+    param = descriptors[0].fields[0].param
+    assert isinstance(param, CalldataDescriptorParamCalldataV1)
+    for value, expected in (
+        (param.callee, MAP_ADDRESSES[chain_id]),
+        (param.selector, MAP_SELECTORS[chain_id]),
+        (param.amount, MAP_AMOUNTS[chain_id]),
+        (param.spender, MAP_ADDRESSES[chain_id]),
+    ):
+        assert isinstance(value, CalldataDescriptorValueConstantV1)
+        assert value.value == expected
+
+
+def test_convert_calldata_rejects_callee_map_keyed_on_data() -> None:
+    descriptors = convert_with_maps(
+        "execute(address target, bytes data)",
+        {
+            "path": "data",
+            "label": "Embedded call",
+            "format": "calldata",
+            "params": {"callee": map_ref("addresses", "target")},
+        },
+        1,
+    )
+
+    assert descriptors == []
+
+
+@pytest.mark.parametrize(
+    ("param", "map_name"), [("selector", "selectors"), ("amount", "amounts"), ("spender", "addresses")]
+)
+def test_convert_calldata_rejects_optional_map_keyed_on_data(param: str, map_name: str) -> None:
+    # an optional parameter that is set but cannot be converted must not be silently omitted
+    descriptors = convert_with_maps(
+        "execute(address target, bytes data)",
+        {
+            "path": "data",
+            "label": "Embedded call",
+            "format": "calldata",
+            "params": {"calleePath": "target", param: map_ref(map_name, "@.from")},
+        },
+        1,
+    )
+
+    assert descriptors == []
+
+
+@pytest.mark.parametrize("chain_id", [1, 8453])
+def test_convert_nft_name_resolves_collection_map_per_deployment(chain_id: int) -> None:
+    descriptors = convert_with_maps(
+        "transferNft(uint256 tokenId)",
+        {"path": "tokenId", "label": "NFT", "format": "nftName", "params": {"collection": map_ref("addresses")}},
+        chain_id,
+    )
+
+    assert len(descriptors) == 1
+    param = descriptors[0].fields[0].param
+    assert isinstance(param, CalldataDescriptorParamNFTV1)
+    assert isinstance(param.collection, CalldataDescriptorValueConstantV1)
+    assert param.collection.value == MAP_ADDRESSES[chain_id]
+
+
+@pytest.mark.parametrize("chain_id", [1, 8453])
+def test_convert_address_name_resolves_sender_address_map_per_deployment(chain_id: int) -> None:
+    descriptors = convert_with_maps(
+        "transfer(address to, uint256 amount)",
+        {
+            "path": "to",
+            "label": "To",
+            "format": "addressName",
+            "params": {"types": ["eoa"], "senderAddress": map_ref("addresses")},
+        },
+        chain_id,
+    )
+
+    assert len(descriptors) == 1
+    param = descriptors[0].fields[0].param
+    assert isinstance(param, CalldataDescriptorParamTrustedNameV1)
+    assert param.sender_addresses == [MAP_ADDRESSES[chain_id].lower()]
+
+
 def convert_descriptor(signature: str, field: dict[str, Any]) -> list[Any]:
     """Build a minimal v2 descriptor around a single display field and return the raw conversion result."""
     descriptor = InputERC7730Descriptor.model_validate_json(

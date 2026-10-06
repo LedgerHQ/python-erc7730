@@ -31,7 +31,7 @@ from erc7730.convert.calldata.v1.path import (
 from erc7730.convert.resolved.v2.convert_erc7730_input_to_resolved import (
     ERC7730InputToResolved,
 )
-from erc7730.convert.resolved.v2.values import encode_value
+from erc7730.convert.resolved.v2.values import deployment_map_key, encode_value, lookup_map_value
 from erc7730.model.abi import Function
 from erc7730.model.calldata.descriptor import (
     CalldataDescriptor,
@@ -87,6 +87,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldGroup,
     ResolvedFormat,
     ResolvedNftNameParameters,
+    ResolvedValueMap,
     ResolvedVisibilityConditions,
 )
 from erc7730.model.types import Address, HexStr, ScalarType, Selector
@@ -233,7 +234,11 @@ def _convert_v2_selector(
 
     fields: list[CalldataDescriptorInstructionFieldV1] = []
     for input_field in format.fields:
-        if (output_fields := _convert_v2_field(abi=abi_tree, field=input_field, enums=enums_by_id, out=out)) is None:
+        if (
+            output_fields := _convert_v2_field(
+                abi=abi_tree, field=input_field, enums=enums_by_id, deployment=deployment, out=out
+            )
+        ) is None:
             return None
         fields.extend(output_fields)
 
@@ -273,6 +278,7 @@ def _convert_v2_field(
     abi: ABITree,
     field: ResolvedFieldDescription | ResolvedFieldGroup,
     enums: dict[str, int],
+    deployment: ResolvedDeployment,
     out: OutputAdder,
 ) -> list[CalldataDescriptorInstructionFieldV1] | None:
     """
@@ -290,6 +296,7 @@ def _convert_v2_field(
     :param abi: function ABI tree
     :param field: v2 resolved field
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
+    :param deployment: chain id / contract address for which the descriptor is generated
     :param out: error handler
     :return: 1 or more calldata field instructions, or None on error
     """
@@ -318,7 +325,7 @@ def _convert_v2_field(
                 )
             name = field.id or "constraint"
 
-        if (param := _convert_v2_param(abi=abi, field=field, enums=enums, out=out)) is None:
+        if (param := _convert_v2_param(abi=abi, field=field, enums=enums, deployment=deployment, out=out)) is None:
             return None
 
         # Constraints are compared by the parameter formatter, so they are encoded against the type
@@ -363,7 +370,11 @@ def _convert_v2_field(
         # In v1 protocol, nested fields are flattened
         instructions: list[CalldataDescriptorInstructionFieldV1] = []
         for nested_field in field.fields:
-            if (nested_instructions := _convert_v2_field(abi=abi, field=nested_field, enums=enums, out=out)) is None:
+            if (
+                nested_instructions := _convert_v2_field(
+                    abi=abi, field=nested_field, enums=enums, deployment=deployment, out=out
+                )
+            ) is None:
                 return None
             instructions.extend(nested_instructions)
         return instructions
@@ -669,6 +680,7 @@ def _convert_v2_param(
     abi: ABITree,
     field: ResolvedFieldDescription,
     enums: dict[str, int],
+    deployment: ResolvedDeployment,
     out: OutputAdder,
 ) -> CalldataDescriptorParamV1 | None:
     """
@@ -679,6 +691,7 @@ def _convert_v2_param(
     :param abi: function ABI tree
     :param field: v2 resolved field description
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
+    :param deployment: chain id / contract address for which the descriptor is generated, used to look up map values
     :param out: error handler
     :return: calldata protocol field parameter or None on error
     """
@@ -686,12 +699,32 @@ def _convert_v2_param(
     if (value := _convert_v2_value(path_str, field.value, field.format, abi, out)) is None:
         return None
 
+    def _lookup_deployment_value(value_map: ResolvedValueMap) -> ResolvedValueConstant | None:
+        # the calldata descriptor is generated for a single deployment, so a map keyed on the chain id or target
+        # contract address resolves to a constant
+        if (key := deployment_map_key(value_map.keyPath, deployment.chainId, deployment.address)) is None:
+            return out.error(
+                title="Unsupported map key",
+                message=f"Map lookups keyed on {value_map.keyPath} cannot be converted to calldata descriptors, only "
+                "@.chainId and @.to keys are supported.",
+            )
+        if (map_value := lookup_map_value(value_map.values, key)) is None:
+            return out.error(
+                title="Missing map value",
+                message=f"""Map has no value for {value_map.keyPath} "{key}".""",
+            )
+        return map_value
+
     def _convert_resolved_value(
-        resolved_value: ResolvedValuePath | ResolvedValueConstant | None,
+        resolved_value: ResolvedValuePath | ResolvedValueConstant | ResolvedValueMap | None,
         abi_type: ABIDataType,
     ) -> CalldataDescriptorValueV1 | None:
         if resolved_value is None:
             return None
+        if isinstance(resolved_value, ResolvedValueMap):
+            if (map_value := _lookup_deployment_value(resolved_value)) is None:
+                return None
+            resolved_value = map_value
         if isinstance(resolved_value, ResolvedValuePath):
             return _convert_v2_value(str(resolved_value.path), None, None, abi, out)
         if isinstance(resolved_value, ResolvedValueConstant):
@@ -746,6 +779,10 @@ def _convert_v2_param(
                             sources.append(TrustedNameSource(input_source.lower()))
 
                 sender_addresses = getattr(address_params, "senderAddress", None)
+                if isinstance(sender_addresses, ResolvedValueMap):
+                    if (sender_address := _lookup_deployment_value(sender_addresses)) is None:
+                        return None
+                    sender_addresses = [Address(str(sender_address.value))]
 
             types = list(TrustedNameType) if not types else list(dict.fromkeys(types))
             sources = list(TrustedNameSource) if not sources else list(dict.fromkeys(sources))
@@ -822,14 +859,27 @@ def _convert_v2_param(
             if (callee := _convert_resolved_value(field.params.callee, ABIDataType.ADDRESS)) is None:
                 return None
 
-            selector_val = _convert_resolved_value(field.params.selector, ABIDataType.STRING)
+            # optional parameters: a parameter that is set but fails to convert must reject the field, not be omitted
+            def _convert_optional_value(
+                resolved_value: ResolvedValuePath | ResolvedValueConstant | ResolvedValueMap | None,
+                abi_type: ABIDataType,
+            ) -> tuple[bool, CalldataDescriptorValueV1 | None]:
+                converted = _convert_resolved_value(resolved_value, abi_type)
+                return resolved_value is None or converted is not None, converted
+
+            selector_ok, selector_val = _convert_optional_value(field.params.selector, ABIDataType.STRING)
 
             # v2 calldata params may not define chainId; keep compatibility with both models.
-            chain_id_val = _convert_resolved_value(getattr(field.params, "chainId", None), ABIDataType.UINT)
+            chain_id_ok, chain_id_val = _convert_optional_value(
+                getattr(field.params, "chainId", None), ABIDataType.UINT
+            )
 
-            amount_val = _convert_resolved_value(field.params.amount, ABIDataType.UINT)
+            amount_ok, amount_val = _convert_optional_value(field.params.amount, ABIDataType.UINT)
 
-            spender_val = _convert_resolved_value(field.params.spender, ABIDataType.ADDRESS)
+            spender_ok, spender_val = _convert_optional_value(field.params.spender, ABIDataType.ADDRESS)
+
+            if not (selector_ok and chain_id_ok and amount_ok and spender_ok):
+                return None
 
             return CalldataDescriptorParamCalldataV1(
                 value=value,
@@ -886,7 +936,8 @@ def _convert_v2_param(
 
             if field.params is not None:
                 token = getattr(field.params, "token", None)
-                token_path = _convert_resolved_value(token, ABIDataType.ADDRESS)
+                if (token_path := _convert_resolved_value(token, ABIDataType.ADDRESS)) is None and token is not None:
+                    return None
 
                 threshold = getattr(field.params, "threshold", None)
                 native_currencies = getattr(field.params, "nativeCurrencyAddress", None)

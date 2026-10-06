@@ -5,7 +5,7 @@ Specification: https://github.com/LedgerHQ/clear-signing-erc7730-registry/tree/m
 JSON schema: https://github.com/LedgerHQ/clear-signing-erc7730-registry/blob/master/specs/erc7730-v2.schema.json
 """
 
-from typing import Annotated, ForwardRef, Self
+from typing import Annotated, ForwardRef, Literal, Self
 
 from pydantic import Discriminator, Field, Tag, model_validator
 
@@ -21,10 +21,43 @@ from erc7730.model.input.v2.unions import (
     field_parameters_discriminator,
     visibility_rules_discriminator,
 )
-from erc7730.model.resolved.display import ResolvedValue
+from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
+from erc7730.model.resolved.path import ResolvedPath
 from erc7730.model.types import Address, HexStr, Id, ScalarType
 
 # ruff: noqa: N815 - camel case field names are tolerated to match schema
+
+
+class ResolvedValueMap(Model):
+    """
+    A constant value looked up in a map, using a key read from the structured data or its container (resolved).
+
+    The map values are inlined and encoded, the key is only known when the structured data is signed (or, for keys
+    read from the container like the chain id or the target contract address, for a given deployment).
+    """
+
+    type: Literal["map"] = Field(
+        default="map",
+        title="Value Type",
+        description="The value type identifier (discriminator for values discriminated union).",
+    )
+
+    keyPath: ResolvedPath = Field(
+        title="Key Path",
+        description="The path to the key used to look up the value in the map.",
+    )
+
+    values: dict[str, ResolvedValueConstant] = Field(
+        title="Map Values",
+        description="The resolved constant values, indexed by key.",
+        min_length=1,
+    )
+
+
+ResolvedValueOrMap = Annotated[
+    ResolvedValuePath | ResolvedValueConstant | ResolvedValueMap,
+    Discriminator("type"),
+]
 
 
 class ResolvedVisibilityConditions(Model):
@@ -96,10 +129,10 @@ class ResolvedTokenAmountParameters(Model):
     Token Amount Formatting Parameters (resolved).
     """
 
-    token: ResolvedValue | None = Field(
+    token: ResolvedValueOrMap | None = Field(
         default=None,
         title="Token",
-        description="The resolved address of the token contract, either as path or constant value. Used to "
+        description="The resolved address of the token contract, either as path, constant value or map lookup. Used to "
         "associate correct ticker. If ticker is not found or value is not set, the wallet SHOULD display the "
         'raw value instead with an "Unknown token" warning.',
     )
@@ -126,11 +159,11 @@ class ResolvedTokenAmountParameters(Model):
         description="The resolved message to display when the amount is above the threshold.",
     )
 
-    chainId: int | None = Field(
+    chainId: int | ResolvedValueMap | None = Field(
         default=None,
         title="Chain ID",
         description=(
-            "Optional. The resolved chain on which the token is deployed. "
+            "Optional. The resolved chain on which the token is deployed, as constant or map lookup. "
             "When present, the wallet SHOULD resolve token metadata (ticker, decimals) for this chain. "
             "Useful for cross-chain swap clear signing where the same token address may refer to different chains."
         ),
@@ -174,11 +207,12 @@ class ResolvedAddressNameParameters(Model):
         min_length=1,
     )
 
-    senderAddress: Address | list[Address] | None = Field(
+    senderAddress: Address | list[Address] | ResolvedValueMap | None = Field(
         default=None,
         title="Sender Address",
         description="Either a string or an array of strings. If the address pointed to by addressName is equal to one "
-        "of the addresses in senderAddress, the addressName is interpreted as the sender referenced by @.from",
+        "of the addresses in senderAddress, the addressName is interpreted as the sender referenced by @.from. Can "
+        "also be a map lookup.",
     )
 
 
@@ -201,10 +235,10 @@ class ResolvedInteroperableAddressNameParameters(Model):
         min_length=1,
     )
 
-    senderAddress: Address | list[Address] | None = Field(
+    senderAddress: Address | list[Address] | ResolvedValueMap | None = Field(
         default=None,
         title="Sender Address",
-        description="Either a string or an array of strings for sender address matching.",
+        description="Either a string or an array of strings for sender address matching, or a map lookup.",
     )
 
 
@@ -213,30 +247,31 @@ class ResolvedCallDataParameters(Model):
     Embedded Calldata Formatting Parameters (resolved).
     """
 
-    callee: ResolvedValue = Field(
+    callee: ResolvedValueOrMap = Field(
         title="Callee",
-        description="The resolved address of the contract being called by this embedded calldata, either as path "
-        "or constant value.",
+        description="The resolved address of the contract being called by this embedded calldata, either as path, "
+        "constant value or map lookup.",
     )
 
-    selector: ResolvedValue | None = Field(
+    selector: ResolvedValueOrMap | None = Field(
         default=None,
         title="Called Selector",
-        description="The resolved selector being called, if not contained in the calldata, either as path or "
-        "constant value.",
+        description="The resolved selector being called, if not contained in the calldata, either as path, "
+        "constant value or map lookup.",
     )
 
-    amount: ResolvedValue | None = Field(
+    amount: ResolvedValueOrMap | None = Field(
         default=None,
         title="Amount",
-        description="The resolved amount being transferred, if not contained in the calldata, either as path or "
-        "constant value.",
+        description="The resolved amount being transferred, if not contained in the calldata, either as path, "
+        "constant value or map lookup.",
     )
 
-    spender: ResolvedValue | None = Field(
+    spender: ResolvedValueOrMap | None = Field(
         default=None,
         title="Spender",
-        description="The resolved spender, if not contained in the calldata, either as path or constant value.",
+        description="The resolved spender, if not contained in the calldata, either as path, constant value or map "
+        "lookup.",
     )
 
 
@@ -245,9 +280,9 @@ class ResolvedNftNameParameters(Model):
     NFT Names Formatting Parameters (resolved).
     """
 
-    collection: ResolvedValue = Field(
+    collection: ResolvedValueOrMap = Field(
         title="Collection",
-        description="The resolved address of the collection contract, either as path or constant value.",
+        description="The resolved address of the collection contract, either as path, constant value or map lookup.",
     )
 
 
@@ -304,11 +339,11 @@ class ResolvedTokenTickerParameters(Model):
     Token Ticker Formatting Parameters (resolved).
     """
 
-    chainId: int | None = Field(
+    chainId: int | ResolvedValueMap | None = Field(
         default=None,
         title="Chain ID",
         description=(
-            "Optional. The resolved chain on which the token is deployed. "
+            "Optional. The resolved chain on which the token is deployed, as constant or map lookup. "
             "When present, the wallet SHOULD resolve the token ticker for this chain. "
             "Useful for cross-chain swap clear signing."
         ),
