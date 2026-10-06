@@ -952,6 +952,18 @@ def _convert_v2_param(
                 if (token_path := _convert_resolved_value(token, ABIDataType.ADDRESS)) is None and token is not None:
                     return None
 
+                # PARAM_TOKEN_AMOUNT has no chain id tag: the device looks the token up on the transaction chain
+                chain_id: object = getattr(field.params, "chainId", None)
+                if isinstance(chain_id, ResolvedValueMap):
+                    key = _deployment_map_key(chain_id)
+                    map_value = None if key is None else lookup_map_value(chain_id.values, key)
+                    chain_id = chain_id.keyPath if map_value is None else map_value.value
+                if chain_id is not None and chain_id != maps.deployment.chainId:
+                    out.warning(
+                        f"tokenAmount chainId {chain_id} cannot be encoded in the PARAM_TOKEN_AMOUNT struct and will "
+                        f"be ignored: the device looks the token up on the transaction chain."
+                    )
+
                 threshold = getattr(field.params, "threshold", None)
                 native_currencies = getattr(field.params, "nativeCurrencyAddress", None)
                 above_threshold_message = getattr(field.params, "message", None)

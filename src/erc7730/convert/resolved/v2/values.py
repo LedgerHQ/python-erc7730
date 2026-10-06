@@ -176,6 +176,19 @@ def resolve_map_reference_value(
             message=f"{map_ref.map} is not a valid map definition.",
         )
 
+    # hex keys (addresses) are matched case-insensitively, so keys only differing by case would be ambiguous
+    hex_keys: dict[str, str] = {}
+    for key in values:
+        if not key.startswith("0x"):
+            continue
+        if (other_key := hex_keys.get(key.lower())) is not None:
+            return out.error(
+                title="Invalid map key",
+                message=f"""Keys "{other_key}" and "{key}" of map {map_ref.map} only differ by case, hexadecimal """
+                "keys are matched case-insensitively.",
+            )
+        hex_keys[key.lower()] = key
+
     def resolve_map_value(key: str, value: Any) -> ResolvedValueConstant | None:
         if not isinstance(value, str | bool | int | float):
             return out.error(
@@ -273,6 +286,11 @@ def encode_value(value: ScalarType, abi_type: ABIDataType, out: OutputAdder) -> 
             return out.error(
                 title="Invalid hex string",
                 message=f""""{value}" is not a valid hexadecimal string.""",
+            )
+        if len(hex_value) % 2 != 0:
+            return out.error(
+                title="Invalid hex string",
+                message=f""""{value}" is not a valid hexadecimal string: it must have an even number of digits.""",
             )
         if abi_type == ABIDataType.ADDRESS and len(hex_value) != 42:
             return out.error(title="Invalid constant", message=f"""Value "{value}" is not a valid 20 bytes address.""")

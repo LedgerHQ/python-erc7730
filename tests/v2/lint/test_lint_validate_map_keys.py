@@ -83,3 +83,34 @@ def test_deployment_keys_not_checked() -> None:
 def test_selector_format_key_not_checked() -> None:
     # without a declared signature, the key type is unknown
     assert lint("#.marketId", ["1", "4294967296"], signature="0xe2bbb158") == []
+
+
+def test_format_without_map_lookup_not_converted_to_abi_tree() -> None:
+    # fixed point numbers cannot be converted to an ABI tree, which must not fail descriptors that do not need it
+    descriptor = InputERC7730Descriptor.model_validate_json(
+        json.dumps(
+            {
+                "$schema": "specs/erc7730-v2.schema.json",
+                "context": {
+                    "$id": "test",
+                    "contract": {
+                        "deployments": [{"chainId": 1, "address": "0x0000000000000000000000000000000000000001"}]
+                    },
+                },
+                "metadata": {"owner": "Test Owner"},
+                "display": {
+                    "formats": {
+                        "setRate(fixed128x18 rate)": {
+                            "intent": "Set rate",
+                            "fields": [{"path": "rate", "label": "Rate", "format": "raw"}],
+                        }
+                    }
+                },
+            }
+        )
+    )
+    out = ListOutputAdder()
+    resolved = ERC7730InputToResolved().convert(descriptor, out)
+    assert resolved is not None, out.outputs
+    ValidateMapKeysLinter().lint(descriptor, resolved, out)
+    assert out.outputs == []

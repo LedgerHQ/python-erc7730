@@ -8,7 +8,7 @@ be encodable as the value at the key path (for instance, a uint32 key must fit i
 from typing import assert_never, final, override
 
 from erc7730.common.output import OutputAdder
-from erc7730.convert.calldata.v1.abi import ABITree, function_to_abi_tree
+from erc7730.convert.calldata.v1.abi import function_to_abi_tree
 from erc7730.convert.calldata.v1.map import encode_map_keys
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.lint.v2.lint_validate_display_fields import parse_declared_abis
@@ -46,24 +46,29 @@ class ValidateMapKeysLinter(ERC7730Linter):
                 for selector, fmt in descriptor.display.formats.items():
                     if (abi := abis.get(selector)) is None:
                         continue
+                    if not (value_maps := [value_map for field in fmt.fields for value_map in _value_maps(field)]):
+                        continue
+                    # only built when needed: some ABI types (fixed point numbers) cannot be converted to a tree
                     abi_tree = function_to_abi_tree(abi)
-                    for field in fmt.fields:
-                        _validate_field(field, abi_tree, out)
+                    for value_map in value_maps:
+                        encode_map_keys(value_map, abi_tree, out)
             case _:
                 assert_never(descriptor.context)
 
 
-def _validate_field(field: ResolvedField, abi_tree: ABITree, out: OutputAdder) -> None:
+def _value_maps(field: ResolvedField) -> list[ResolvedValueMap]:
+    """Get the map lookups of a field whose key is read from the transaction."""
     match field:
         case ResolvedFieldDescription():
             if field.params is None:
-                return
-            for _, param in field.params:
-                if isinstance(param, ResolvedValueMap) and not _is_deployment_key(param):
-                    encode_map_keys(param, abi_tree, out)
+                return []
+            return [
+                param
+                for _, param in field.params
+                if isinstance(param, ResolvedValueMap) and not _is_deployment_key(param)
+            ]
         case ResolvedFieldGroup():
-            for sub_field in field.fields:
-                _validate_field(sub_field, abi_tree, out)
+            return [value_map for sub_field in field.fields for value_map in _value_maps(sub_field)]
         case _:
             assert_never(field)
 

@@ -4,6 +4,7 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from erc7730.common.output import ListOutputAdder
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import (
     erc7730_v2_descriptor_to_calldata_descriptors,
 )
@@ -289,6 +290,50 @@ def test_convert_token_amount_resolves_map_per_deployment(chain_id: int) -> None
     assert isinstance(param.token, CalldataDescriptorValueConstantV1)
     assert param.token.value == MAP_ADDRESSES[chain_id]
     assert param.token.type_family == CalldataDescriptorTypeFamily.ADDRESS
+
+
+@pytest.mark.parametrize(
+    ("chain_id_param", "warns"),
+    [
+        pytest.param(1, False, id="same_chain"),
+        pytest.param(8453, True, id="other_chain"),
+        pytest.param(map_ref("chains"), True, id="map_other_chain"),
+        pytest.param(map_ref("chains", "#.key"), True, id="map_data_key"),
+    ],
+)
+def test_convert_token_amount_warns_on_ignored_chain_id(chain_id_param: Any, warns: bool) -> None:
+    descriptor = InputERC7730Descriptor.model_validate_json(
+        json.dumps(
+            {
+                "$schema": "specs/erc7730-v2.schema.json",
+                "context": {
+                    "$id": "test",
+                    "contract": {"deployments": [{"chainId": DEFAULT_CHAIN_ID, "address": DEFAULT_ADDRESS}]},
+                },
+                "metadata": {"owner": "Test Owner", "maps": {"chains": {"values": {"1": 8453}}}},
+                "display": {
+                    "formats": {
+                        "deposit(address token, uint256 assets, uint256 key)": {
+                            "intent": "Test intent",
+                            "fields": [
+                                {
+                                    "path": "assets",
+                                    "label": "Amount",
+                                    "format": "tokenAmount",
+                                    "params": {"tokenPath": "token", "chainId": chain_id_param},
+                                }
+                            ],
+                        }
+                    }
+                },
+            }
+        )
+    )
+    out = ListOutputAdder()
+    descriptors = erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=DEFAULT_CHAIN_ID, out=out)
+
+    assert len(descriptors) == 1, out.outputs
+    assert any("tokenAmount chainId" in output.message for output in out.outputs) == warns, out.outputs
 
 
 @pytest.mark.parametrize("chain_id", [1, 8453])

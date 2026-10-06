@@ -144,6 +144,46 @@ def test_map_address_value_must_be_20_bytes() -> None:
     assert any("is not a valid 20 bytes address" in message for message in messages)
 
 
+@pytest.mark.parametrize("key_path", ["@.chainId", "#.key"])
+def test_map_hex_value_must_have_even_number_of_digits(key_path: str) -> None:
+    resolved, messages = resolve(
+        descriptor(
+            "execute(address target, bytes data, uint256 key)",
+            {
+                "path": "data",
+                "label": "Embedded call",
+                "format": "calldata",
+                "params": {"calleePath": "target", "amount": map_ref("a", key_path)},
+            },
+            {"a": {"1": "0x1"}},
+        )
+    )
+
+    assert resolved is None
+    assert any("must have an even number of digits" in message for message in messages)
+
+
+@pytest.mark.parametrize("key_path", ["$.metadata.constants.owner", "@.to", "#.owner"])
+def test_map_keys_only_differing_by_case_rejects_descriptor(key_path: str) -> None:
+    other = "0x0000000000000000000000000000000000000002"
+    resolved, messages = resolve(
+        descriptor(
+            "deposit(uint256 assets, address owner)",
+            {
+                "path": "assets",
+                "label": "Deposit asset",
+                "format": "tokenAmount",
+                "params": {"token": map_ref("t", key_path)},
+            },
+            {"t": {USDC: USDC, USDC.lower(): other}},
+            constants={"owner": USDC},
+        )
+    )
+
+    assert resolved is None
+    assert any("only differ by case" in message for message in messages)
+
+
 def test_constant_key_only_encodes_selected_value() -> None:
     # the value for 8453 is not a valid address, but is never selected
     resolved, messages = resolve(token_amount_descriptor({"1": USDC, "8453": True}, "$.metadata.constants.chain"))
