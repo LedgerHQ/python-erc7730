@@ -42,6 +42,11 @@ class ResolvedValueMap(Model):
         description="The value type identifier (discriminator for values discriminated union).",
     )
 
+    map: DescriptorPathStr = Field(
+        title="Map Reference",
+        description="The path to the referenced map, identifying the map when its values are served to a wallet.",
+    )
+
     keyPath: ResolvedPath = Field(
         title="Key Path",
         description="The path to the key used to look up the value in the map.",

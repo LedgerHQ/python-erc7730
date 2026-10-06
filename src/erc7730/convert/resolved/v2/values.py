@@ -191,7 +191,8 @@ def resolve_map_reference_value(
     if isinstance(map_ref.keyPath, DescriptorPath):
         if (key := constants.get(map_ref.keyPath, out)) is None:
             return None
-        if (map_key := lookup_map_key(values, str(key))) is None:
+        # map keys are JSON object keys, so a boolean key is written "true" or "false"
+        if (map_key := lookup_map_key(values, str(key).lower() if isinstance(key, bool) else str(key))) is None:
             return out.error(
                 title="Invalid map reference",
                 message=f"""Map {map_ref.map} has no value for key "{key}" (from {map_ref.keyPath}).""",
@@ -207,7 +208,9 @@ def resolve_map_reference_value(
     if (key_path := constants.resolve_path(map_ref.keyPath, out)) is None:
         return None
 
-    return ResolvedValueMap(keyPath=data_or_container_path_concat(prefix, key_path), values=resolved_values)
+    return ResolvedValueMap(
+        map=map_ref.map, keyPath=data_or_container_path_concat(prefix, key_path), values=resolved_values
+    )
 
 
 def deployment_map_key(key_path: ContainerPath | DataPath, chain_id: int, address: str) -> str | None:

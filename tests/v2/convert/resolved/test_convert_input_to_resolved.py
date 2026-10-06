@@ -152,6 +152,11 @@ UPDATE_REFERENCES = False
             error='Map used for "callee" of field "Embedded call" has no value for @.chainId "8453"',
         ),
         TestCase(
+            id="definition_with_map",
+            label="definition with map",
+            description="using a field definition whose parameters look up the token in a map keyed on the chain id",
+        ),
+        TestCase(
             id="calldata_with_extended_params",
             label="calldata with extended parameters",
             description="using calldata format with chainId, amount, and spender parameters",

@@ -32,6 +32,7 @@
             "params": {
               "callee": {
                 "type": "map",
+                "map": "$.metadata.maps.addresses",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": {
@@ -52,6 +53,7 @@
               },
               "selector": {
                 "type": "map",
+                "map": "$.metadata.maps.selectors",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": { "type": "constant", "type_family": "string", "type_size": 4, "value": "0xa9059cbb", "raw": "0xa9059cbb" },
@@ -60,6 +62,7 @@
               },
               "amount": {
                 "type": "map",
+                "map": "$.metadata.maps.amounts",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": { "type": "constant", "type_family": "uint", "type_size": 2, "value": 1000, "raw": "0x03e8" },
@@ -68,6 +71,7 @@
               },
               "spender": {
                 "type": "map",
+                "map": "$.metadata.maps.addresses",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": {
@@ -100,6 +104,7 @@
             "params": {
               "collection": {
                 "type": "map",
+                "map": "$.metadata.maps.addresses",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": {
@@ -133,6 +138,7 @@
               "types": ["eoa"],
               "senderAddress": {
                 "type": "map",
+                "map": "$.metadata.maps.addresses",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": {
@@ -161,6 +167,7 @@
               "token": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "token" }] } },
               "chainId": {
                 "type": "map",
+                "map": "$.metadata.maps.targetChains",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": { "type": "constant", "type_family": "uint", "type_size": 1, "value": 10, "raw": "0x0a" },
@@ -176,6 +183,7 @@
             "params": {
               "chainId": {
                 "type": "map",
+                "map": "$.metadata.maps.targetChains",
                 "keyPath": { "type": "container", "field": "chainId" },
                 "values": {
                   "1": { "type": "constant", "type_family": "uint", "type_size": 1, "value": 10, "raw": "0x0a" },

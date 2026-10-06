@@ -24,6 +24,7 @@ from erc7730.common.options import first_not_none
 from erc7730.common.output import ConsoleOutputAdder, OutputAdder, exception_to_output
 from erc7730.convert.calldata.v1.abi import ABITree, function_to_abi_tree
 from erc7730.convert.calldata.v1.enum import convert_enums
+from erc7730.convert.calldata.v1.map import MapEntries
 from erc7730.convert.calldata.v1.path import (
     convert_container_path,
     convert_data_path,
@@ -104,19 +105,21 @@ def erc7730_v2_descriptor_to_calldata_descriptors(
     input_descriptor: InputERC7730Descriptor,
     source: HttpUrl | None = None,
     chain_id: int | None = None,
+    out: OutputAdder | None = None,
 ) -> list[CalldataDescriptor]:
     """
     Generate output calldata descriptors from a v2 input ERC-7730 descriptor with contract context.
 
     If descriptor is invalid, an empty list is returned. If the descriptor is partially invalid, a partial list is
-    returned. Errors are logged as warnings.
+    returned. Errors are reported to the error handler.
 
     :param input_descriptor: deserialized v2 input ERC-7730 descriptor
     :param source: source of the descriptor file
     :param chain_id: if set, only emit calldata descriptors for given chain IDs
+    :param out: error handler, defaults to printing errors to the console
     :return: output calldata descriptors (1 per chain + selector)
     """
-    out = ConsoleOutputAdder()
+    out = ConsoleOutputAdder() if out is None else out
 
     try:
         if not isinstance(input_descriptor.context, InputContractContext):
@@ -231,13 +234,12 @@ def _convert_v2_selector(
     # Use v1 convert_enums — v2 ResolvedDeployment is duck-type compatible with v1
     enums = convert_enums(deployment, selector, descriptor.metadata.enums)  # type: ignore[arg-type]
     enums_by_id = {enum.enum_id: enum.id for enum in enums}
+    maps = MapEntries(deployment, selector)
 
     fields: list[CalldataDescriptorInstructionFieldV1] = []
     for input_field in format.fields:
         if (
-            output_fields := _convert_v2_field(
-                abi=abi_tree, field=input_field, enums=enums_by_id, deployment=deployment, out=out
-            )
+            output_fields := _convert_v2_field(abi=abi_tree, field=input_field, enums=enums_by_id, maps=maps, out=out)
         ) is None:
             return None
         fields.extend(output_fields)
@@ -267,6 +269,7 @@ def _convert_v2_selector(
         selector=selector,
         transaction_info=transaction_info,
         enums=enums,
+        maps=maps.entries,
         fields=fields,
     )
 
@@ -278,7 +281,7 @@ def _convert_v2_field(
     abi: ABITree,
     field: ResolvedFieldDescription | ResolvedFieldGroup,
     enums: dict[str, int],
-    deployment: ResolvedDeployment,
+    maps: MapEntries,
     out: OutputAdder,
 ) -> list[CalldataDescriptorInstructionFieldV1] | None:
     """
@@ -296,7 +299,7 @@ def _convert_v2_field(
     :param abi: function ABI tree
     :param field: v2 resolved field
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
-    :param deployment: chain id / contract address for which the descriptor is generated
+    :param maps: device side maps of the descriptor, map lookups are registered in it
     :param out: error handler
     :return: 1 or more calldata field instructions, or None on error
     """
@@ -325,7 +328,7 @@ def _convert_v2_field(
                 )
             name = field.id or "constraint"
 
-        if (param := _convert_v2_param(abi=abi, field=field, enums=enums, deployment=deployment, out=out)) is None:
+        if (param := _convert_v2_param(abi=abi, field=field, enums=enums, maps=maps, out=out)) is None:
             return None
 
         # Constraints are compared by the parameter formatter, so they are encoded against the type
@@ -371,9 +374,7 @@ def _convert_v2_field(
         instructions: list[CalldataDescriptorInstructionFieldV1] = []
         for nested_field in field.fields:
             if (
-                nested_instructions := _convert_v2_field(
-                    abi=abi, field=nested_field, enums=enums, deployment=deployment, out=out
-                )
+                nested_instructions := _convert_v2_field(abi=abi, field=nested_field, enums=enums, maps=maps, out=out)
             ) is None:
                 return None
             instructions.extend(nested_instructions)
@@ -680,7 +681,7 @@ def _convert_v2_param(
     abi: ABITree,
     field: ResolvedFieldDescription,
     enums: dict[str, int],
-    deployment: ResolvedDeployment,
+    maps: MapEntries,
     out: OutputAdder,
 ) -> CalldataDescriptorParamV1 | None:
     """
@@ -691,7 +692,7 @@ def _convert_v2_param(
     :param abi: function ABI tree
     :param field: v2 resolved field description
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
-    :param deployment: chain id / contract address for which the descriptor is generated, used to look up map values
+    :param maps: device side maps of the descriptor, map lookups the device has to do are registered in it
     :param out: error handler
     :return: calldata protocol field parameter or None on error
     """
@@ -699,19 +700,14 @@ def _convert_v2_param(
     if (value := _convert_v2_value(path_str, field.value, field.format, abi, out)) is None:
         return None
 
-    def _lookup_deployment_value(value_map: ResolvedValueMap) -> ResolvedValueConstant | None:
-        # the calldata descriptor is generated for a single deployment, so a map keyed on the chain id or target
-        # contract address resolves to a constant
-        if (key := deployment_map_key(value_map.keyPath, deployment.chainId, deployment.address)) is None:
-            return out.error(
-                title="Unsupported map key",
-                message=f"Map lookups keyed on {value_map.keyPath} cannot be converted to calldata descriptors, only "
-                "@.chainId and @.to keys are supported.",
-            )
+    def _deployment_map_key(value_map: ResolvedValueMap) -> str | None:
+        return deployment_map_key(value_map.keyPath, maps.deployment.chainId, maps.deployment.address)
+
+    def _lookup_deployment_value(value_map: ResolvedValueMap, key: str) -> ResolvedValueConstant | None:
         if (map_value := lookup_map_value(value_map.values, key)) is None:
             return out.error(
                 title="Missing map value",
-                message=f"""Map has no value for {value_map.keyPath} "{key}".""",
+                message=f"""Map {value_map.map} has no value for {value_map.keyPath} "{key}".""",
             )
         return map_value
 
@@ -722,7 +718,12 @@ def _convert_v2_param(
         if resolved_value is None:
             return None
         if isinstance(resolved_value, ResolvedValueMap):
-            if (map_value := _lookup_deployment_value(resolved_value)) is None:
+            # the calldata descriptor is generated for a single deployment, so a map keyed on the chain id or target
+            # contract address resolves to a constant, other keys are only known when the transaction is signed and
+            # the device looks the value up in the map entries provided with the descriptor
+            if (key := _deployment_map_key(resolved_value)) is None:
+                return maps.map_ref(resolved_value, abi_type, abi, out)
+            if (map_value := _lookup_deployment_value(resolved_value, key)) is None:
                 return None
             resolved_value = map_value
         if isinstance(resolved_value, ResolvedValuePath):
@@ -778,11 +779,23 @@ def _convert_v2_param(
                         if input_source.lower() in set(TrustedNameSource):
                             sources.append(TrustedNameSource(input_source.lower()))
 
-                sender_addresses = getattr(address_params, "senderAddress", None)
-                if isinstance(sender_addresses, ResolvedValueMap):
-                    if (sender_address := _lookup_deployment_value(sender_addresses)) is None:
+                input_sender_addresses = getattr(address_params, "senderAddress", None)
+                if isinstance(input_sender_addresses, ResolvedValueMap):
+                    # sender addresses are constants in the TRUSTED_NAME struct, the device cannot look them up
+                    if (key := _deployment_map_key(input_sender_addresses)) is None:
+                        return out.error(
+                            title="Unsupported map key",
+                            message=f"Sender addresses cannot be looked up in map {input_sender_addresses.map} using "
+                            f"key {input_sender_addresses.keyPath}: the device only accepts constant sender "
+                            "addresses, so only @.chainId and @.to keys are supported.",
+                        )
+                    if (sender_address := _lookup_deployment_value(input_sender_addresses, key)) is None:
                         return None
                     sender_addresses = [Address(str(sender_address.value))]
+                elif isinstance(input_sender_addresses, str):
+                    sender_addresses = [Address(input_sender_addresses)]
+                else:
+                    sender_addresses = input_sender_addresses
 
             types = list(TrustedNameType) if not types else list(dict.fromkeys(types))
             sources = list(TrustedNameSource) if not sources else list(dict.fromkeys(sources))

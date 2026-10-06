@@ -291,11 +291,6 @@ def test_convert_token_amount_resolves_map_per_deployment(chain_id: int) -> None
     assert param.token.type_family == CalldataDescriptorTypeFamily.ADDRESS
 
 
-def test_convert_token_amount_rejects_map_keyed_on_data() -> None:
-    # the key is only known when the transaction is signed, which the calldata descriptor cannot encode
-    assert convert_map_token_descriptor("key", 1) == []
-
-
 @pytest.mark.parametrize("chain_id", [1, 8453])
 def test_convert_calldata_resolves_maps_per_deployment(chain_id: int) -> None:
     descriptors = convert_with_maps(
@@ -327,26 +322,12 @@ def test_convert_calldata_resolves_maps_per_deployment(chain_id: int) -> None:
         assert value.value == expected
 
 
-def test_convert_calldata_rejects_callee_map_keyed_on_data() -> None:
-    descriptors = convert_with_maps(
-        "execute(address target, bytes data)",
-        {
-            "path": "data",
-            "label": "Embedded call",
-            "format": "calldata",
-            "params": {"callee": map_ref("addresses", "target")},
-        },
-        1,
-    )
-
-    assert descriptors == []
-
-
 @pytest.mark.parametrize(
     ("param", "map_name"), [("selector", "selectors"), ("amount", "amounts"), ("spender", "addresses")]
 )
-def test_convert_calldata_rejects_optional_map_keyed_on_data(param: str, map_name: str) -> None:
-    # an optional parameter that is set but cannot be converted must not be silently omitted
+def test_convert_calldata_rejects_optional_map_with_invalid_keys(param: str, map_name: str) -> None:
+    # an optional parameter that is set but cannot be converted must not be silently omitted: here the map is keyed on
+    # chain ids, which cannot match the sender address
     descriptors = convert_with_maps(
         "execute(address target, bytes data)",
         {
