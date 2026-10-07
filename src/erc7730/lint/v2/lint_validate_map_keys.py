@@ -10,10 +10,10 @@ from typing import assert_never, final, override
 from erc7730.common.output import OutputAdder
 from erc7730.convert.calldata.v1.abi import function_to_abi_tree
 from erc7730.convert.calldata.v1.map import encode_map_keys
+from erc7730.convert.resolved.v2.values import is_deployment_key
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.lint.v2.lint_validate_display_fields import parse_declared_abis
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
-from erc7730.model.paths import ContainerField, ContainerPath
 from erc7730.model.resolved.v2.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import (
@@ -65,17 +65,9 @@ def _value_maps(field: ResolvedField) -> list[ResolvedValueMap]:
             return [
                 param
                 for _, param in field.params
-                if isinstance(param, ResolvedValueMap) and not _is_deployment_key(param)
+                if isinstance(param, ResolvedValueMap) and not is_deployment_key(param.keyPath)
             ]
         case ResolvedFieldGroup():
             return [value_map for sub_field in field.fields for value_map in _value_maps(sub_field)]
         case _:
             assert_never(field)
-
-
-def _is_deployment_key(value_map: ResolvedValueMap) -> bool:
-    """Whether the map key is provided by the deployment (chain id or target contract address)."""
-    return isinstance(value_map.keyPath, ContainerPath) and value_map.keyPath.field in (
-        ContainerField.CHAIN_ID,
-        ContainerField.TO,
-    )

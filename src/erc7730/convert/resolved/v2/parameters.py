@@ -136,18 +136,12 @@ def _resolve_sender_address(
 def resolve_calldata_parameters(
     prefix: DataPath, params: InputCallDataParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedCallDataParameters | None:
-    resolution_failed = False
-
     def resolve(
         input_path: DescriptorPath | DataPath | ContainerPath | None,
         input_value: DescriptorPath | ScalarType | InputMapReference | None,
         abi_type: ABIDataType,
     ) -> ResolvedValueOrMap | None:
-        nonlocal resolution_failed
-        resolved = resolve_path_constant_or_map_value(prefix, input_path, input_value, abi_type, constants, out)
-        if resolved is None and (input_path is not None or input_value is not None):
-            resolution_failed = True
-        return resolved
+        return resolve_path_constant_or_map_value(prefix, input_path, input_value, abi_type, constants, out)
 
     # callee is mandatory, other parameters are optional: each can be a path, a constant or a map reference
     if params.callee is None and params.calleePath is None:
@@ -161,7 +155,13 @@ def resolve_calldata_parameters(
     selector_resolved = resolve(params.selectorPath, params.selector, ABIDataType.STRING)
     amount_resolved = resolve(params.amountPath, params.amount, ABIDataType.UINT)
     spender_resolved = resolve(params.spenderPath, params.spender, ABIDataType.ADDRESS)
-    if resolution_failed:
+
+    # an optional parameter that is set but fails to resolve must reject the field, not be omitted
+    if (
+        (selector_resolved is None and (params.selector is not None or params.selectorPath is not None))
+        or (amount_resolved is None and (params.amount is not None or params.amountPath is not None))
+        or (spender_resolved is None and (params.spender is not None or params.spenderPath is not None))
+    ):
         return None
 
     return ResolvedCallDataParameters(

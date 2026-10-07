@@ -872,33 +872,23 @@ def _convert_v2_param(
             if (callee := _convert_resolved_value(field.params.callee, ABIDataType.ADDRESS)) is None:
                 return None
 
-            # optional parameters: a parameter that is set but fails to convert must reject the field, not be omitted
-            def _convert_optional_value(
-                resolved_value: ResolvedValuePath | ResolvedValueConstant | ResolvedValueMap | None,
-                abi_type: ABIDataType,
-            ) -> tuple[bool, CalldataDescriptorValueV1 | None]:
-                converted = _convert_resolved_value(resolved_value, abi_type)
-                return resolved_value is None or converted is not None, converted
+            selector_val = _convert_resolved_value(field.params.selector, ABIDataType.STRING)
+            amount_val = _convert_resolved_value(field.params.amount, ABIDataType.UINT)
+            spender_val = _convert_resolved_value(field.params.spender, ABIDataType.ADDRESS)
 
-            selector_ok, selector_val = _convert_optional_value(field.params.selector, ABIDataType.STRING)
-
-            # v2 calldata params may not define chainId; keep compatibility with both models.
-            chain_id_ok, chain_id_val = _convert_optional_value(
-                getattr(field.params, "chainId", None), ABIDataType.UINT
-            )
-
-            amount_ok, amount_val = _convert_optional_value(field.params.amount, ABIDataType.UINT)
-
-            spender_ok, spender_val = _convert_optional_value(field.params.spender, ABIDataType.ADDRESS)
-
-            if not (selector_ok and chain_id_ok and amount_ok and spender_ok):
+            # an optional parameter that is set but fails to convert must reject the field, not be omitted
+            if (
+                (field.params.selector is not None and selector_val is None)
+                or (field.params.amount is not None and amount_val is None)
+                or (field.params.spender is not None and spender_val is None)
+            ):
                 return None
 
             return CalldataDescriptorParamCalldataV1(
                 value=value,
                 callee=callee,
                 selector=selector_val,
-                chain_id=chain_id_val,
+                chain_id=None,  # v2 calldata parameters have no chain id
                 amount=amount_val,
                 spender=spender_val,
             )
@@ -952,16 +942,19 @@ def _convert_v2_param(
                 if (token_path := _convert_resolved_value(token, ABIDataType.ADDRESS)) is None and token is not None:
                     return None
 
-                # PARAM_TOKEN_AMOUNT has no chain id tag: the device looks the token up on the transaction chain
-                chain_id: object = getattr(field.params, "chainId", None)
-                if isinstance(chain_id, ResolvedValueMap):
-                    key = _deployment_map_key(chain_id)
-                    map_value = None if key is None else lookup_map_value(chain_id.values, key)
-                    chain_id = chain_id.keyPath if map_value is None else map_value.value
+                # PARAM_TOKEN_AMOUNT has no chain id tag: the device looks the token up on the transaction chain, so a
+                # token on another chain would be displayed with a wrong ticker and decimals
+                chain_id = getattr(field.params, "chainId", None)
+                if isinstance(chain_id, ResolvedValueMap) and (key := _deployment_map_key(chain_id)) is not None:
+                    if (map_value := _lookup_deployment_value(chain_id, key)) is None:
+                        return None
+                    chain_id = map_value.value
                 if chain_id is not None and chain_id != maps.deployment.chainId:
-                    out.warning(
-                        f"tokenAmount chainId {chain_id} cannot be encoded in the PARAM_TOKEN_AMOUNT struct and will "
-                        f"be ignored: the device looks the token up on the transaction chain."
+                    return out.error(
+                        title="Unsupported token chain",
+                        message=f"""Token amount "{field.label}" may be on another chain than the transaction, which """
+                        "cannot be encoded in the PARAM_TOKEN_AMOUNT struct: the device looks the token up on the "
+                        "transaction chain.",
                     )
 
                 threshold = getattr(field.params, "threshold", None)

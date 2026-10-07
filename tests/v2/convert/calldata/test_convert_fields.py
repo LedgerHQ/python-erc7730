@@ -293,15 +293,16 @@ def test_convert_token_amount_resolves_map_per_deployment(chain_id: int) -> None
 
 
 @pytest.mark.parametrize(
-    ("chain_id_param", "warns"),
+    ("chain_id_param", "rejected"),
     [
         pytest.param(1, False, id="same_chain"),
         pytest.param(8453, True, id="other_chain"),
+        pytest.param(map_ref("sameChains"), False, id="map_same_chain"),
         pytest.param(map_ref("chains"), True, id="map_other_chain"),
         pytest.param(map_ref("chains", "#.key"), True, id="map_data_key"),
     ],
 )
-def test_convert_token_amount_warns_on_ignored_chain_id(chain_id_param: Any, warns: bool) -> None:
+def test_convert_token_amount_rejects_other_chain_id(chain_id_param: Any, rejected: bool) -> None:
     descriptor = InputERC7730Descriptor.model_validate_json(
         json.dumps(
             {
@@ -310,7 +311,10 @@ def test_convert_token_amount_warns_on_ignored_chain_id(chain_id_param: Any, war
                     "$id": "test",
                     "contract": {"deployments": [{"chainId": DEFAULT_CHAIN_ID, "address": DEFAULT_ADDRESS}]},
                 },
-                "metadata": {"owner": "Test Owner", "maps": {"chains": {"values": {"1": 8453}}}},
+                "metadata": {
+                    "owner": "Test Owner",
+                    "maps": {"chains": {"values": {"1": 8453}}, "sameChains": {"values": {"1": 1}}},
+                },
                 "display": {
                     "formats": {
                         "deposit(address token, uint256 assets, uint256 key)": {
@@ -332,8 +336,9 @@ def test_convert_token_amount_warns_on_ignored_chain_id(chain_id_param: Any, war
     out = ListOutputAdder()
     descriptors = erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=DEFAULT_CHAIN_ID, out=out)
 
-    assert len(descriptors) == 1, out.outputs
-    assert any("tokenAmount chainId" in output.message for output in out.outputs) == warns, out.outputs
+    # the device looks the token up on the transaction chain, so a token on another chain must not be displayed
+    assert len(descriptors) == (0 if rejected else 1), out.outputs
+    assert any(output.title == "Unsupported token chain" for output in out.outputs) == rejected, out.outputs
 
 
 @pytest.mark.parametrize("chain_id", [1, 8453])

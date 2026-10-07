@@ -21,7 +21,6 @@ from erc7730.common.output import OutputAdder
 from erc7730.convert.calldata.v1.abi import ABITree
 from erc7730.convert.calldata.v1.path import convert_container_path, convert_data_path
 from erc7730.convert.calldata.v1.tlv import tlv_value
-from erc7730.convert.resolved.v2.values import encode_value
 from erc7730.model.calldata.v1.instruction import MAX_MAP_ENTRY_SIZE, CalldataDescriptorInstructionMapEntryV1
 from erc7730.model.calldata.v1.value import (
     CalldataDescriptorContainerPathV1,
@@ -100,9 +99,7 @@ class MapEntries:
         encoded: list[tuple[str, bytes, bytes]] = []
         for key_source, value in value_map.values.items():
             key_bytes = keys_bytes[key_source]
-            if (raw := encode_value(value.value, abi_type, out)) is None:
-                return None
-            value_bytes = from_hex(raw)
+            value_bytes = from_hex(value.raw)  # encoded with the parameter type when resolved
             if not 1 <= len(value_bytes) <= MAX_MAP_ENTRY_SIZE:
                 return out.error(
                     title="Invalid map value",

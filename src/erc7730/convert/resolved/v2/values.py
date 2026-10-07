@@ -1,5 +1,5 @@
 from collections.abc import Mapping
-from typing import Any, assert_never
+from typing import Any, TypeGuard, assert_never
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -226,6 +226,16 @@ def resolve_map_reference_value(
     )
 
 
+def is_deployment_key(key_path: ContainerPath | DataPath) -> TypeGuard[ContainerPath]:
+    """
+    Whether a map key is determined by the deployment: the chain id or the target contract address.
+
+    :param key_path: resolved map key path
+    :return: True if the key is the chain id or the target contract address
+    """
+    return isinstance(key_path, ContainerPath) and key_path.field in (ContainerField.CHAIN_ID, ContainerField.TO)
+
+
 def deployment_map_key(key_path: ContainerPath | DataPath, chain_id: int, address: str) -> str | None:
     """
     Get the map key a deployment provides, for map lookups keyed on the chain id or target contract address.
@@ -235,17 +245,9 @@ def deployment_map_key(key_path: ContainerPath | DataPath, chain_id: int, addres
     :param address: deployment contract address
     :return: map key, or None if the key is not determined by the deployment
     """
-    if isinstance(key_path, ContainerPath):
-        match key_path.field:
-            case ContainerField.CHAIN_ID:
-                return str(chain_id)
-            case ContainerField.TO:
-                return address
-            case ContainerField.FROM | ContainerField.VALUE:
-                return None
-            case _:
-                assert_never(key_path.field)
-    return None
+    if not is_deployment_key(key_path):
+        return None
+    return str(chain_id) if key_path.field == ContainerField.CHAIN_ID else address
 
 
 def lookup_map_value(values: dict[str, ResolvedValueConstant], key: str) -> ResolvedValueConstant | None:
