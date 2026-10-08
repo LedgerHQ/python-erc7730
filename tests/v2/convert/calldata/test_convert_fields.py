@@ -308,7 +308,7 @@ def test_convert_token_amount_resolves_map_per_deployment(chain_id: int) -> None
 )
 def test_convert_token_rejects_other_chain_id(format: str, chain_params: dict[str, Any], rejected: bool) -> None:
     # the token amount is on the amount, the token ticker on the token address
-    field = (
+    field: dict[str, Any] = (
         {"path": "assets", "format": "tokenAmount", "params": {"tokenPath": "token", **chain_params}}
         if format == "tokenAmount"
         else {"path": "token", "format": "tokenTicker", "params": chain_params or None}
