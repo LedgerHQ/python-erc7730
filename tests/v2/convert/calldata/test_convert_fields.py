@@ -292,17 +292,27 @@ def test_convert_token_amount_resolves_map_per_deployment(chain_id: int) -> None
     assert param.token.type_family == CalldataDescriptorTypeFamily.ADDRESS
 
 
+@pytest.mark.parametrize("format", ["tokenAmount", "tokenTicker"])
 @pytest.mark.parametrize(
-    ("chain_id_param", "rejected"),
+    ("chain_params", "rejected"),
     [
-        pytest.param(1, False, id="same_chain"),
-        pytest.param(8453, True, id="other_chain"),
-        pytest.param(map_ref("sameChains"), False, id="map_same_chain"),
-        pytest.param(map_ref("chains"), True, id="map_other_chain"),
-        pytest.param(map_ref("chains", "#.key"), True, id="map_data_key"),
+        pytest.param({}, False, id="no_chain"),
+        pytest.param({"chainId": 1}, False, id="same_chain"),
+        pytest.param({"chainId": 8453}, True, id="other_chain"),
+        pytest.param({"chainId": map_ref("sameChains")}, False, id="map_same_chain"),
+        pytest.param({"chainId": map_ref("chains")}, True, id="map_other_chain"),
+        pytest.param({"chainId": map_ref("chains", "#.key")}, True, id="map_data_key"),
+        pytest.param({"chainIdPath": "@.chainId"}, False, id="path_transaction_chain"),
+        pytest.param({"chainIdPath": "#.key"}, True, id="path_data"),
     ],
 )
-def test_convert_token_amount_rejects_other_chain_id(chain_id_param: Any, rejected: bool) -> None:
+def test_convert_token_rejects_other_chain_id(format: str, chain_params: dict[str, Any], rejected: bool) -> None:
+    # the token amount is on the amount, the token ticker on the token address
+    field = (
+        {"path": "assets", "format": "tokenAmount", "params": {"tokenPath": "token", **chain_params}}
+        if format == "tokenAmount"
+        else {"path": "token", "format": "tokenTicker", "params": chain_params or None}
+    )
     descriptor = InputERC7730Descriptor.model_validate_json(
         json.dumps(
             {
@@ -319,14 +329,7 @@ def test_convert_token_amount_rejects_other_chain_id(chain_id_param: Any, reject
                     "formats": {
                         "deposit(address token, uint256 assets, uint256 key)": {
                             "intent": "Test intent",
-                            "fields": [
-                                {
-                                    "path": "assets",
-                                    "label": "Amount",
-                                    "format": "tokenAmount",
-                                    "params": {"tokenPath": "token", "chainId": chain_id_param},
-                                }
-                            ],
+                            "fields": [{"label": "Token", **field}],
                         }
                     }
                 },

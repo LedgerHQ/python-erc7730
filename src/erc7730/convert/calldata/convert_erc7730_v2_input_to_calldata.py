@@ -74,7 +74,7 @@ from erc7730.model.display import AddressNameType
 from erc7730.model.input.v2.context import InputContractContext
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.input.v2.format import DateEncoding, FieldFormat
-from erc7730.model.paths import ContainerPath, DataPath
+from erc7730.model.paths import ContainerField, ContainerPath, DataPath
 from erc7730.model.paths.path_parser import to_path
 from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.v2.context import (
@@ -711,6 +711,34 @@ def _convert_v2_param(
             )
         return map_value
 
+    def _check_token_chain(params: object) -> bool:
+        """
+        Check that a token is on the transaction chain: PARAM_TOKEN_AMOUNT and PARAM_TOKEN have no chain id tag, the
+        device looks the token up on the transaction chain, so a token on another chain would be displayed with a
+        wrong ticker and decimals.
+
+        :param params: token amount or token ticker parameters
+        :return: True if the token is on the transaction chain, False on error (reported)
+        """
+        chain_id = getattr(params, "chainId", None)
+        if isinstance(chain_id, ResolvedValueMap) and (key := _deployment_map_key(chain_id)) is not None:
+            if (map_value := _lookup_deployment_value(chain_id, key)) is None:
+                return False
+            chain_id = map_value.value
+        # a chain id read from the transaction is only safe if it is the transaction chain itself
+        chain_id_path = getattr(params, "chainIdPath", None)
+        other_chain_path = chain_id_path is not None and not (
+            isinstance(chain_id_path, ContainerPath) and chain_id_path.field == ContainerField.CHAIN_ID
+        )
+        if (chain_id is not None and chain_id != maps.deployment.chainId) or other_chain_path:
+            out.error(
+                title="Unsupported token chain",
+                message=f"""Token "{field.label}" may be on another chain than the transaction, which cannot be """
+                "encoded: the device looks the token up on the transaction chain.",
+            )
+            return False
+        return True
+
     def _convert_resolved_value(
         resolved_value: ResolvedValuePath | ResolvedValueConstant | ResolvedValueMap | None,
         abi_type: ABIDataType,
@@ -916,14 +944,8 @@ def _convert_v2_param(
 
         case FieldFormat.TOKEN_TICKER:
             # tokenTicker maps to PARAM_TOKEN: the field value is the token address, ticker is resolved by the device.
-            # chainId/chainIdPath have no equivalent tag in PARAM_TOKEN, so they cannot be encoded and are ignored.
-            if field.params is not None and (
-                getattr(field.params, "chainId", None) is not None
-                or getattr(field.params, "chainIdPath", None) is not None
-            ):
-                out.warning(
-                    "tokenTicker chainId/chainIdPath cannot be encoded in the PARAM_TOKEN struct and will be ignored."
-                )
+            if field.params is not None and not _check_token_chain(field.params):
+                return None
             # native_currencies is left unset: PARAM_TOKEN supports NATIVE_CURRENCY, but tokenTicker has no such param.
             return CalldataDescriptorParamTokenV1(value=value)
 
@@ -942,20 +964,8 @@ def _convert_v2_param(
                 if (token_path := _convert_resolved_value(token, ABIDataType.ADDRESS)) is None and token is not None:
                     return None
 
-                # PARAM_TOKEN_AMOUNT has no chain id tag: the device looks the token up on the transaction chain, so a
-                # token on another chain would be displayed with a wrong ticker and decimals
-                chain_id = getattr(field.params, "chainId", None)
-                if isinstance(chain_id, ResolvedValueMap) and (key := _deployment_map_key(chain_id)) is not None:
-                    if (map_value := _lookup_deployment_value(chain_id, key)) is None:
-                        return None
-                    chain_id = map_value.value
-                if chain_id is not None and chain_id != maps.deployment.chainId:
-                    return out.error(
-                        title="Unsupported token chain",
-                        message=f"""Token amount "{field.label}" may be on another chain than the transaction, which """
-                        "cannot be encoded in the PARAM_TOKEN_AMOUNT struct: the device looks the token up on the "
-                        "transaction chain.",
-                    )
+                if not _check_token_chain(field.params):
+                    return None
 
                 threshold = getattr(field.params, "threshold", None)
                 native_currencies = getattr(field.params, "nativeCurrencyAddress", None)
