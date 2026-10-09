@@ -473,8 +473,8 @@ def tlv_param_unit(obj: CalldataDescriptorParamUnitV1) -> bytes:
     out += tlv(CalldataDescriptorParamUnitTag.VALUE, tlv_value(obj.value))
     out += tlv(CalldataDescriptorParamUnitTag.BASE, obj.base)
 
-    if (decimals := obj.decimals) is not None:
-        out += tlv(CalldataDescriptorParamUnitTag.DECIMALS, decimals.to_bytes(1))
+    # always emit DECIMALS (defaulting to 0): app-ethereum >= 1.22.4 rejects PARAM_UNIT structs without it
+    out += tlv(CalldataDescriptorParamUnitTag.DECIMALS, (obj.decimals or 0).to_bytes(1))
 
     if (prefix := obj.prefix) is not None:
         out += tlv(CalldataDescriptorParamUnitTag.PREFIX, prefix.to_bytes(1))
