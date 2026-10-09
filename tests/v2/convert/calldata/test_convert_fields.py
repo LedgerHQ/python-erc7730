@@ -8,7 +8,12 @@ from erc7730.common.output import ListOutputAdder
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import (
     erc7730_v2_descriptor_to_calldata_descriptors,
 )
-from erc7730.convert.calldata.v1.tlv import CalldataDescriptorFieldTag, tlv_field
+from erc7730.convert.calldata.v1.tlv import (
+    CalldataDescriptorFieldTag,
+    CalldataDescriptorParamUnitTag,
+    tlv_field,
+    tlv_param_unit,
+)
 from erc7730.model.calldata.v1.instruction import (
     CalldataDescriptorFieldVisibilityV1,
     CalldataDescriptorInstructionFieldV1,
@@ -202,6 +207,18 @@ def test_convert_unit_params() -> None:
     assert field.param.base == "%"
     assert field.param.decimals == 4
     assert field.param.prefix is False
+
+
+@pytest.mark.parametrize(("decimals", "expected"), [pytest.param(None, 0, id="unset"), pytest.param(4, 4, id="set")])
+def test_convert_unit_always_serializes_decimals(decimals: int | None, expected: int) -> None:
+    params: dict[str, Any] = {"base": "s"} if decimals is None else {"base": "s", "decimals": decimals}
+    field = convert_field(
+        "setDuration(uint256 duration)", {"path": "duration", "label": "Duration", "format": "unit", "params": params}
+    )
+
+    assert isinstance(field.param, CalldataDescriptorParamUnitV1)
+    values = dict(parse_tlv(tlv_param_unit(field.param)))
+    assert values[CalldataDescriptorParamUnitTag.DECIMALS] == bytes([expected])
 
 
 def test_convert_token_ticker_has_no_native_currencies() -> None:
