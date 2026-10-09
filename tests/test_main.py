@@ -105,3 +105,40 @@ def test_convert_registry_files_to_legacy_eip712_files(input_file: Path, tmp_pat
     out = "".join(result.stdout.splitlines())
     assert "generated" in out
     assert "✅" in out
+
+
+def test_calldata_fails_on_conversion_error(tmp_path: Path) -> None:
+    # a map key that cannot be encoded as a uint32 makes the selector fail to convert
+    descriptor = {
+        "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
+        "context": {
+            "$id": "test",
+            "contract": {"deployments": [{"chainId": 1, "address": "0x0000000000000000000000000000000000000001"}]},
+        },
+        "metadata": {
+            "owner": "Test Owner",
+            "maps": {"tokens": {"values": {"4294967296": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"}}},
+        },
+        "display": {
+            "formats": {
+                "deposit(uint256 assets, uint32 marketId)": {
+                    "intent": "Deposit",
+                    "fields": [
+                        {
+                            "path": "assets",
+                            "label": "Amount",
+                            "format": "tokenAmount",
+                            "params": {"token": {"map": "$.metadata.maps.tokens", "keyPath": "#.marketId"}},
+                        }
+                    ],
+                }
+            }
+        },
+    }
+    input_file = tmp_path / "calldata-test.json"
+    input_file.write_text(json.dumps(descriptor))
+
+    result = runner.invoke(app, ["calldata", "--v2", str(input_file)])
+
+    assert result.exit_code == 1, result.output
+    assert "Invalid map key" in result.output
