@@ -38,6 +38,23 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
       - No schema available in v2 resolved model, so no validation is performed
     """
 
+    @staticmethod
+    def _coverage_message(source: str | None, unavailable: list[str], not_reached: list[str]) -> str:
+        """State which deployment the ABI checks ran against, and which they did not cover.
+
+        One reference ABI validates the display fields, so a descriptor with several deployments
+        is only ever compared against one of them. Saying so keeps "validated" from reading as
+        "validated against every deployment".
+        """
+        parts = [f"Display fields validated against the ABI of {source}."]
+        if unavailable:
+            parts.append(f"No ABI available for {len(unavailable)} earlier deployment(s): "
+                         f"{'; '.join(unavailable)}.")
+        if not_reached:
+            parts.append(f"Not compared against {len(not_reached)} further deployment(s): "
+                         f"{', '.join(not_reached)}.")
+        return " ".join(parts)
+
     @override
     def lint(
         self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
@@ -59,36 +76,52 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         if (deployments := context.contract.deployments) is None:
             return
 
-        # Try to fetch ABI from Sourcify or Etherscan for the first deployment that succeeds
+        # Fetch the reference ABI from the first deployment that has one, recording the outcome
+        # of every deployment so the result says what was checked and what could not be.
         reference_abis = None
         explorer_url = None
+        unavailable: list[str] = []
+        not_reached: list[str] = []
         for deployment in deployments:
+            where = f"chain id {deployment.chainId} address {deployment.address}"
+            if reference_abis is not None:
+                # one reference ABI is enough to validate against, so do not fetch the rest
+                not_reached.append(where)
+                continue
             try:
                 if (abis := client.get_contract_abis(deployment.chainId, deployment.address)) is None:
+                    unavailable.append(f"{where}: no verified source found")
                     continue
             except Exception as e:
-                out.warning(
-                    title="Could not fetch ABI",
-                    message=f"Fetching reference ABI for chain id {deployment.chainId} failed, display fields will "
-                    f"not be validated against ABI: {e}",
-                )
+                unavailable.append(f"{where}: {e}")
                 continue
 
             reference_abis = get_functions(abis)
             try:
                 explorer_url = client.get_contract_explorer_url(deployment.chainId, deployment.address)
             except NotImplementedError:
-                explorer_url = f"<chain id {deployment.chainId} address {deployment.address}>"
-            break
+                explorer_url = f"<{where}>"
 
         if reference_abis is None:
-            return
+            # Say so explicitly. A silent return is indistinguishable from a descriptor whose
+            # display fields were checked against an ABI and found correct.
+            return out.warning(
+                title="Display fields not validated against an ABI",
+                message="No deployment yielded a reference ABI, so display field paths, parameter coverage "
+                f"and selector exhaustiveness were not checked. Tried {len(unavailable)} deployment(s): "
+                + "; ".join(unavailable),
+            )
 
         if reference_abis.proxy:
             return out.info(
                 title="Proxy contract",
                 message=f"Contract {explorer_url} is likely to be a proxy, validation of display fields skipped",
             )
+
+        out.info(
+            title="Reference ABI",
+            message=cls._coverage_message(explorer_url, unavailable, not_reached),
+        )
 
         # Build ABI paths by selector
         abi_paths_by_selector: dict[str, set[DataPath]] = {}
