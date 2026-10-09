@@ -1,0 +1,200 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "maps-in-parameters-test",
+    "contract": {
+      "deployments": [
+        { "chainId": 1, "address": "0x0000000000000000000000000000000000000001" },
+        { "chainId": 8453, "address": "0x0000000000000000000000000000000000000002" }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner",
+    "maps": {
+      "addresses": {
+        "$keyType": "chainId",
+        "values": { "1": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" }
+      },
+      "selectors": { "$keyType": "chainId", "values": { "1": "0xa9059cbb", "8453": "0x095ea7b3" } },
+      "amounts": { "$keyType": "chainId", "values": { "1": 1000, "8453": 2000 } },
+      "targetChains": { "$keyType": "chainId", "values": { "1": 10, "8453": 42161 } }
+    }
+  },
+  "display": {
+    "formats": {
+      "0x1cff79cd": {
+        "intent": "Execute",
+        "fields": [
+          {
+            "label": "Embedded call",
+            "format": "calldata",
+            "params": {
+              "callee": {
+                "type": "map",
+                "map": "$.metadata.maps.addresses",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                    "raw": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+                  },
+                  "8453": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "raw": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+                  }
+                }
+              },
+              "selector": {
+                "type": "map",
+                "map": "$.metadata.maps.selectors",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": { "type": "constant", "type_family": "string", "type_size": 4, "value": "0xa9059cbb", "raw": "0xa9059cbb" },
+                  "8453": { "type": "constant", "type_family": "string", "type_size": 4, "value": "0x095ea7b3", "raw": "0x095ea7b3" }
+                }
+              },
+              "amount": {
+                "type": "map",
+                "map": "$.metadata.maps.amounts",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": { "type": "constant", "type_family": "uint", "type_size": 2, "value": 1000, "raw": "0x03e8" },
+                  "8453": { "type": "constant", "type_family": "uint", "type_size": 2, "value": 2000, "raw": "0x07d0" }
+                }
+              },
+              "spender": {
+                "type": "map",
+                "map": "$.metadata.maps.addresses",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                    "raw": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+                  },
+                  "8453": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "raw": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+                  }
+                }
+              }
+            },
+            "path": "#.data"
+          }
+        ]
+      },
+      "0x8e53f838": {
+        "intent": "Transfer NFT",
+        "fields": [
+          {
+            "label": "NFT",
+            "format": "nftName",
+            "params": {
+              "collection": {
+                "type": "map",
+                "map": "$.metadata.maps.addresses",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                    "raw": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+                  },
+                  "8453": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "raw": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+                  }
+                }
+              }
+            },
+            "path": "#.tokenId"
+          }
+        ]
+      },
+      "0xdbba0f01": {
+        "intent": "Transfer",
+        "fields": [
+          {
+            "label": "To",
+            "format": "addressName",
+            "params": {
+              "types": ["eoa"],
+              "senderAddress": {
+                "type": "map",
+                "map": "$.metadata.maps.addresses",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+                    "raw": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+                  },
+                  "8453": {
+                    "type": "constant",
+                    "type_family": "address",
+                    "type_size": 20,
+                    "value": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+                    "raw": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+                  }
+                }
+              }
+            },
+            "path": "#.to"
+          },
+          {
+            "label": "Amount",
+            "format": "tokenAmount",
+            "params": {
+              "token": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "token" }] } },
+              "chainId": {
+                "type": "map",
+                "map": "$.metadata.maps.targetChains",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": { "type": "constant", "type_family": "uint", "type_size": 1, "value": 10, "raw": "0x0a" },
+                  "8453": { "type": "constant", "type_family": "uint", "type_size": 2, "value": 42161, "raw": "0xa4b1" }
+                }
+              }
+            },
+            "path": "#.amount"
+          },
+          {
+            "label": "Token",
+            "format": "tokenTicker",
+            "params": {
+              "chainId": {
+                "type": "map",
+                "map": "$.metadata.maps.targetChains",
+                "keyPath": { "type": "container", "field": "chainId" },
+                "values": {
+                  "1": { "type": "constant", "type_family": "uint", "type_size": 1, "value": 10, "raw": "0x0a" },
+                  "8453": { "type": "constant", "type_family": "uint", "type_size": 2, "value": 42161, "raw": "0xa4b1" }
+                }
+              }
+            },
+            "path": "#.token"
+          }
+        ]
+      }
+    }
+  }
+}

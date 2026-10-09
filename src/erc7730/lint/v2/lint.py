@@ -18,6 +18,7 @@ from erc7730.lint.v2 import ERC7730Linter, MultiLinter
 from erc7730.lint.v2.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
 from erc7730.lint.v2.lint_validate_display_fields import ValidateDisplayFieldsLinter
 from erc7730.lint.v2.lint_validate_eip712_keys import ValidateEIP712KeysLinter
+from erc7730.lint.v2.lint_validate_map_keys import ValidateMapKeysLinter
 from erc7730.lint.v2.lint_validate_max_length import ValidateMaxLengthLinter
 from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
@@ -55,6 +56,7 @@ def lint_all(paths: list[Path], out: OutputAdder) -> int:
         [
             ValidateDisplayFieldsLinter(),
             ValidateEIP712KeysLinter(),
+            ValidateMapKeysLinter(),
             ClassifyTransactionTypeLinter(),
             ValidateMaxLengthLinter(),
         ]
