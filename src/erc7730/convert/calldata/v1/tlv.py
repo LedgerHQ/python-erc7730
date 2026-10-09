@@ -15,6 +15,7 @@ from erc7730.model.calldata.v1.instruction import (
     CalldataDescriptorFieldVisibilityV1,
     CalldataDescriptorInstructionEnumValueV1,
     CalldataDescriptorInstructionFieldV1,
+    CalldataDescriptorInstructionMapEntryV1,
     CalldataDescriptorInstructionTransactionInfoV1,
 )
 from erc7730.model.calldata.v1.param import (
@@ -35,6 +36,7 @@ from erc7730.model.calldata.v1.param import (
 from erc7730.model.calldata.v1.value import (
     CalldataDescriptorContainerPathV1,
     CalldataDescriptorDataPathV1,
+    CalldataDescriptorMapRefV1,
     CalldataDescriptorPathElementArrayV1,
     CalldataDescriptorPathElementLeafV1,
     CalldataDescriptorPathElementRefV1,
@@ -42,6 +44,7 @@ from erc7730.model.calldata.v1.value import (
     CalldataDescriptorPathElementTupleV1,
     CalldataDescriptorPathElementV1,
     CalldataDescriptorValueConstantV1,
+    CalldataDescriptorValueMapRefV1,
     CalldataDescriptorValuePathV1,
     CalldataDescriptorValueV1,
 )
@@ -72,6 +75,18 @@ class CalldataDescriptorEnumValueTag(IntEnum):
     ID = 0x04
     VALUE = 0x05
     NAME = 0x06
+
+
+@pydantic_enum_by_name
+class CalldataDescriptorMapEntryTag(IntEnum):
+    VERSION = 0x00
+    CHAIN_ID = 0x01
+    CONTRACT_ADDR = 0x02
+    SELECTOR = 0x03
+    ID = 0x04
+    KEY = 0x05
+    VALUE = 0x06
+    SIGNATURE = 0xFF
 
 
 @pydantic_enum_by_name
@@ -183,6 +198,14 @@ class CalldataDescriptorValueTag(IntEnum):
     DATA_PATH = 0x03
     CONTAINER_PATH = 0x04
     CONSTANT = 0x05
+    MAP_REF = 0x06
+
+
+@pydantic_enum_by_name
+class CalldataDescriptorMapRefTag(IntEnum):
+    VERSION = 0x00
+    ID = 0x01
+    KEY = 0x02
 
 
 @pydantic_enum_by_name
@@ -257,6 +280,24 @@ def tlv_enum_value(obj: CalldataDescriptorInstructionEnumValueV1) -> bytes:
     out += tlv(CalldataDescriptorEnumValueTag.ID, obj.id.to_bytes(1))
     out += tlv(CalldataDescriptorEnumValueTag.VALUE, obj.value.to_bytes(1))
     out += tlv(CalldataDescriptorEnumValueTag.NAME, obj.name)
+    return out
+
+
+def tlv_map_entry(obj: CalldataDescriptorInstructionMapEntryV1) -> bytes:
+    """
+    Encode a struct of type MAP_ENTRY (without its signature, which is computed by CAL).
+
+    @param obj: object representation of struct
+    @return: encoded struct TLV
+    """
+    out = bytearray()
+    out += tlv(CalldataDescriptorMapEntryTag.VERSION, obj.version.to_bytes(1))
+    out += tlv(CalldataDescriptorMapEntryTag.CHAIN_ID, obj.chain_id.to_bytes(8))
+    out += tlv(CalldataDescriptorMapEntryTag.CONTRACT_ADDR, from_hex(obj.address))
+    out += tlv(CalldataDescriptorMapEntryTag.SELECTOR, from_hex(obj.selector))
+    out += tlv(CalldataDescriptorMapEntryTag.ID, obj.id.to_bytes(1))
+    out += tlv(CalldataDescriptorMapEntryTag.KEY, from_hex(obj.key))
+    out += tlv(CalldataDescriptorMapEntryTag.VALUE, from_hex(obj.value))
     return out
 
 
@@ -573,9 +614,25 @@ def tlv_value(obj: CalldataDescriptorValueV1) -> bytes:
                     assert_never(path.binary_path)
         case CalldataDescriptorValueConstantV1() as constant:
             out += tlv(CalldataDescriptorValueTag.CONSTANT, from_hex(constant.raw))
+        case CalldataDescriptorValueMapRefV1() as map_value:
+            out += tlv(CalldataDescriptorValueTag.MAP_REF, tlv_map_ref(map_value.map_ref))
         case _:
             assert_never(obj)
 
+    return out
+
+
+def tlv_map_ref(obj: CalldataDescriptorMapRefV1) -> bytes:
+    """
+    Encode a struct of type MAP_REF.
+
+    @param obj: object representation of struct
+    @return: encoded struct TLV
+    """
+    out = bytearray()
+    out += tlv(CalldataDescriptorMapRefTag.VERSION, obj.version.to_bytes(1))
+    out += tlv(CalldataDescriptorMapRefTag.ID, obj.id.to_bytes(1))
+    out += tlv(CalldataDescriptorMapRefTag.KEY, tlv_value(obj.key))
     return out
 
 

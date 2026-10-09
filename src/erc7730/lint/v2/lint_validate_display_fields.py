@@ -96,7 +96,7 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
             abi_paths_by_selector[selector] = compute_abi_schema_paths(abi)
 
         # Parse the input format keys, which carry the parameter names resolution reduced to selectors
-        declared_abis_by_selector = cls._parse_declared_abis(input_descriptor)
+        declared_abis_by_selector = parse_declared_abis(input_descriptor)
 
         # Validate display field paths against ABI paths
         for selector, fmt in descriptor.display.formats.items():
@@ -148,27 +148,6 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
                 )
 
     @classmethod
-    def _parse_declared_abis(cls, input_descriptor: InputERC7730Descriptor) -> dict[str, Function]:
-        """
-        Parse the function signatures declared as display format keys, indexed by selector.
-
-        Format keys that are already selectors declare no parameter name, and are skipped.
-
-        :param input_descriptor: input descriptor the linted descriptor was resolved from
-        :return: declared ABI functions, by selector
-        """
-        declared_abis: dict[str, Function] = {}
-        for format_id in input_descriptor.display.formats:
-            if format_id.startswith("0x"):
-                continue
-            try:
-                declared_abi = parse_signature(format_id)
-            except ValueError:
-                continue  # invalid signatures are reported by the resolution step
-            declared_abis[signature_to_selector(compute_signature(declared_abi))] = declared_abi
-        return declared_abis
-
-    @classmethod
     def _unnamed_parameter_names(cls, abi: Function, declared_abi: Function | None) -> set[str]:
         """
         Get the names the descriptor gave to the parameters the reference ABI left unnamed.
@@ -202,3 +181,24 @@ class ValidateDisplayFieldsLinter(ERC7730Linter):
         if path.elements and isinstance(root := path.elements[0], Field):
             return root.identifier
         return None
+
+
+def parse_declared_abis(input_descriptor: InputERC7730Descriptor) -> dict[str, Function]:
+    """
+    Parse the function signatures declared as display format keys, indexed by selector.
+
+    Format keys that are already selectors declare no parameter name, and are skipped.
+
+    :param input_descriptor: input descriptor the linted descriptor was resolved from
+    :return: declared ABI functions, by selector
+    """
+    declared_abis: dict[str, Function] = {}
+    for format_id in input_descriptor.display.formats:
+        if format_id.startswith("0x"):
+            continue
+        try:
+            declared_abi = parse_signature(format_id)
+        except ValueError:
+            continue  # invalid signatures are reported by the resolution step
+        declared_abis[signature_to_selector(compute_signature(declared_abi))] = declared_abi
+    return declared_abis

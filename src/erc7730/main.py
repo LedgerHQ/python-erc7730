@@ -237,22 +237,27 @@ def command_calldata(
     v2: Annotated[bool, Option("--v2", help="Force v2 mode")] = False,
 ) -> None:
     source_url = HttpUrl(source) if source is not None else None
+    out = ConsoleOutputAdder()
 
     if v2 or _any_v2_descriptor([input_erc7730_path]):
         from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
 
         input_descriptor_v2 = InputERC7730DescriptorV2.load(input_erc7730_path)
         calldata_descriptors = erc7730_v2_descriptor_to_calldata_descriptors(
-            input_descriptor_v2, source=source_url, chain_id=chain_id
+            input_descriptor_v2, source=source_url, chain_id=chain_id, out=out
         )
     else:
         input_descriptor = InputERC7730Descriptor.load(input_erc7730_path)
         calldata_descriptors = erc7730_descriptor_to_calldata_descriptors(
-            input_descriptor, source=source_url, chain_id=chain_id
+            input_descriptor, source=source_url, chain_id=chain_id, out=out
         )
 
     model = RootModel[list[CalldataDescriptor]](calldata_descriptors)
     builtins.print(model.model_dump_json(indent=2, exclude_none=True))
+
+    # descriptors failing to convert are left out of the output, so the output alone does not tell an error happened
+    if out.has_errors:
+        raise Exit(1)
 
 
 if __name__ == "__main__":
