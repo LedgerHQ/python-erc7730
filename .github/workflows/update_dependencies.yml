@@ -29,7 +29,7 @@ jobs:
 
       - name: Setup mise
         timeout-minutes: 10
-        uses: jdx/mise-action@v5.0.1
+        uses: jdx/mise-action@v5.1.1
 
       - name: Update dependencies
         timeout-minutes: 30
