@@ -37,6 +37,19 @@ The four "not verified" / "not supported" / "could not fetch" checks below are r
 - **Message**: `Function <function> (selector: <selector>) defined in descriptor ABIs does not match reference ABI (see <url>)`
 - **Description**: A function found in the provided ABI does not match the one present in the externally fetched ABI.
 
+## Deprecated fields checks
+Both checks only apply to v2 descriptors. The ERC-7730 specification deprecates these fields, so the v2 linter rejects them.
+
+### Deprecated ABI field
+- **Level**: 🛑 Error 
+- **Message**: ``The `context.contract.abi` field is deprecated and must not be set in v2 descriptors. Remove it: function signatures are declared by the `display.formats` keys, and ABIs are resolved from the verified contract.``
+- **Description**: The descriptor sets the deprecated `context.contract.abi` field. Remove it.
+
+### Deprecated schemas field
+- **Level**: 🛑 Error 
+- **Message**: ``The `context.eip712.schemas` field is deprecated and must not be set in v2 descriptors. Remove it: message types are declared by the `display.formats` keys, which must be EIP-712 `encodeType` strings.``
+- **Description**: The descriptor sets the deprecated `context.eip712.schemas` field. Remove it.
+
 ## Display fields checks
 
 ### Invalid EIP712 Schema
