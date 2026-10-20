@@ -15,7 +15,7 @@ from erc7730.convert import ERC7730Converter
 from erc7730.convert.resolved.v2.constants import ConstantProvider, DefaultConstantProvider
 from erc7730.convert.resolved.v2.parameters import resolve_field_parameters
 from erc7730.convert.resolved.v2.references import is_field_hidden, resolve_reference
-from erc7730.convert.resolved.v2.values import resolve_field_value
+from erc7730.convert.resolved.v2.values import deployment_map_key, lookup_map_value, resolve_field_value
 from erc7730.model.input.v2.context import (
     InputContract,
     InputContractContext,
@@ -57,6 +57,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldDescription,
     ResolvedFieldGroup,
     ResolvedFormat,
+    ResolvedValueMap,
 )
 from erc7730.model.resolved.v2.metadata import ResolvedMapDefinition, ResolvedMetadata, ResolvedOwnerInfo
 from erc7730.model.types import Address, Id, Selector
@@ -88,6 +89,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
             if (metadata := self._resolve_metadata(descriptor.metadata, out)) is None:
                 return None
             if (display := self._resolve_display(descriptor.display, context, metadata.enums, constants, out)) is None:
+                return None
+            if not self._validate_deployment_map_lookups(context, display, out):
                 return None
 
             return ResolvedERC7730Descriptor.model_validate(
@@ -274,6 +277,57 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
         return ResolvedDisplay(definitions=None, formats=formats)
 
     @classmethod
+    def _validate_deployment_map_lookups(
+        cls, context: ResolvedContractContext | ResolvedEIP712Context, display: ResolvedDisplay, out: OutputAdder
+    ) -> bool:
+        """
+        Check that map lookups keyed on the chain id or target contract address have a value for each deployment.
+
+        A wallet must consider the descriptor invalid when a map has no value for the key, so a missing key for a
+        known deployment is an error.
+        """
+        match context:
+            case ResolvedContractContext():
+                deployments = context.contract.deployments
+            case ResolvedEIP712Context():
+                deployments = context.eip712.deployments or []
+            case _:
+                assert_never(context)
+
+        valid = True
+
+        def validate_field(field: ResolvedField) -> None:
+            nonlocal valid
+            match field:
+                case ResolvedFieldDescription():
+                    if field.params is None:
+                        return
+                    for param_name, param in field.params:
+                        if not isinstance(param, ResolvedValueMap):
+                            continue
+                        for deployment in deployments:
+                            key = deployment_map_key(param.keyPath, deployment.chainId, deployment.address)
+                            if key is not None and lookup_map_value(param.values, key) is None:
+                                valid = False
+                                out.error(
+                                    title="Missing map value",
+                                    message=f"""Map used for "{param_name}" of field "{field.label}" has no value """
+                                    f"""for {param.keyPath} "{key}" (deployment {deployment.address} on chain """
+                                    f"""{deployment.chainId}).""",
+                                )
+                case ResolvedFieldGroup():
+                    for sub_field in field.fields:
+                        validate_field(sub_field)
+                case _:
+                    assert_never(field)
+
+        for format in display.formats.values():
+            for field in format.fields:
+                validate_field(field)
+
+        return valid
+
+    @classmethod
     def _resolve_field_description(
         cls,
         prefix: DataPath,
@@ -314,6 +368,10 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 assert_never(definition.format)
 
         params = resolve_field_parameters(prefix, definition.params, enums, constants, out)
+        if definition.params is not None and params is None:
+            # parameters are set but could not be resolved (error already reported): dropping them would display the
+            # field without them, so reject the field instead
+            return None
 
         if (value_or_path := resolve_field_value(prefix, definition, definition.format, constants, out)) is None:
             return None
