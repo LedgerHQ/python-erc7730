@@ -44,6 +44,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldDescription,
     ResolvedFieldGroup,
     ResolvedTokenAmountParameters,
+    ResolvedValueMap,
 )
 
 # ---------------------------------------------------------------------------
@@ -225,6 +226,16 @@ def _convert_v2_field_description(
 
     relative_path = str(to_relative(parsed_path))
 
+    # --- Map lookups (looked up by the wallet at signing time) cannot be represented in legacy format ---
+    if field.params is not None:
+        for param_name, param in field.params:
+            if isinstance(param, ResolvedValueMap):
+                return out.error(
+                    title="Map lookup not supported",
+                    message=f'Map lookup "{param_name}" of field "{field.label}" cannot be converted to legacy '
+                    "EIP-712 fields.",
+                )
+
     # --- Format mapping ---
     asset_path: str | None = None
     field_format: EIP712Format | None = None
@@ -314,7 +325,7 @@ def _convert_v2_field_description(
     ):
 
         def _resolve_calldata_resolved_value(
-            value: ResolvedValuePath | ResolvedValueConstant | None,
+            value: ResolvedValuePath | ResolvedValueConstant | ResolvedValueMap | None,
             field_name: str,
         ) -> str | None:
             if value is None:

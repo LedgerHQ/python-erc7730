@@ -116,6 +116,47 @@ UPDATE_REFERENCES = False
             description="using token amount format with chainId parameter for cross-chain tokens",
         ),
         TestCase(
+            id="token_amount_with_map",
+            label="token amount with map",
+            description="using token amount format with token looked up in a map keyed on the chain id",
+        ),
+        TestCase(
+            id="token_amount_with_map_constant_key",
+            label="token amount with map and constant key",
+            description="using token amount format with token looked up in a map using a constant key, resolved as "
+            "a constant",
+        ),
+        TestCase(
+            id="token_amount_with_map_missing_key",
+            label="token amount with map missing a deployment key",
+            description="using token amount format with token looked up in a map keyed on the chain id, without a "
+            "value for one of the deployments",
+            error='Map used for "token" of field "Deposit asset" has no value for @.chainId "8453"',
+        ),
+        TestCase(
+            id="maps_in_parameters",
+            label="maps in parameters",
+            description="using maps keyed on the chain id for calldata, nft name, address name, token amount and "
+            "token ticker parameters",
+        ),
+        TestCase(
+            id="maps_in_parameters_constant_key",
+            label="maps in parameters with constant key",
+            description="using maps with a constant key in parameters, resolved as constants",
+        ),
+        TestCase(
+            id="maps_in_parameters_missing_key",
+            label="maps in parameters missing a deployment key",
+            description="using a map keyed on the chain id for the calldata callee, without a value for one of the "
+            "deployments",
+            error='Map used for "callee" of field "Embedded call" has no value for @.chainId "8453"',
+        ),
+        TestCase(
+            id="definition_with_map",
+            label="definition with map",
+            description="using a field definition whose parameters look up the token in a map keyed on the chain id",
+        ),
+        TestCase(
             id="calldata_with_extended_params",
             label="calldata with extended parameters",
             description="using calldata format with chainId, amount, and spender parameters",
