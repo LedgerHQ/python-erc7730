@@ -24,7 +24,9 @@ from erc7730.model.resolved.v2.display import (
     ResolvedTokenAmountParameters,
     ResolvedTokenTickerParameters,
     ResolvedUnitParameters,
+    ResolvedValueMap,
 )
+from erc7730.model.types import Address
 
 
 def compute_format_schema_paths(fmt: ResolvedFormat) -> FormatPaths:
@@ -48,9 +50,11 @@ def compute_format_schema_paths(fmt: ResolvedFormat) -> FormatPaths:
             case DescriptorPath():
                 pass  # descriptor paths are not schema paths
 
-    def add_value(value: ResolvedValue | None) -> None:
+    def add_value(value: ResolvedValue | ResolvedValueMap | Address | list[Address] | int | None) -> None:
         if isinstance(value, ResolvedValuePath):
             add_path(value.path)
+        elif isinstance(value, ResolvedValueMap):
+            add_path(value.keyPath)
 
     def append_field(field: ResolvedField) -> None:
         match field:
@@ -64,19 +68,20 @@ def compute_format_schema_paths(fmt: ResolvedFormat) -> FormatPaths:
                     case None:
                         pass
                     case ResolvedAddressNameParameters():
-                        pass
+                        add_value(field.params.senderAddress)
                     case ResolvedInteroperableAddressNameParameters():
-                        pass
+                        add_value(field.params.senderAddress)
                     case ResolvedCallDataParameters():
                         add_value(field.params.callee)
                         add_value(field.params.selector)
                         add_value(field.params.amount)
                         add_value(field.params.spender)
                     case ResolvedTokenAmountParameters():
-                        if isinstance(field.params.token, ResolvedValuePath):
-                            add_path(field.params.token.path)
+                        add_value(field.params.token)
+                        add_value(field.params.chainId)
                         add_path(field.params.chainIdPath)
                     case ResolvedTokenTickerParameters():
+                        add_value(field.params.chainId)
                         add_path(field.params.chainIdPath)
                     case ResolvedNftNameParameters():
                         add_value(field.params.collection)

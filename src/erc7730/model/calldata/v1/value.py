@@ -299,7 +299,53 @@ class CalldataDescriptorValueConstantV1(CalldataDescriptorValueBaseV1):
     )
 
 
+class CalldataDescriptorMapRefV1(CalldataDescriptorStructV1):
+    """Descriptor for the MAP_REF struct."""
+
+    version: Literal[1] = Field(
+        default=1,
+        title="Struct version",
+        description="Version of the MAP_REF struct",
+    )
+
+    map: str = Field(
+        title="Source map reference",
+        description="Path of the referenced map in the source descriptor (not serialized).",
+    )
+
+    id: int = Field(
+        title="Map identifier",
+        description="Identifier of the map (references the MAP_ENTRY structs carrying its values)",
+        ge=0,
+        le=255,
+    )
+
+    key: CalldataDescriptorValuePathV1 = Field(
+        title="Key",
+        description="Value read from the transaction to get the key to look up in the map",
+    )
+
+
+class CalldataDescriptorValueMapRefV1(CalldataDescriptorValueBaseV1):
+    """
+    A value looked up by the device in a map, using a key read from the transaction.
+
+    The map values are provided to the device by MAP_ENTRY structs.
+    """
+
+    type: Literal["map"] = Field(
+        default="map",
+        title="Value Type",
+        description="The value type identifier (discriminator for values discriminated union).",
+    )
+
+    map_ref: CalldataDescriptorMapRefV1 = Field(
+        title="Map reference",
+        description="Reference to the map and the key to look up in it",
+    )
+
+
 CalldataDescriptorValueV1 = Annotated[
-    CalldataDescriptorValuePathV1 | CalldataDescriptorValueConstantV1,
+    CalldataDescriptorValuePathV1 | CalldataDescriptorValueConstantV1 | CalldataDescriptorValueMapRefV1,
     Discriminator("type"),
 ]

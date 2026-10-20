@@ -1,6 +1,6 @@
 from pydantic_string_url import HttpUrl
 
-from erc7730.common.output import ConsoleOutputAdder, exception_to_output
+from erc7730.common.output import ConsoleOutputAdder, OutputAdder, exception_to_output
 from erc7730.convert.calldata.v1.descriptor import (
     convert_descriptor,
 )
@@ -11,21 +11,25 @@ from erc7730.model.input.lenses import get_chain_ids
 
 
 def erc7730_descriptor_to_calldata_descriptors(
-    input_descriptor: InputERC7730Descriptor, source: HttpUrl | None = None, chain_id: int | None = None
+    input_descriptor: InputERC7730Descriptor,
+    source: HttpUrl | None = None,
+    chain_id: int | None = None,
+    out: OutputAdder | None = None,
 ) -> list[CalldataDescriptor]:
     """
     Generate output calldata descriptors from input ERC-7730 descriptor with contract context.
 
     If descriptor is invalid, an empty list is returned. If the descriptor is partially invalid, a partial list is
-    returned. Errors are logged as warnings.
+    returned. Errors are reported to the error handler.
 
     :param input_descriptor: input descriptor
     :param source: source of the descriptor file
     :param chain_id: if set, only emit calldata descriptors for given chain IDs
+    :param out: error handler, defaults to printing errors to the console
     :return: output calldata descriptors (1 per chain + selector)
     """
 
-    out = ConsoleOutputAdder()
+    out = ConsoleOutputAdder() if out is None else out
     try:
         if not isinstance(input_descriptor.context, InputContractContext):
             return []

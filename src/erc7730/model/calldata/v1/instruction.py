@@ -20,7 +20,7 @@ from erc7730.model.calldata.v1.param import (
 from erc7730.model.calldata.v1.struct import (
     CalldataDescriptorStructV1,
 )
-from erc7730.model.types import Address, HexStr, Selector
+from erc7730.model.types import Address, HexStr, ScalarType, Selector
 
 CalldataDescriptorInstructionHex = Annotated[
     HexStr,
@@ -45,6 +45,9 @@ CalldataDescriptorInstructionProtobuf = Annotated[
 
 # maximum number of CONSTRAINT tags per FIELD struct, as documented in app-ethereum
 MAX_FIELD_CONSTRAINTS = 5
+
+# maximum size of a MAP_ENTRY key or value (MAP_ENTRY_MAX_KEY_SIZE / MAP_ENTRY_MAX_VALUE_SIZE in app-ethereum)
+MAX_MAP_ENTRY_SIZE = 32
 
 
 @pydantic_enum_by_name
@@ -211,6 +214,88 @@ class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBase
         from erc7730.convert.calldata.v1.tlv import tlv_enum_value
 
         return tlv_enum_value(self).hex()
+
+
+class CalldataDescriptorInstructionMapEntryV1(CalldataDescriptorInstructionBaseV1):
+    """
+    Instruction descriptor for the MAP_ENTRY struct.
+
+    One struct is emitted per key of a map looked up by the device (see MAP_REF values). The wallet only provides the
+    entry matching the key read from the transaction, after it has been signed with the calldata key.
+    """
+
+    version: Literal[1] = Field(
+        default=1,
+        title="Struct version",
+        description="Version of the MAP_ENTRY struct",
+    )
+
+    chain_id: int = Field(
+        title="Chain ID",
+        description="The contract deployment EIP-155 chain id.",
+        ge=1,
+    )
+
+    address: Address = Field(
+        title="Contract address",
+        description="The contract deployment address.",
+    )
+
+    selector: Selector = Field(
+        title="Function selector",
+        description="The 4-bytes function selector this descriptor applies to.",
+    )
+
+    map: str = Field(
+        title="Source map reference",
+        description="Path of the map in the source descriptor.",
+    )
+
+    id: int = Field(
+        title="Map identifier",
+        description="Identifier of the map (to differentiate multiple maps in one contract)",
+        ge=0,
+        le=255,
+    )
+
+    key_source: str = Field(
+        title="Source map key",
+        description="The map key, as written in the source descriptor.",
+    )
+
+    key: HexStr = Field(
+        title="Map key",
+        description="The map key, encoded as the device reads it from the transaction (raw bytes, hex encoded).",
+    )
+
+    value_source: ScalarType = Field(
+        title="Source map value",
+        description="The map value, as written in the source descriptor.",
+    )
+
+    value: HexStr = Field(
+        title="Map value",
+        description="The map value, encoded for the device (raw bytes, hex encoded).",
+    )
+
+    @model_validator(mode="after")
+    def _validate_sizes(self) -> Self:
+        # key and value are copied into fixed size buffers by the device (MAP_ENTRY_MAX_KEY_SIZE,
+        # MAP_ENTRY_MAX_VALUE_SIZE), and an empty one is rejected
+        for name, payload in (("key", self.key), ("value", self.value)):
+            digits = payload.removeprefix("0x")
+            if len(digits) % 2 != 0:
+                raise ValueError(f"Map entry {name} must be whole bytes, got {len(digits)} hex digits.")
+            if not 1 <= len(digits) // 2 <= MAX_MAP_ENTRY_SIZE:
+                raise ValueError(f"Map entry {name} must be 1 to {MAX_MAP_ENTRY_SIZE} bytes, got {len(digits) // 2}.")
+        return self
+
+    @computed_field(title="Descriptor", description="Hex encoded MAP_ENTRY TLV struct")  # type: ignore[misc]
+    @cached_property
+    def descriptor(self) -> CalldataDescriptorInstructionHex:
+        from erc7730.convert.calldata.v1.tlv import tlv_map_entry
+
+        return tlv_map_entry(self).hex()
 
 
 class CalldataDescriptorInstructionFieldV1(CalldataDescriptorInstructionBaseV1):
