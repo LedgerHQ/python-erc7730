@@ -1,5 +1,7 @@
 # Linter checks list
 ## ABI checks
+The reference ABI is fetched from Sourcify for each deployment. In v2, the descriptor carries no ABI: its functions are the `display.formats` keys, and the display fields checks below validate them against the reference ABI. The "Extra function" and "Function mismatch" checks compare the ABI embedded in a v1 descriptor against the reference ABI, so they only apply to v1 descriptors.
+
 The four "not verified" / "not supported" / "could not fetch" checks below are reported as errors instead when `--require-verified` is passed, so that a strict run never passes without having checked every deployment.
 
 ### Contract not verified
@@ -30,12 +32,12 @@ The four "not verified" / "not supported" / "could not fetch" checks below are r
 ### Extra function
 - **Level**: ⚠️ Warning 
 - **Message**: `Function <function> (selector: <selector>) defined in descriptor ABIs does not exist in reference ABI (see <url>)`
-- **Description**: A function found in the externally fetched ABI is not present in the provided ABI.
+- **Description**: A function found in the externally fetched ABI is not present in the ABI embedded in the v1 descriptor.
 
 ### Function mismatch
 - **Level**: ⚠️ Warning 
 - **Message**: `Function <function> (selector: <selector>) defined in descriptor ABIs does not match reference ABI (see <url>)`
-- **Description**: A function found in the provided ABI does not match the one present in the externally fetched ABI.
+- **Description**: A function found in the ABI embedded in the v1 descriptor does not match the one present in the externally fetched ABI.
 
 ## Deprecated fields checks
 Both checks only apply to v2 descriptors. The ERC-7730 specification deprecates these fields, so the v2 linter rejects them.

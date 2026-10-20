@@ -82,8 +82,9 @@ class InputContract(InputBindingContext):
         None,
         title="ABI",
         description=(
-            "[Deprecated] ABI definition bound to this file."
-            "Continue providing it for backward compatibility only; new specs should rely on display formats."
+            "[Deprecated] ABI definition bound to this file. "
+            "V2 descriptors must not set this field: the linter reports it as an error. "
+            "Function signatures are declared by the display formats keys."
         ),
     )
 
@@ -133,8 +134,8 @@ class InputEIP712(InputBindingContext):
         title="EIP-712 messages schemas",
         description=(
             "[Deprecated] Schema definition bound to this file. "
-            "This is deprecated in favor of format driven validation. "
-            "The address book should be used to resolve EIP-712 schemas."
+            "V2 descriptors must not set this field: the linter reports it as an error. "
+            "Message types are declared by the display formats keys."
         ),
     )
 

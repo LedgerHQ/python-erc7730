@@ -21,18 +21,20 @@ DEPRECATED_SCHEMAS_TITLE = "Deprecated schemas field"
 def validate_deprecated_fields(input_descriptor: InputERC7730Descriptor, out: OutputAdder) -> None:
     """Report an error for each deprecated context field set on the descriptor.
 
+    A field set to ``null`` is reported too: only a missing field is accepted.
+
     :param input_descriptor: the input descriptor, as loaded from the file
     :param out: output adder
     """
     match input_descriptor.context:
-        case InputContractContext(contract=contract) if contract.abi is not None:
+        case InputContractContext(contract=contract) if "abi" in contract.model_fields_set:
             out.error(
                 title=DEPRECATED_ABI_TITLE,
                 message="The `context.contract.abi` field is deprecated and must not be set in v2 descriptors. "
                 "Remove it: function signatures are declared by the `display.formats` keys, and ABIs are "
                 "resolved from the verified contract.",
             )
-        case InputEIP712Context(eip712=eip712) if eip712.schemas is not None:
+        case InputEIP712Context(eip712=eip712) if "schemas" in eip712.model_fields_set:
             out.error(
                 title=DEPRECATED_SCHEMAS_TITLE,
                 message="The `context.eip712.schemas` field is deprecated and must not be set in v2 descriptors. "
