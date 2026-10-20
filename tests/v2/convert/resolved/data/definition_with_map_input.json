@@ -1,0 +1,55 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "token-amount-map-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        },
+        {
+          "chainId": 8453,
+          "address": "0x0000000000000000000000000000000000000002"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner",
+    "maps": {
+      "underlyingToken": {
+        "$keyType": "chainId",
+        "values": {
+          "1": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+        }
+      }
+    }
+  },
+  "display": {
+    "formats": {
+      "deposit(uint256 assets, address receiver)": {
+        "intent": "Deposit",
+        "fields": [
+          {
+            "path": "assets",
+            "$ref": "$.display.definitions.depositAsset"
+          }
+        ]
+      }
+    },
+    "definitions": {
+      "depositAsset": {
+        "label": "Deposit asset",
+        "format": "tokenAmount",
+        "params": {
+          "token": {
+            "map": "$.metadata.maps.underlyingToken",
+            "keyPath": "@.chainId"
+          }
+        }
+      }
+    }
+  }
+}

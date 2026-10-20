@@ -10,6 +10,7 @@ from erc7730.model.calldata import CalldataDescriptorBase
 from erc7730.model.calldata.v1.instruction import (
     CalldataDescriptorInstructionEnumValueV1,
     CalldataDescriptorInstructionFieldV1,
+    CalldataDescriptorInstructionMapEntryV1,
     CalldataDescriptorInstructionTransactionInfoV1,
 )
 
@@ -36,6 +37,13 @@ class CalldataDescriptorV1(CalldataDescriptorBase):
     enums: list[CalldataDescriptorInstructionEnumValueV1] = Field(
         title="ENUM_VALUE instructions descriptors",
         description="Descriptor and metadata to craft ENUM APDUs.",
+    )
+
+    maps: list[CalldataDescriptorInstructionMapEntryV1] = Field(
+        default_factory=list,
+        title="MAP_ENTRY instructions descriptors",
+        description="Descriptor and metadata to craft MAP_ENTRY APDUs, one per key of the maps looked up by the "
+        "device. Only the entries matching the keys read from the transaction need to be provided.",
     )
 
     fields: list[CalldataDescriptorInstructionFieldV1] = Field(
