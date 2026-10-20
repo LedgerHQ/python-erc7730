@@ -75,19 +75,35 @@ app.add_typer(convert_app)
     short_help="Print ERC-7730 descriptor JSON schema.",
     help="""
     Print ERC-7730 descriptor JSON schema.
+
+    The schema is generated from the model this tool validates against, so it is the one
+    `erc7730 lint` enforces. Pass --v2 for the v2 model.
     """,
 )
 def command_schema(
     model_type: Annotated[ERC7730ModelType, Argument(help="The descriptor form ")] = ERC7730ModelType.INPUT,
+    v2: Annotated[bool, Option("--v2", help="Print the schema of the v2 model")] = False,
 ) -> None:
     descriptor_type: type[Model]
-    match model_type:
-        case ERC7730ModelType.INPUT:
-            descriptor_type = InputERC7730Descriptor
-        case ERC7730ModelType.RESOLVED:
-            descriptor_type = ResolvedERC7730Descriptor
-        case _:
-            assert_never(model_type)
+    if v2:
+        from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2
+        from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor as ResolvedERC7730DescriptorV2
+
+        match model_type:
+            case ERC7730ModelType.INPUT:
+                descriptor_type = InputERC7730DescriptorV2
+            case ERC7730ModelType.RESOLVED:
+                descriptor_type = ResolvedERC7730DescriptorV2
+            case _:
+                assert_never(model_type)
+    else:
+        match model_type:
+            case ERC7730ModelType.INPUT:
+                descriptor_type = InputERC7730Descriptor
+            case ERC7730ModelType.RESOLVED:
+                descriptor_type = ResolvedERC7730Descriptor
+            case _:
+                assert_never(model_type)
 
     builtins.print(json.dumps(descriptor_type.model_json_schema(by_alias=True), indent=4))
 

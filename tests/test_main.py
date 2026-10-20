@@ -34,6 +34,27 @@ def test_schema(model_type: ERC7730ModelType) -> None:
     assert json.loads(out) is not None
 
 
+@pytest.mark.parametrize("model_type", list(ERC7730ModelType))
+def test_schema_v2(model_type: ERC7730ModelType) -> None:
+    result = runner.invoke(app, ["schema", model_type, "--v2"])
+    out = "".join(result.stdout.splitlines())
+    assert result.exit_code == 0
+    assert json.loads(out) is not None
+
+
+def test_schema_v2_reaches_the_v2_model() -> None:
+    """Exit code 0 only proves a schema was printed, not which model it came from.
+
+    `mustMatch` is a v2 visibility rule and `excluded` a v1 field, so each name appears
+    in exactly one of the two schemas.
+    """
+    v1 = "".join(runner.invoke(app, ["schema", ERC7730ModelType.INPUT]).stdout.splitlines())
+    v2 = "".join(runner.invoke(app, ["schema", ERC7730ModelType.INPUT, "--v2"]).stdout.splitlines())
+
+    assert "excluded" in v1 and "mustMatch" not in v1
+    assert "mustMatch" in v2 and "excluded" not in v2
+
+
 def test_list() -> None:
     result = runner.invoke(app, ["list", str(ERC7730_REGISTRY_ROOT)])
     out = "".join(result.stdout.splitlines())
