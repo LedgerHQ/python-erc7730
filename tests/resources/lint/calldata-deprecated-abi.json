@@ -1,0 +1,52 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
+  "context": {
+    "$id": "Deprecated ABI",
+    "contract": {
+      "abi": [
+        {
+          "type": "function",
+          "name": "transfer",
+          "inputs": [
+            {
+              "name": "to",
+              "type": "address"
+            },
+            {
+              "name": "amount",
+              "type": "uint256"
+            }
+          ]
+        }
+      ],
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test"
+  },
+  "display": {
+    "formats": {
+      "transfer(address to, uint256 amount)": {
+        "intent": "Transfer tokens",
+        "fields": [
+          {
+            "path": "#.to",
+            "label": "To",
+            "format": "addressName",
+            "params": {
+              "types": [
+                "eoa"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

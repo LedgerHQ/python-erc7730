@@ -32,7 +32,17 @@ ERC7730_CALLDATA_DESCRIPTORS = sorted(
     [
         path
         for path in ERC7730_REGISTRY.rglob(f"{ERC_7730_REGISTRY_CALLDATA_PREFIX}*.json")
-        if _is_registry_descriptor(path) and path.name not in ["calldata-lpv2.json", "calldata-stETH.json"]
+        if _is_registry_descriptor(path)
+        and path.name
+        not in [
+            "calldata-lpv2.json",
+            "calldata-stETH.json",
+            # these files set the deprecated `context.contract.abi` field, which the v2 linter rejects
+            "calldata-AgentIdentityRegistry-base.json",
+            "calldata-AssetIdentityRegistry-base.json",
+            "calldata-ScoreEngineV2-base.json",
+            "calldata-TeraSwapFeeCollector.json",
+        ]
     ]
 )
 ERC7730_EIP712_DESCRIPTORS = sorted(
@@ -45,6 +55,8 @@ ERC7730_EIP712_DESCRIPTORS = sorted(
             "eip712-DelegatedUserDecryptRequestVerificationV1.json",
             "eip712-UserDecryptRequestVerificationV1.json",
             "eip712-UserDecryptRequestVerificationV2.json",
+            # this file sets the deprecated `context.eip712.schemas` field, which the v2 linter rejects
+            "eip712-rarible-exchange-v2-meta-tx.json",
         ]
     ]
 )

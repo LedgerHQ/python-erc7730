@@ -16,6 +16,7 @@ from erc7730.common.output import (
 from erc7730.convert.resolved.v2.convert_erc7730_input_to_resolved import ERC7730InputToResolved
 from erc7730.lint.v2 import ERC7730Linter, MultiLinter
 from erc7730.lint.v2.lint_transaction_type_classifier import ClassifyTransactionTypeLinter
+from erc7730.lint.v2.lint_validate_deprecated_fields import ValidateDeprecatedFieldsLinter
 from erc7730.lint.v2.lint_validate_display_fields import ValidateDisplayFieldsLinter
 from erc7730.lint.v2.lint_validate_eip712_keys import ValidateEIP712KeysLinter
 from erc7730.lint.v2.lint_validate_max_length import ValidateMaxLengthLinter
@@ -55,6 +56,7 @@ def lint_all(paths: list[Path], out: OutputAdder, require_verified: bool = False
     """
     linter = MultiLinter(
         [
+            ValidateDeprecatedFieldsLinter(),
             ValidateDisplayFieldsLinter(require_verified=require_verified),
             ValidateEIP712KeysLinter(),
             ClassifyTransactionTypeLinter(),

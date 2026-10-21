@@ -1,0 +1,50 @@
+{
+  "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
+  "context": {
+    "$id": "Deprecated schemas",
+    "eip712": {
+      "schemas": [
+        {
+          "primaryType": "TestMessage",
+          "types": {
+            "EIP712Domain": [
+              {
+                "name": "name",
+                "type": "string"
+              }
+            ],
+            "TestMessage": [
+              {
+                "name": "value",
+                "type": "uint256"
+              }
+            ]
+          }
+        }
+      ],
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test"
+  },
+  "display": {
+    "formats": {
+      "TestMessage(uint256 value)": {
+        "intent": "Test",
+        "fields": [
+          {
+            "path": "#.value",
+            "label": "Value",
+            "format": "raw"
+          }
+        ]
+      }
+    }
+  }
+}
