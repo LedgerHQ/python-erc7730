@@ -8,7 +8,7 @@ logic.
 """
 
 import hashlib
-from typing import cast
+from typing import Any, cast
 
 from pydantic_string_url import HttpUrl
 
@@ -21,13 +21,15 @@ from erc7730.common.abi import (
 from erc7730.common.binary import from_hex
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.options import first_not_none
-from erc7730.common.output import ConsoleOutputAdder, OutputAdder, exception_to_output
+from erc7730.common.output import ConsoleOutputAdder, ListOutputAdder, Output, OutputAdder, exception_to_output
 from erc7730.convert.calldata.v1.abi import ABITree, function_to_abi_tree
 from erc7730.convert.calldata.v1.enum import convert_enums
 from erc7730.convert.calldata.v1.path import (
     convert_container_path,
     convert_data_path,
 )
+from erc7730.convert.resolved.v2.address import resolved_address, resolved_addresses
+from erc7730.convert.resolved.v2.constants import MAPS_DESCRIPTOR_PATH
 from erc7730.convert.resolved.v2.convert_erc7730_input_to_resolved import (
     ERC7730InputToResolved,
 )
@@ -73,7 +75,7 @@ from erc7730.model.display import AddressNameType
 from erc7730.model.input.v2.context import InputContractContext
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.input.v2.format import DateEncoding, FieldFormat
-from erc7730.model.paths import ContainerPath, DataPath
+from erc7730.model.paths import ContainerField, ContainerPath, DataPath
 from erc7730.model.paths.path_parser import to_path
 from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValuePath
 from erc7730.model.resolved.v2.context import (
@@ -86,10 +88,12 @@ from erc7730.model.resolved.v2.display import (
     ResolvedFieldDescription,
     ResolvedFieldGroup,
     ResolvedFormat,
+    ResolvedMapReference,
     ResolvedNftNameParameters,
     ResolvedVisibilityConditions,
 )
-from erc7730.model.types import Address, HexStr, ScalarType, Selector
+from erc7730.model.resolved.v2.metadata import ResolvedMapDefinition
+from erc7730.model.types import Address, HexStr, Id, ScalarType, Selector
 
 # size of a calldata chunk (CALLDATA_CHUNK_SIZE in app-ethereum): the device reads a static ABI leaf
 # as a whole chunk, so a static value is always compared on that many bytes
@@ -97,6 +101,8 @@ CALLDATA_CHUNK_SIZE = 32
 
 # length of an EVM address (ADDRESS_LENGTH in app-ethereum)
 ADDRESS_LENGTH = 20
+
+CHAIN_ID_CONTAINER_PATH = ContainerPath(field=ContainerField.CHAIN_ID)
 
 
 def erc7730_v2_descriptor_to_calldata_descriptors(
@@ -233,7 +239,16 @@ def _convert_v2_selector(
 
     fields: list[CalldataDescriptorInstructionFieldV1] = []
     for input_field in format.fields:
-        if (output_fields := _convert_v2_field(abi=abi_tree, field=input_field, enums=enums_by_id, out=out)) is None:
+        if (
+            output_fields := _convert_v2_field(
+                abi=abi_tree,
+                field=input_field,
+                enums=enums_by_id,
+                maps=descriptor.metadata.maps,
+                deployment=deployment,
+                out=out,
+            )
+        ) is None:
             return None
         fields.extend(output_fields)
 
@@ -273,6 +288,8 @@ def _convert_v2_field(
     abi: ABITree,
     field: ResolvedFieldDescription | ResolvedFieldGroup,
     enums: dict[str, int],
+    maps: dict[Id, ResolvedMapDefinition] | None,
+    deployment: ResolvedDeployment,
     out: OutputAdder,
 ) -> list[CalldataDescriptorInstructionFieldV1] | None:
     """
@@ -290,6 +307,8 @@ def _convert_v2_field(
     :param abi: function ABI tree
     :param field: v2 resolved field
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
+    :param maps: maps of the source descriptor, to resolve map references
+    :param deployment: chain id / contract address for which the descriptor is generated
     :param out: error handler
     :return: 1 or more calldata field instructions, or None on error
     """
@@ -318,7 +337,11 @@ def _convert_v2_field(
                 )
             name = field.id or "constraint"
 
-        if (param := _convert_v2_param(abi=abi, field=field, enums=enums, out=out)) is None:
+        try:
+            param = _convert_v2_param(abi=abi, field=field, enums=enums, maps=maps, deployment=deployment, out=out)
+        except MapReferenceError as e:
+            return out.error(title=e.title, message=str(e))
+        if param is None:
             return None
 
         # Constraints are compared by the parameter formatter, so they are encoded against the type
@@ -363,7 +386,11 @@ def _convert_v2_field(
         # In v1 protocol, nested fields are flattened
         instructions: list[CalldataDescriptorInstructionFieldV1] = []
         for nested_field in field.fields:
-            if (nested_instructions := _convert_v2_field(abi=abi, field=nested_field, enums=enums, out=out)) is None:
+            if (
+                nested_instructions := _convert_v2_field(
+                    abi=abi, field=nested_field, enums=enums, maps=maps, deployment=deployment, out=out
+                )
+            ) is None:
                 return None
             instructions.extend(nested_instructions)
         return instructions
@@ -665,10 +692,58 @@ def _format_to_abi_type(format_type: FieldFormat | None) -> ABIDataType:
             return ABIDataType.STRING
 
 
+class MapReferenceError(Exception):
+    """A map reference cannot be converted to a calldata descriptor value."""
+
+    def __init__(self, title: str, message: str) -> None:
+        super().__init__(message)
+        self.title = title
+
+
+UNSUPPORTED_MAP_REFERENCE = "Unsupported map reference"
+INVALID_MAP_REFERENCE_VALUE = "Invalid map reference value"
+
+
+def _error_messages(out: ListOutputAdder) -> str:
+    return " ".join(output.message for output in out.outputs if output.level == Output.Level.ERROR)
+
+
+def _resolve_v2_map_reference(
+    map_ref: ResolvedMapReference, maps: dict[Id, ResolvedMapDefinition] | None, deployment: ResolvedDeployment
+) -> Any:
+    """
+    Resolve a map reference to its value for the deployment.
+
+    A calldata descriptor targets a single chain. Thus only a map keyed by the chain ID has a static value.
+
+    :param map_ref: resolved map reference
+    :param maps: maps of the source descriptor
+    :param deployment: chain id / contract address for which the descriptor is generated
+    :return: map value for the deployment chain ID
+    :raises MapReferenceError: if the map reference cannot be resolved to a static value
+    """
+    if map_ref.keyPath != CHAIN_ID_CONTAINER_PATH:
+        raise MapReferenceError(
+            UNSUPPORTED_MAP_REFERENCE,
+            f"Map reference {map_ref.map} uses key path {map_ref.keyPath}, only maps keyed by "
+            f"{CHAIN_ID_CONTAINER_PATH} can be converted to calldata descriptors.",
+        )
+    map_id = str(map_ref.map).removeprefix(MAPS_DESCRIPTOR_PATH + ".")
+    if maps is None or (map_def := maps.get(map_id)) is None:
+        raise MapReferenceError(INVALID_MAP_REFERENCE_VALUE, f"Map {map_ref.map} is not defined.")
+    if (value := map_def.values.get(str(deployment.chainId))) is None:
+        raise MapReferenceError(
+            INVALID_MAP_REFERENCE_VALUE, f"Map {map_ref.map} has no value for chain id {deployment.chainId}."
+        )
+    return value
+
+
 def _convert_v2_param(
     abi: ABITree,
     field: ResolvedFieldDescription,
     enums: dict[str, int],
+    maps: dict[Id, ResolvedMapDefinition] | None,
+    deployment: ResolvedDeployment,
     out: OutputAdder,
 ) -> CalldataDescriptorParamV1 | None:
     """
@@ -679,6 +754,8 @@ def _convert_v2_param(
     :param abi: function ABI tree
     :param field: v2 resolved field description
     :param enums: mapping of source descriptor enum ids to calldata descriptor enum ids
+    :param maps: maps of the source descriptor, to resolve map references
+    :param deployment: chain id / contract address for which the descriptor is generated
     :param out: error handler
     :return: calldata protocol field parameter or None on error
     """
@@ -687,24 +764,41 @@ def _convert_v2_param(
         return None
 
     def _convert_resolved_value(
-        resolved_value: ResolvedValuePath | ResolvedValueConstant | None,
+        resolved_value: ResolvedValuePath | ResolvedValueConstant | ResolvedMapReference | int | None,
         abi_type: ABIDataType,
     ) -> CalldataDescriptorValueV1 | None:
         if resolved_value is None:
             return None
         if isinstance(resolved_value, ResolvedValuePath):
             return _convert_v2_value(str(resolved_value.path), None, None, abi, out)
-        if isinstance(resolved_value, ResolvedValueConstant):
-            raw = encode_value(resolved_value.value, abi_type, out)
-            if raw is None:
-                return None
-            return CalldataDescriptorValueConstantV1(
-                type_family=CalldataDescriptorTypeFamily[abi_type.name],
-                type_size=len(raw) // 2 - 1,
-                value=resolved_value.value,
-                raw=raw,
-            )
-        return None
+        constant: ScalarType
+        match resolved_value:
+            case ResolvedValueConstant():
+                constant = resolved_value.value
+            case ResolvedMapReference():
+                constant = _resolve_v2_map_reference(resolved_value, maps, deployment)
+                if not isinstance(constant, str | bool | int | float):
+                    raise MapReferenceError(
+                        INVALID_MAP_REFERENCE_VALUE,
+                        f"Map {resolved_value.map} value must be a scalar, got {constant!r}.",
+                    )
+                address_out = ListOutputAdder()
+                if abi_type == ABIDataType.ADDRESS and resolved_address(constant, address_out) is None:
+                    raise MapReferenceError(
+                        INVALID_MAP_REFERENCE_VALUE,
+                        f"Map {resolved_value.map} value {constant!r} is invalid: {_error_messages(address_out)}",
+                    )
+            case _:
+                constant = resolved_value
+        raw = encode_value(constant, abi_type, out)
+        if raw is None:
+            return None
+        return CalldataDescriptorValueConstantV1(
+            type_family=CalldataDescriptorTypeFamily[abi_type.name],
+            type_size=len(raw) // 2 - 1,
+            value=constant,
+            raw=raw,
+        )
 
     match field.format:
         case None | FieldFormat.RAW:
@@ -745,7 +839,24 @@ def _convert_v2_param(
                         if input_source.lower() in set(TrustedNameSource):
                             sources.append(TrustedNameSource(input_source.lower()))
 
-                sender_addresses = getattr(address_params, "senderAddress", None)
+                match sender_address := getattr(address_params, "senderAddress", None):
+                    case ResolvedMapReference():
+                        resolved_senders = _resolve_v2_map_reference(sender_address, maps, deployment)
+                        senders_out = ListOutputAdder()
+                        if (
+                            sender_addresses := resolved_addresses(
+                                resolved_senders if isinstance(resolved_senders, list) else [resolved_senders],
+                                senders_out,
+                            )
+                        ) is None:
+                            raise MapReferenceError(
+                                INVALID_MAP_REFERENCE_VALUE,
+                                f"Map {sender_address.map} value is invalid: {_error_messages(senders_out)}",
+                            )
+                    case str():
+                        sender_addresses = [sender_address]
+                    case _:
+                        sender_addresses = sender_address
 
             types = list(TrustedNameType) if not types else list(dict.fromkeys(types))
             sources = list(TrustedNameSource) if not sources else list(dict.fromkeys(sources))
@@ -824,8 +935,9 @@ def _convert_v2_param(
 
             selector_val = _convert_resolved_value(field.params.selector, ABIDataType.STRING)
 
-            # v2 calldata params may not define chainId; keep compatibility with both models.
-            chain_id_val = _convert_resolved_value(getattr(field.params, "chainId", None), ABIDataType.UINT)
+            chain_id_val = _convert_resolved_value(field.params.chainId, ABIDataType.UINT)
+            if field.params.chainIdPath is not None:
+                chain_id_val = _convert_v2_value(str(field.params.chainIdPath), None, None, abi, out)
 
             amount_val = _convert_resolved_value(field.params.amount, ABIDataType.UINT)
 
@@ -891,6 +1003,16 @@ def _convert_v2_param(
                 threshold = getattr(field.params, "threshold", None)
                 native_currencies = getattr(field.params, "nativeCurrencyAddress", None)
                 above_threshold_message = getattr(field.params, "message", None)
+
+                # chainId/chainIdPath have no equivalent tag in PARAM_TOKEN_AMOUNT, so they cannot be encoded.
+                if (
+                    getattr(field.params, "chainId", None) is not None
+                    or getattr(field.params, "chainIdPath", None) is not None
+                ):
+                    out.warning(
+                        "tokenAmount chainId/chainIdPath cannot be encoded in the PARAM_TOKEN_AMOUNT struct and will "
+                        "be ignored."
+                    )
 
             return CalldataDescriptorParamTokenAmountV1(
                 value=value,

@@ -43,6 +43,7 @@ from erc7730.model.resolved.v2.display import (
     ResolvedField,
     ResolvedFieldDescription,
     ResolvedFieldGroup,
+    ResolvedMapReference,
     ResolvedTokenAmountParameters,
 )
 
@@ -225,6 +226,16 @@ def _convert_v2_field_description(
 
     relative_path = str(to_relative(parsed_path))
 
+    # the legacy format has no equivalent of a map reference, in any parameter
+    if field.params is not None:
+        for name in type(field.params).model_fields:
+            if isinstance(map_ref := getattr(field.params, name), ResolvedMapReference):
+                return out.error(
+                    title="Map reference not supported",
+                    message=f'Map reference {map_ref.map} in parameter "{name}" cannot be converted to legacy '
+                    "EIP-712 fields.",
+                )
+
     # --- Format mapping ---
     asset_path: str | None = None
     field_format: EIP712Format | None = None
@@ -276,6 +287,12 @@ def _convert_v2_field_description(
                         title="Missing token",
                         message="Token path or reference must be set for tokenAmount format.",
                     )
+                if field.params.chainId is not None or field.params.chainIdPath is not None:
+                    out.warning(
+                        title="Chain ID not supported",
+                        message="tokenAmount chainId/chainIdPath cannot be converted to legacy EIP-712 fields and "
+                        "will be ignored.",
+                    )
         case FieldFormat.INTEROPERABLE_ADDRESS_NAME:
             field_format = EIP712Format.TRUSTED_NAME
         case FieldFormat.TOKEN_TICKER:
@@ -314,22 +331,23 @@ def _convert_v2_field_description(
     ):
 
         def _resolve_calldata_resolved_value(
-            value: ResolvedValuePath | ResolvedValueConstant | None,
+            value: ResolvedValuePath | ResolvedValueConstant | ResolvedMapReference | int | None,
             field_name: str,
         ) -> str | None:
             if value is None:
                 return None
             if isinstance(value, ResolvedValuePath):
                 return _resolve_calldata_param_path(str(value.path))
-            if isinstance(value, ResolvedValueConstant):
-                raise ValueError(f'Constant "{field_name}" is not supported for calldata parameter conversion.')
-            return None
+            raise ValueError(f'Constant "{field_name}" is not supported for calldata parameter conversion.')
 
         try:
             callee_path = _resolve_calldata_resolved_value(field.params.callee, "callee")
             selector_path = _resolve_calldata_resolved_value(field.params.selector, "selector")
             amount_path = _resolve_calldata_resolved_value(field.params.amount, "amount")
             spender_path = _resolve_calldata_resolved_value(field.params.spender, "spender")
+            _resolve_calldata_resolved_value(field.params.chainId, "chainId")
+            if field.params.chainIdPath is not None:
+                chainid_path = _resolve_calldata_param_path(str(field.params.chainIdPath))
         except ValueError as e:
             return out.error(
                 title="Calldata param error",

@@ -345,6 +345,21 @@ class InputCallDataParameters(Model):
         'one of "spenderPath" or "spender" must be set.',
     )
 
+    chainId: int | DescriptorPathStr | InputMapReference | None = Field(
+        default=None,
+        title="Chain ID",
+        description="Optional. The chain ID of the called contract, if it differs from the current contract's "
+        'chain, as constant value or map reference. Only one of "chainIdPath" or "chainId" must be set.',
+    )
+
+    chainIdPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Chain ID Path",
+        description="Optional. The path to the chain ID of the called contract, if it differs from the current "
+        "contract's chain. "
+        'Only one of "chainIdPath" or "chainId" must be set.',
+    )
+
     @model_validator(mode="after")
     def _validate_mutually_exclusive_path_or_value(self) -> Self:
         if self.calleePath is not None and self.callee is not None:
@@ -355,6 +370,8 @@ class InputCallDataParameters(Model):
             raise ValueError('"amountPath" and "amount" are mutually exclusive.')
         if self.spenderPath is not None and self.spender is not None:
             raise ValueError('"spenderPath" and "spender" are mutually exclusive.')
+        if self.chainIdPath is not None and self.chainId is not None:
+            raise ValueError('"chainIdPath" and "chainId" are mutually exclusive.')
         return self
 
     @model_validator(mode="after")

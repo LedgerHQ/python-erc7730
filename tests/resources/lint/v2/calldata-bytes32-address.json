@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "bytes32 address",
+    "contract": { "deployments": [{ "chainId": 1, "address": "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5" }] }
+  },
+  "metadata": { "owner": "Test Owner" },
+  "display": {
+    "formats": {
+      "deposit(bytes32 depositor,bytes32 outputToken,uint256 destinationChainId)": {
+        "intent": "Bridge tokens",
+        "fields": [
+          {
+            "path": "depositor",
+            "label": "Depositor",
+            "format": "addressName",
+            "params": { "types": ["eoa", "wallet", "contract"], "sources": ["local", "ens"] }
+          },
+          {
+            "path": "outputToken",
+            "label": "Output Token",
+            "format": "tokenTicker",
+            "params": { "chainIdPath": "destinationChainId" }
+          },
+          { "path": "destinationChainId", "label": "Destination Chain", "format": "chainId" }
+        ]
+      }
+    }
+  }
+}

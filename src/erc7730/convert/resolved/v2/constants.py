@@ -10,11 +10,15 @@ from erc7730.common.properties import get_property
 from erc7730.model.input.path import ContainerPathStr, DataPathStr
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.input.v2.display import InputMapReference
+from erc7730.model.input.v2.metadata import InputMapDefinition
 from erc7730.model.paths import ROOT_DESCRIPTOR_PATH, ArrayElement, ContainerPath, DataPath, DescriptorPath, Field
-from erc7730.model.paths.path_ops import descriptor_path_append, to_absolute
+from erc7730.model.paths.path_ops import data_or_container_path_concat, descriptor_path_append, to_absolute
+from erc7730.model.resolved.v2.display import ResolvedMapReference
 from erc7730.model.types import ADDRESS_PATTERN
 
 _T = TypeVar("_T", covariant=True)
+
+MAPS_DESCRIPTOR_PATH = "$.metadata.maps"
 
 
 class ConstantProvider(ABC):
@@ -33,17 +37,31 @@ class ConstantProvider(ABC):
         """
         raise NotImplementedError()
 
-    @abstractmethod
-    def resolve_map_reference(self, prefix: DataPath, map_ref: InputMapReference, out: OutputAdder) -> Any:
+    def resolve_map_reference(
+        self, prefix: DataPath, map_ref: InputMapReference, out: OutputAdder
+    ) -> ResolvedMapReference | None:
         """
-        Resolve a map reference to its value.
+        Resolve a map reference.
+
+        The map must be defined in the metadata maps section. The key path is resolved relative to the current path
+        prefix. The value itself is looked up at signing time, so the reference is kept in the resolved form.
 
         :param prefix: current path prefix
         :param map_ref: map reference to resolve
         :param out: error handler
-        :return: resolved value from map, or None if not found
+        :return: resolved map reference, or None if error
         """
-        raise NotImplementedError()
+        if (map_def := self.get(map_ref.map, out)) is None:
+            return None
+        if not isinstance(map_def, InputMapDefinition):
+            return out.error(
+                title="Invalid map reference",
+                message=f"Map reference {map_ref.map} is invalid, it must reference a map defined in "
+                f"{MAPS_DESCRIPTOR_PATH}.",
+            )
+        if (key_path := self.resolve_path(map_ref.keyPath, out)) is None:
+            return None
+        return ResolvedMapReference(map=map_ref.map, keyPath=data_or_container_path_concat(prefix, key_path))
 
     def resolve(self, value: _T | DescriptorPath, out: OutputAdder) -> _T:
         """
@@ -191,41 +209,3 @@ class DefaultConstantProvider(ConstantProvider):
             parent_path = descriptor_path_append(parent_path, element)
 
         return current_target
-
-    @override
-    def resolve_map_reference(self, prefix: DataPath, map_ref: InputMapReference, out: OutputAdder) -> Any:
-        """
-        Resolve a map reference to its value by looking up the map and resolving the keyPath.
-
-        :param prefix: current path prefix
-        :param map_ref: map reference with map descriptor path and keyPath
-        :param out: error handler
-        :return: resolved value from map, or None if not found
-        """
-        # Get the map definition
-        if (map_def := self.get(map_ref.map, out)) is None:
-            return out.error(
-                title="Invalid map reference",
-                message=f"Map at {map_ref.map} does not exist.",
-            )
-
-        # Ensure map has the expected structure
-        if not hasattr(map_def, "values") or not isinstance(map_def.values, dict):
-            return out.error(
-                title="Invalid map reference",
-                message=f"Map at {map_ref.map} is not a valid map definition.",
-            )
-
-        # Resolve the key path to get the key value
-        if (self.resolve_path(map_ref.keyPath, out)) is None:
-            return None
-
-        # For map references, the key path is either a DataPath or ContainerPath
-        # We can't actually resolve the runtime value here during conversion,
-        # so we store the path for runtime resolution. However, for constant validation
-        # we could check if it's a constant path.
-        # Since this is input-to-resolved conversion, we pass through the structure.
-        # The actual key lookup happens at display time, not conversion time.
-
-        # Return the map reference as-is for the resolved model to handle at runtime
-        return map_ref

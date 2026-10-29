@@ -89,6 +89,19 @@ Both checks only apply to v2 descriptors. The ERC-7730 specification deprecates 
  - **Message**: ``No display field is defined for path <path> in <type/selector>. If intentionally excluded, please add it to `excluded` list to avoid this warning.``
 - **Description**: No display format for non-optional field.
 
+## Map reference checks
+These checks only apply to v2 descriptors. A map reference must reference a map defined in `$.metadata.maps`.
+
+### Invalid map value
+- **Level**: 🛑 Error 
+- **Message**: `Value for key "<key>" in map <map> is invalid: <reason>`
+- **Description**: A map value fails the checks of a constant value for the parameter that references the map. For instance, a `token` map value must be an address, and a `chainId` map value must be an integer.
+
+### Missing map value
+- **Level**: 🛑 Error 
+- **Message**: `Map <map> is keyed by @.chainId, but it has no value for deployment chain <chain_id>. Add a value for this chain, or the descriptor is invalid on it.`
+- **Description**: A map keyed by `@.chainId` has no value for a deployment chain. A wallet must consider the descriptor invalid on this chain.
+
 ## Max length checks
 
 ### Object too long

@@ -19,6 +19,7 @@ from erc7730.lint.v2.lint_transaction_type_classifier import ClassifyTransaction
 from erc7730.lint.v2.lint_validate_deprecated_fields import ValidateDeprecatedFieldsLinter
 from erc7730.lint.v2.lint_validate_display_fields import ValidateDisplayFieldsLinter
 from erc7730.lint.v2.lint_validate_eip712_keys import ValidateEIP712KeysLinter
+from erc7730.lint.v2.lint_validate_map_references import ValidateMapReferencesLinter
 from erc7730.lint.v2.lint_validate_max_length import ValidateMaxLengthLinter
 from erc7730.list.list import get_erc7730_files
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
@@ -59,6 +60,7 @@ def lint_all(paths: list[Path], out: OutputAdder, require_verified: bool = False
             ValidateDeprecatedFieldsLinter(),
             ValidateDisplayFieldsLinter(require_verified=require_verified),
             ValidateEIP712KeysLinter(),
+            ValidateMapReferencesLinter(),
             ClassifyTransactionTypeLinter(),
             ValidateMaxLengthLinter(),
         ]

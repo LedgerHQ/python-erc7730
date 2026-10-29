@@ -121,6 +121,42 @@ UPDATE_REFERENCES = False
             description="using calldata format with chainId, amount, and spender parameters",
         ),
         TestCase(
+            id="chain_id_params",
+            label="chain ID parameters",
+            description="using chainId and chainIdPath on tokenAmount, tokenTicker and calldata formats, with paths "
+            "relative to a field group",
+        ),
+        TestCase(
+            id="calldata_chain_id_and_chain_id_path",
+            label="calldata with both chainId and chainIdPath",
+            description="calldata parameters chainId and chainIdPath are mutually exclusive",
+            error='"chainIdPath" and "chainId" are mutually exclusive',
+        ),
+        TestCase(
+            id="chain_id_not_an_integer",
+            label="chain ID constant not an integer",
+            description="a chainId constant must resolve to an integer",
+            error="must be an integer",
+        ),
+        TestCase(
+            id="map_references",
+            label="map references",
+            description="map references in all parameters that accept them are kept, with key paths resolved relative "
+            "to the field prefix",
+        ),
+        TestCase(
+            id="map_reference_unknown_map",
+            label="map reference to an unknown map",
+            description="a map reference must reference a map defined in the metadata maps section",
+            error='$.metadata.maps has no "missing" field',
+        ),
+        TestCase(
+            id="map_reference_not_a_map",
+            label="map reference to a constant",
+            description="a map reference must reference a map defined in the metadata maps section",
+            error="it must reference a map defined in $.metadata.maps",
+        ),
+        TestCase(
             id="nft_name_with_collection_path",
             label="nft name with collection path",
             description="using nft name format with collectionPath resolved as ResolvedValue path",

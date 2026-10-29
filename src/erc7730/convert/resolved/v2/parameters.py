@@ -1,7 +1,8 @@
+from collections.abc import Callable
 from typing import Any, assert_never, cast
 
 from erc7730.common.abi import ABIDataType
-from erc7730.common.output import OutputAdder
+from erc7730.common.output import ListOutputAdder, Output, OutputAdder
 from erc7730.convert.resolved.v2.address import resolved_addresses
 from erc7730.convert.resolved.v2.constants import ConstantProvider
 from erc7730.convert.resolved.v2.enums import get_enum, get_enum_id
@@ -21,7 +22,8 @@ from erc7730.model.input.v2.display import (
     InputTokenTickerParameters,
     InputUnitParameters,
 )
-from erc7730.model.paths import ContainerPath, DataPath
+from erc7730.model.input.v2.metadata import InputMapDefinition
+from erc7730.model.paths import ContainerPath, DataPath, DescriptorPath
 from erc7730.model.paths.path_ops import data_or_container_path_concat
 from erc7730.model.resolved.display import ResolvedValue
 from erc7730.model.resolved.metadata import EnumDefinition
@@ -33,12 +35,13 @@ from erc7730.model.resolved.v2.display import (
     ResolvedEnumParameters,
     ResolvedFieldParameters,
     ResolvedInteroperableAddressNameParameters,
+    ResolvedMapReference,
     ResolvedNftNameParameters,
     ResolvedTokenAmountParameters,
     ResolvedTokenTickerParameters,
     ResolvedUnitParameters,
 )
-from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress
+from erc7730.model.types import Address, HexStr, Id, MixedCaseAddress, ScalarType
 
 
 def resolve_field_parameters(
@@ -76,16 +79,15 @@ def resolve_field_parameters(
 def resolve_address_name_parameters(
     prefix: DataPath, params: InputAddressNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedAddressNameParameters | None:
-    sender_address: list[Address] | None = None
+    sender_address: list[Address] | ResolvedMapReference | None = None
     if (sender_addr_input := params.senderAddress) is not None:
-        # InputMapReference is passed through to resolved model for runtime resolution
         if isinstance(sender_addr_input, InputMapReference):
-            # Map references in senderAddress cannot be resolved at conversion time
-            out.warning(
-                title="Unresolved map reference",
-                message="Map reference in senderAddress cannot be resolved at conversion time and will be dropped.",
-            )
-            sender_address = None
+            if (
+                sender_address := resolve_map_reference(
+                    prefix, sender_addr_input, _validate_sender_addresses, constants, out
+                )
+            ) is None:
+                return None
         else:
             resolved_sender = constants.resolve_or_none(sender_addr_input, out)
             if resolved_sender is None:
@@ -107,15 +109,15 @@ def resolve_address_name_parameters(
 def resolve_interoperable_address_name_parameters(
     prefix: DataPath, params: InputInteroperableAddressNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedInteroperableAddressNameParameters | None:
-    sender_address: list[Address] | None = None
+    sender_address: list[Address] | ResolvedMapReference | None = None
     if (sender_addr_input := params.senderAddress) is not None:
-        # InputMapReference is passed through - similar to address_name
         if isinstance(sender_addr_input, InputMapReference):
-            out.warning(
-                title="Unresolved map reference",
-                message="Map reference in senderAddress cannot be resolved at conversion time and will be dropped.",
-            )
-            sender_address = None
+            if (
+                sender_address := resolve_map_reference(
+                    prefix, sender_addr_input, _validate_sender_addresses, constants, out
+                )
+            ) is None:
+                return None
         else:
             resolved_sender = constants.resolve_or_none(sender_addr_input, out)
             if resolved_sender is None:
@@ -137,106 +139,45 @@ def resolve_interoperable_address_name_parameters(
 def resolve_calldata_parameters(
     prefix: DataPath, params: InputCallDataParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedCallDataParameters | None:
-    # Resolve callee - can be path, constant, or map reference
-    callee_resolved = None
-    if params.callee is not None and isinstance(params.callee, InputMapReference):
-        out.warning(
-            title="Unresolved map reference",
-            message="Map reference in callee cannot be resolved at conversion time and will be dropped.",
+    if (
+        callee := resolve_path_constant_or_map_reference(
+            prefix, params.calleePath, params.callee, ABIDataType.ADDRESS, constants, out
         )
+    ) is None:
         return None
-    elif params.callee is not None or params.calleePath is not None:
-        callee_resolved = resolve_path_or_constant_value(
-            prefix=prefix,
-            input_path=params.calleePath,
-            input_value=params.callee,
-            abi_type=ABIDataType.ADDRESS,
-            constants=constants,
-            out=out,
-        )
-        if callee_resolved is None:
-            return None
 
-    # Resolve selector
-    selector_resolved = None
-    if params.selector is not None and isinstance(params.selector, InputMapReference):
-        out.warning(
-            title="Unresolved map reference",
-            message="Map reference in selector cannot be resolved at conversion time and will be dropped.",
-        )
-    elif params.selector is not None or params.selectorPath is not None:
-        selector_resolved = resolve_path_or_constant_value(
-            prefix=prefix,
-            input_path=params.selectorPath,
-            input_value=params.selector,
-            abi_type=ABIDataType.STRING,
-            constants=constants,
-            out=out,
-        )
-
-    # Resolve amount
-    amount_resolved = None
-    if params.amount is not None and isinstance(params.amount, InputMapReference):
-        out.warning(
-            title="Unresolved map reference",
-            message="Map reference in amount cannot be resolved at conversion time and will be dropped.",
-        )
-    elif params.amount is not None or params.amountPath is not None:
-        amount_resolved = resolve_path_or_constant_value(
-            prefix=prefix,
-            input_path=params.amountPath,
-            input_value=params.amount,
-            abi_type=ABIDataType.UINT,
-            constants=constants,
-            out=out,
-        )
-
-    # Resolve spender
-    spender_resolved = None
-    if params.spender is not None and isinstance(params.spender, InputMapReference):
-        out.warning(
-            title="Unresolved map reference",
-            message="Map reference in spender cannot be resolved at conversion time and will be dropped.",
-        )
-    elif params.spender is not None or params.spenderPath is not None:
-        spender_resolved = resolve_path_or_constant_value(
-            prefix=prefix,
-            input_path=params.spenderPath,
-            input_value=params.spender,
-            abi_type=ABIDataType.ADDRESS,
-            constants=constants,
-            out=out,
-        )
+    if (chain_ids := resolve_chain_id_parameters(prefix, params.chainId, params.chainIdPath, constants, out)) is None:
+        return None
+    chain_id, chain_id_path = chain_ids
 
     return ResolvedCallDataParameters(
-        callee=cast(ResolvedValue, callee_resolved),
-        selector=selector_resolved,
-        amount=amount_resolved,
-        spender=spender_resolved,
+        callee=callee,
+        selector=resolve_path_constant_or_map_reference(
+            prefix, params.selectorPath, params.selector, ABIDataType.STRING, constants, out
+        ),
+        amount=resolve_path_constant_or_map_reference(
+            prefix, params.amountPath, params.amount, ABIDataType.UINT, constants, out
+        ),
+        spender=resolve_path_constant_or_map_reference(
+            prefix, params.spenderPath, params.spender, ABIDataType.ADDRESS, constants, out
+        ),
+        chainId=chain_id,
+        chainIdPath=chain_id_path,
     )
 
 
 def resolve_token_amount_parameters(
     prefix: DataPath, params: InputTokenAmountParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedTokenAmountParameters | None:
-    # Resolve token into a ResolvedValue (path or constant), like v1.
-    token_value = params.token
-    token_resolved = None
-    if token_value is not None and isinstance(token_value, InputMapReference):
-        # Map reference needs runtime resolution and is dropped in resolved model
-        out.warning(
-            title="Unresolved map reference",
-            message="Map reference in token cannot be resolved at conversion time and will be dropped.",
-        )
-    else:
-        token_resolved = resolve_path_or_constant_value(
-            prefix=prefix,
-            input_path=params.tokenPath,
-            input_value=token_value,
-            abi_type=ABIDataType.ADDRESS,
-            constants=constants,
-            out=out,
-        )
+    token_resolved = resolve_path_constant_or_map_reference(
+        prefix, params.tokenPath, params.token, ABIDataType.ADDRESS, constants, out
+    )
+    if token_resolved is None and (params.tokenPath is not None or params.token is not None):
+        return None
+
+    if (chain_ids := resolve_chain_id_parameters(prefix, params.chainId, params.chainIdPath, constants, out)) is None:
+        return None
+    chain_id, chain_id_path = chain_ids
 
     input_addresses = cast(
         list[DescriptorPathStr | MixedCaseAddress] | MixedCaseAddress | None,
@@ -246,7 +187,7 @@ def resolve_token_amount_parameters(
     if input_addresses is None:
         native_addresses = None
     elif isinstance(input_addresses, str | list):
-        inputs = [input_addresses] if isinstance(input_addresses, str) else input_addresses
+        inputs: list[DescriptorPath | str] = [input_addresses] if isinstance(input_addresses, str) else input_addresses
         # an element of the list can be a path to a constant
         resolved_inputs = [constants.resolve(i, out) for i in inputs]
         if None in resolved_inputs or (native_addresses := resolved_addresses(resolved_inputs, out)) is None:
@@ -264,80 +205,36 @@ def resolve_token_amount_parameters(
     else:
         resolved_threshold = None
 
-    # Resolve chainId - can be int, descriptor path, or map reference
-    chain_id_value = params.chainId
-    resolved_chain_id: int | None = None
-    if chain_id_value is not None and not isinstance(chain_id_value, InputMapReference):
-        if isinstance(chain_id_value, int):
-            resolved_chain_id = chain_id_value
-        else:
-            # Descriptor path
-            resolved_value: Any = constants.resolve(chain_id_value, out)
-            if isinstance(resolved_value, int):
-                resolved_chain_id = resolved_value
-
     return ResolvedTokenAmountParameters(
         token=token_resolved,
         nativeCurrencyAddress=native_addresses,
         threshold=resolved_threshold,
         message=constants.resolve_or_none(params.message, out),
-        chainId=resolved_chain_id,
-        chainIdPath=params.chainIdPath,
+        chainId=chain_id,
+        chainIdPath=chain_id_path,
     )
 
 
 def resolve_token_ticker_parameters(
     prefix: DataPath, params: InputTokenTickerParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedTokenTickerParameters | None:
-    # Resolve chainId - can be int, descriptor path, or map reference
-    chain_id_value = params.chainId
-    resolved_chain_id: int | None = None
-    if chain_id_value is not None and not isinstance(chain_id_value, InputMapReference):
-        if isinstance(chain_id_value, int):
-            resolved_chain_id = chain_id_value
-        else:
-            # Descriptor path
-            resolved_value: Any = constants.resolve(chain_id_value, out)
-            if isinstance(resolved_value, int):
-                resolved_chain_id = resolved_value
+    if (chain_ids := resolve_chain_id_parameters(prefix, params.chainId, params.chainIdPath, constants, out)) is None:
+        return None
+    chain_id, chain_id_path = chain_ids
 
-    # Resolve and normalize chainIdPath using constants and the current prefix
-    resolved_chain_id_path: DataPath | ContainerPath | None = None
-    if params.chainIdPath is not None:
-        relative_chain_id_path = constants.resolve_path(params.chainIdPath, out)
-        if relative_chain_id_path is not None:
-            resolved_chain_id_path = data_or_container_path_concat(prefix, relative_chain_id_path)
-
-    return ResolvedTokenTickerParameters(
-        chainId=resolved_chain_id,
-        chainIdPath=resolved_chain_id_path,
-    )
+    return ResolvedTokenTickerParameters(chainId=chain_id, chainIdPath=chain_id_path)
 
 
 def resolve_nft_parameters(
     prefix: DataPath, params: InputNftNameParameters, constants: ConstantProvider, out: OutputAdder
 ) -> ResolvedNftNameParameters | None:
-    # Resolve collection - can be path, constant, or map reference
-    collection_value = params.collection
-    if collection_value is not None and isinstance(collection_value, InputMapReference):
-        # Map reference - needs runtime resolution
-        out.warning(
-            title="Unresolved map reference",
-            message="Map reference in collection cannot be resolved at conversion time and will be dropped.",
+    if (
+        collection := resolve_path_constant_or_map_reference(
+            prefix, params.collectionPath, params.collection, ABIDataType.ADDRESS, constants, out
         )
+    ) is None:
         return None
-    else:
-        collection_resolved = resolve_path_or_constant_value(
-            prefix=prefix,
-            input_path=params.collectionPath,
-            input_value=collection_value,
-            abi_type=ABIDataType.ADDRESS,
-            constants=constants,
-            out=out,
-        )
-        if collection_resolved is None:
-            return None
-        return ResolvedNftNameParameters(collection=collection_resolved)
+    return ResolvedNftNameParameters(collection=collection)
 
 
 def resolve_date_parameters(
@@ -380,3 +277,148 @@ def resolve_encryption_parameters(
         plaintextType=params.plaintextType,
         fallbackLabel=params.fallbackLabel,
     )
+
+
+def resolve_path_constant_or_map_reference(
+    prefix: DataPath,
+    input_path: DescriptorPath | DataPath | ContainerPath | None,
+    input_value: DescriptorPath | ScalarType | InputMapReference | None,
+    abi_type: ABIDataType,
+    constants: ConstantProvider,
+    out: OutputAdder,
+) -> ResolvedValue | ResolvedMapReference | None:
+    """
+    Resolve a parameter value, as a data path, a constant value or a map reference.
+
+    :param prefix: current path prefix
+    :param input_path: input data path, if provided
+    :param input_value: input constant value or map reference, if provided
+    :param abi_type: expected encoded value data type
+    :param constants: descriptor paths constants resolver
+    :param out: error handler
+    :return: resolved value, or None if error or not set
+    """
+    if isinstance(input_value, InputMapReference):
+
+        def validate_value(value: Any, value_out: OutputAdder) -> Any:
+            return resolve_path_or_constant_value(prefix, None, value, abi_type, constants, value_out)
+
+        return resolve_map_reference(prefix, input_value, validate_value, constants, out)
+    return resolve_path_or_constant_value(
+        prefix=prefix,
+        input_path=input_path,
+        input_value=input_value,
+        abi_type=abi_type,
+        constants=constants,
+        out=out,
+    )
+
+
+def resolve_chain_id_parameters(
+    prefix: DataPath,
+    input_chain_id: int | DescriptorPath | InputMapReference | None,
+    input_chain_id_path: DescriptorPath | DataPath | ContainerPath | None,
+    constants: ConstantProvider,
+    out: OutputAdder,
+) -> tuple[int | ResolvedMapReference | None, DataPath | ContainerPath | None] | None:
+    """
+    Resolve the chainId and chainIdPath parameters.
+
+    :param prefix: current path prefix
+    :param input_chain_id: input chain ID, constant path or map reference, if provided
+    :param input_chain_id_path: input chain ID path, if provided
+    :param constants: descriptor paths constants resolver
+    :param out: error handler
+    :return: resolved chain ID and chain ID path, or None if error
+    """
+    chain_id = resolve_chain_id(prefix, input_chain_id, constants, out)
+    chain_id_path = resolve_parameter_path(prefix, input_chain_id_path, constants, out)
+    if (input_chain_id is not None and chain_id is None) or (input_chain_id_path is not None and chain_id_path is None):
+        return None
+    return chain_id, chain_id_path
+
+
+def resolve_chain_id(
+    prefix: DataPath,
+    input_chain_id: int | DescriptorPath | InputMapReference | None,
+    constants: ConstantProvider,
+    out: OutputAdder,
+) -> int | ResolvedMapReference | None:
+    """
+    Resolve a chain ID parameter, as a constant value or a map reference.
+
+    :param prefix: current path prefix
+    :param input_chain_id: input chain ID, constant path or map reference, if provided
+    :param constants: descriptor paths constants resolver
+    :param out: error handler
+    :return: resolved chain ID or map reference, or None if error or not set
+    """
+    if input_chain_id is None:
+        return None
+    if isinstance(input_chain_id, InputMapReference):
+        return resolve_map_reference(prefix, input_chain_id, _validate_chain_id, constants, out)
+    if (chain_id := constants.resolve(input_chain_id, out)) is None:
+        return None
+    return _validate_chain_id(chain_id, out)
+
+
+def resolve_parameter_path(
+    prefix: DataPath,
+    input_path: DescriptorPath | DataPath | ContainerPath | None,
+    constants: ConstantProvider,
+    out: OutputAdder,
+) -> DataPath | ContainerPath | None:
+    """
+    Resolve a parameter path relative to the current path prefix.
+
+    :param prefix: current path prefix
+    :param input_path: input path, or descriptor path to a constant path, if provided
+    :param constants: descriptor paths constants resolver
+    :param out: error handler
+    :return: resolved absolute path, or None if error or not set
+    """
+    if (path := constants.resolve_path_or_none(input_path, out)) is None:
+        return None
+    return data_or_container_path_concat(prefix, path)
+
+
+def resolve_map_reference(
+    prefix: DataPath,
+    map_ref: InputMapReference,
+    validate_value: Callable[[Any, OutputAdder], Any],
+    constants: ConstantProvider,
+    out: OutputAdder,
+) -> ResolvedMapReference | None:
+    """
+    Resolve a map reference, and validate each value of the referenced map.
+
+    :param prefix: current path prefix
+    :param map_ref: input map reference
+    :param validate_value: validator of a map value, returns None if the value is invalid
+    :param constants: descriptor paths constants resolver
+    :param out: error handler
+    :return: resolved map reference, or None if error
+    """
+    if (resolved := constants.resolve_map_reference(prefix, map_ref, out)) is None:
+        return None
+    map_def = cast(InputMapDefinition, constants.get(map_ref.map, out))
+    for key, value in map_def.values.items():
+        value_out = ListOutputAdder()
+        if validate_value(value, value_out) is None or value_out.has_errors:
+            reasons = [output.message for output in value_out.outputs if output.level == Output.Level.ERROR]
+            return out.error(
+                title="Invalid map value",
+                message=f'Value for key "{key}" in map {map_ref.map} is invalid: '
+                + (" ".join(reasons) if reasons else "the value is null."),
+            )
+    return resolved
+
+
+def _validate_chain_id(value: Any, out: OutputAdder) -> int | None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        return out.error(title="Invalid chain ID", message=f"Chain ID must be an integer, got {type(value).__name__}.")
+    return value
+
+
+def _validate_sender_addresses(value: Any, out: OutputAdder) -> list[Address] | None:
+    return resolved_addresses(value if isinstance(value, list) else [value], out)

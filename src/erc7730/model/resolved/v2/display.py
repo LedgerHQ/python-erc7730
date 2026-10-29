@@ -61,6 +61,24 @@ ResolvedVisibilityRules = Annotated[
 ]
 
 
+class ResolvedMapReference(Model):
+    """
+    A reference to a map for dynamic value resolution (resolved).
+
+    The value is looked up in the referenced map at signing time, using the value at the key path as key.
+    """
+
+    map: DescriptorPathStr = Field(
+        title="Map Reference",
+        description="The path to the referenced map, as a path expression $.metadata.maps.MAP_NAME.",
+    )
+
+    keyPath: DataPathStr | ContainerPathStr = Field(
+        title="Key Path",
+        description="The resolved path to the key used to resolve a value in the referenced map.",
+    )
+
+
 class ResolvedFieldBase(Model):
     """
     A resolved field formatter, containing formatting information of a single field in a message.
@@ -96,10 +114,11 @@ class ResolvedTokenAmountParameters(Model):
     Token Amount Formatting Parameters (resolved).
     """
 
-    token: ResolvedValue | None = Field(
+    token: ResolvedValue | ResolvedMapReference | None = Field(
         default=None,
         title="Token",
-        description="The resolved address of the token contract, either as path or constant value. Used to "
+        description="The resolved address of the token contract, either as path, constant value or map reference. "
+        "Used to "
         "associate correct ticker. If ticker is not found or value is not set, the wallet SHOULD display the "
         'raw value instead with an "Unknown token" warning.',
     )
@@ -126,17 +145,17 @@ class ResolvedTokenAmountParameters(Model):
         description="The resolved message to display when the amount is above the threshold.",
     )
 
-    chainId: int | None = Field(
+    chainId: int | ResolvedMapReference | None = Field(
         default=None,
         title="Chain ID",
         description=(
-            "Optional. The resolved chain on which the token is deployed. "
+            "Optional. The resolved chain on which the token is deployed, as constant value or map reference. "
             "When present, the wallet SHOULD resolve token metadata (ticker, decimals) for this chain. "
             "Useful for cross-chain swap clear signing where the same token address may refer to different chains."
         ),
     )
 
-    chainIdPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+    chainIdPath: DataPathStr | ContainerPathStr | None = Field(
         default=None,
         title="Chain ID Path",
         description=(
@@ -174,7 +193,7 @@ class ResolvedAddressNameParameters(Model):
         min_length=1,
     )
 
-    senderAddress: Address | list[Address] | None = Field(
+    senderAddress: Address | list[Address] | ResolvedMapReference | None = Field(
         default=None,
         title="Sender Address",
         description="Either a string or an array of strings. If the address pointed to by addressName is equal to one "
@@ -201,7 +220,7 @@ class ResolvedInteroperableAddressNameParameters(Model):
         min_length=1,
     )
 
-    senderAddress: Address | list[Address] | None = Field(
+    senderAddress: Address | list[Address] | ResolvedMapReference | None = Field(
         default=None,
         title="Sender Address",
         description="Either a string or an array of strings for sender address matching.",
@@ -213,31 +232,52 @@ class ResolvedCallDataParameters(Model):
     Embedded Calldata Formatting Parameters (resolved).
     """
 
-    callee: ResolvedValue = Field(
+    callee: ResolvedValue | ResolvedMapReference = Field(
         title="Callee",
-        description="The resolved address of the contract being called by this embedded calldata, either as path "
-        "or constant value.",
+        description="The resolved address of the contract being called by this embedded calldata, either as path, "
+        "constant value or map reference.",
     )
 
-    selector: ResolvedValue | None = Field(
+    selector: ResolvedValue | ResolvedMapReference | None = Field(
         default=None,
         title="Called Selector",
-        description="The resolved selector being called, if not contained in the calldata, either as path or "
-        "constant value.",
+        description="The resolved selector being called, if not contained in the calldata, either as path, "
+        "constant value or map reference.",
     )
 
-    amount: ResolvedValue | None = Field(
+    amount: ResolvedValue | ResolvedMapReference | None = Field(
         default=None,
         title="Amount",
-        description="The resolved amount being transferred, if not contained in the calldata, either as path or "
-        "constant value.",
+        description="The resolved amount being transferred, if not contained in the calldata, either as path, "
+        "constant value or map reference.",
     )
 
-    spender: ResolvedValue | None = Field(
+    spender: ResolvedValue | ResolvedMapReference | None = Field(
         default=None,
         title="Spender",
-        description="The resolved spender, if not contained in the calldata, either as path or constant value.",
+        description="The resolved spender, if not contained in the calldata, either as path, constant value or map "
+        "reference.",
     )
+
+    chainId: int | ResolvedMapReference | None = Field(
+        default=None,
+        title="Chain ID",
+        description="Optional. The resolved chain ID of the called contract, if it differs from the current "
+        "contract's chain, as constant value or map reference.",
+    )
+
+    chainIdPath: DataPathStr | ContainerPathStr | None = Field(
+        default=None,
+        title="Chain ID Path",
+        description="Optional. The resolved path to the chain ID of the called contract, if it differs from the "
+        "current contract's chain.",
+    )
+
+    @model_validator(mode="after")
+    def _validate_chainid_mutually_exclusive(self) -> Self:
+        if self.chainId is not None and self.chainIdPath is not None:
+            raise ValueError('"chainId" and "chainIdPath" are mutually exclusive.')
+        return self
 
 
 class ResolvedNftNameParameters(Model):
@@ -245,9 +285,9 @@ class ResolvedNftNameParameters(Model):
     NFT Names Formatting Parameters (resolved).
     """
 
-    collection: ResolvedValue = Field(
+    collection: ResolvedValue | ResolvedMapReference = Field(
         title="Collection",
-        description="The resolved address of the collection contract, either as path or constant value.",
+        description="The resolved address of the collection contract, either as path, constant value or map reference.",
     )
 
 
@@ -304,17 +344,17 @@ class ResolvedTokenTickerParameters(Model):
     Token Ticker Formatting Parameters (resolved).
     """
 
-    chainId: int | None = Field(
+    chainId: int | ResolvedMapReference | None = Field(
         default=None,
         title="Chain ID",
         description=(
-            "Optional. The resolved chain on which the token is deployed. "
+            "Optional. The resolved chain on which the token is deployed, as constant value or map reference. "
             "When present, the wallet SHOULD resolve the token ticker for this chain. "
             "Useful for cross-chain swap clear signing."
         ),
     )
 
-    chainIdPath: DescriptorPathStr | DataPathStr | ContainerPathStr | None = Field(
+    chainIdPath: DataPathStr | ContainerPathStr | None = Field(
         default=None,
         title="Chain ID Path",
         description=(

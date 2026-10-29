@@ -32,6 +32,7 @@ from erc7730.model.calldata.v1.param import (
 from erc7730.model.calldata.v1.value import (
     CalldataDescriptorTypeFamily,
     CalldataDescriptorValueConstantV1,
+    CalldataDescriptorValuePathV1,
 )
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 
@@ -223,7 +224,7 @@ def test_convert_token_amount_resolves_token_path() -> None:
     assert field.param.token is not None
 
 
-def convert_descriptor(signature: str, field: dict[str, Any]) -> list[Any]:
+def convert_descriptor(signature: str, field: dict[str, Any], *, metadata: dict[str, Any] | None = None) -> list[Any]:
     """Build a minimal v2 descriptor around a single display field and return the raw conversion result."""
     descriptor = InputERC7730Descriptor.model_validate_json(
         json.dumps(
@@ -233,12 +234,114 @@ def convert_descriptor(signature: str, field: dict[str, Any]) -> list[Any]:
                     "$id": "test",
                     "contract": {"deployments": [{"chainId": DEFAULT_CHAIN_ID, "address": DEFAULT_ADDRESS}]},
                 },
-                "metadata": {"owner": "Test Owner"},
+                "metadata": {"owner": "Test Owner", **(metadata or {})},
                 "display": {"formats": {signature: {"intent": "Test intent", "fields": [field]}}},
             }
         )
     )
     return erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=DEFAULT_CHAIN_ID)
+
+
+def test_convert_calldata_chain_id_constant() -> None:
+    field = convert_field(
+        "execute(address target, bytes data)",
+        {"path": "data", "label": "Call", "format": "calldata", "params": {"calleePath": "target", "chainId": 8453}},
+    )
+
+    assert isinstance(field.param, CalldataDescriptorParamCalldataV1)
+    assert isinstance(field.param.chain_id, CalldataDescriptorValueConstantV1)
+    assert field.param.chain_id.value == 8453
+
+
+def test_convert_calldata_chain_id_path() -> None:
+    field = convert_field(
+        "execute(address target, uint256 chainId, bytes data)",
+        {
+            "path": "data",
+            "label": "Call",
+            "format": "calldata",
+            "params": {"calleePath": "target", "chainIdPath": "chainId"},
+        },
+    )
+
+    assert isinstance(field.param, CalldataDescriptorParamCalldataV1)
+    assert isinstance(field.param.chain_id, CalldataDescriptorValuePathV1)
+
+
+# the shareToken map of assets/eip-7730/example-maps.json in the ERC
+SHARE_TOKEN_MAP = {
+    "shareToken": {
+        "$keyType": "Chain ID",
+        "values": {
+            "1": "0x00000000000000000000000000000000abcdef01",
+            "137": "0x00000000000000000000000000000000abcdef02",
+            "42161": "0x00000000000000000000000000000000abcdef03",
+        },
+    }
+}
+
+
+@pytest.mark.parametrize(
+    ("chain_id", "token"),
+    [
+        (1, "0x00000000000000000000000000000000abcdef01"),
+        (137, "0x00000000000000000000000000000000abcdef02"),
+    ],
+)
+def test_convert_map_reference_keyed_by_chain_id_resolves_for_the_deployment(chain_id: int, token: str) -> None:
+    field = convert_field(
+        "deposit(uint256 amount, uint256 minShares)",
+        {
+            "path": "minShares",
+            "label": "Min Received Shares",
+            "format": "tokenAmount",
+            "params": {"token": {"map": "$.metadata.maps.shareToken", "keyPath": "@.chainId"}},
+        },
+        metadata={"maps": SHARE_TOKEN_MAP},
+        chain_id=chain_id,
+    )
+
+    assert isinstance(field.param, CalldataDescriptorParamTokenAmountV1)
+    assert isinstance(field.param.token, CalldataDescriptorValueConstantV1)
+    assert field.param.token.value == token
+
+
+@pytest.mark.parametrize(
+    ("key_path", "maps"),
+    [
+        # a key read from the transaction has no static value
+        ("amount", SHARE_TOKEN_MAP),
+        # the map has no value for the deployment chain
+        ("@.chainId", {"shareToken": {"values": {"137": "0x00000000000000000000000000000000abcdef02"}}}),
+        # the value is not an address: 21 bytes, as the underlyingToken map in the ERC example
+        ("@.chainId", {"shareToken": {"values": {"1": "0x0000000000000000000000000000000000deadbeef"}}}),
+    ],
+    ids=["key from transaction", "no value for chain", "invalid address"],
+)
+def test_convert_rejects_map_reference_without_static_value(key_path: str, maps: dict[str, Any]) -> None:
+    field = {
+        "path": "amount",
+        "label": "Amount",
+        "format": "tokenAmount",
+        "params": {"token": {"map": "$.metadata.maps.shareToken", "keyPath": key_path}},
+    }
+
+    assert convert_descriptor("deposit(uint256 amount)", field, metadata={"maps": maps}) == []
+
+
+def test_convert_token_amount_chain_id_is_ignored_with_a_warning(capsys: pytest.CaptureFixture[str]) -> None:
+    field = convert_field(
+        "transfer(address token, uint256 amount, uint256 chainId)",
+        {
+            "path": "amount",
+            "label": "Amount",
+            "format": "tokenAmount",
+            "params": {"tokenPath": "token", "chainIdPath": "chainId"},
+        },
+    )
+
+    assert isinstance(field.param, CalldataDescriptorParamTokenAmountV1)
+    assert "PARAM_TOKEN_AMOUNT" in capsys.readouterr().out
 
 
 def parse_tlv(payload: bytes) -> list[tuple[int, bytes]]:

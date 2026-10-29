@@ -1,0 +1,65 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "chain-id-params-test",
+    "contract": { "deployments": [{ "chainId": 1, "address": "0x0000000000000000000000000000000000000001" }] }
+  },
+  "metadata": { "owner": "Test Owner", "constants": { "destinationChain": 10 } },
+  "display": {
+    "formats": {
+      "0x2f19d632": {
+        "intent": "Bridge",
+        "fields": [
+          {
+            "label": "Amount",
+            "format": "tokenAmount",
+            "params": {
+              "token": {
+                "type": "path",
+                "path": {
+                  "type": "data",
+                  "absolute": true,
+                  "elements": [{ "type": "field", "identifier": "order" }, { "type": "field", "identifier": "token" }]
+                }
+              },
+              "chainIdPath": "#.order.chainId"
+            },
+            "path": "#.order.amount"
+          },
+          { "label": "Token", "format": "tokenTicker", "params": { "chainIdPath": "#.order.chainId" }, "path": "#.order.token" },
+          {
+            "label": "Call",
+            "format": "calldata",
+            "params": {
+              "callee": {
+                "type": "path",
+                "path": {
+                  "type": "data",
+                  "absolute": true,
+                  "elements": [{ "type": "field", "identifier": "order" }, { "type": "field", "identifier": "target" }]
+                }
+              },
+              "chainIdPath": "#.order.chainId"
+            },
+            "path": "#.order.data"
+          }
+        ]
+      },
+      "0x1b8b921d": {
+        "intent": "Call",
+        "fields": [
+          {
+            "label": "Call",
+            "format": "calldata",
+            "params": {
+              "callee": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "target" }] } },
+              "chainId": 8453
+            },
+            "path": "#.data"
+          },
+          { "label": "Target", "format": "tokenTicker", "params": { "chainId": 10 }, "path": "#.target" }
+        ]
+      }
+    }
+  }
+}

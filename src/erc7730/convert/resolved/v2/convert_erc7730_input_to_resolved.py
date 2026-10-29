@@ -314,6 +314,8 @@ class ERC7730InputToResolved(ERC7730Converter[InputERC7730Descriptor, ResolvedER
                 assert_never(definition.format)
 
         params = resolve_field_parameters(prefix, definition.params, enums, constants, out)
+        if definition.params is not None and params is None:
+            return None
 
         if (value_or_path := resolve_field_value(prefix, definition, definition.format, constants, out)) is None:
             return None

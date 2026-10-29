@@ -15,7 +15,7 @@
             "format": "tokenAmount",
             "params": {
               "token": { "type": "path", "path": { "type": "data", "absolute": true, "elements": [{ "type": "field", "identifier": "token" }] } },
-              "chainIdPath": "targetChainId"
+              "chainIdPath": "#.targetChainId"
             },
             "path": "#.amount"
           }

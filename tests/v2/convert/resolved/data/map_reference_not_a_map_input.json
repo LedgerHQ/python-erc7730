@@ -1,0 +1,72 @@
+{
+  "$schema": "../../../../../specs/erc7730-v2.schema.json",
+  "context": {
+    "$id": "map-reference-not-a-map-test",
+    "contract": {
+      "deployments": [
+        {
+          "chainId": 1,
+          "address": "0x0000000000000000000000000000000000000001"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "owner": "Test Owner",
+    "constants": {
+      "token": "0x0000000000000000000000000000000000000002"
+    },
+    "maps": {
+      "tokens": {
+        "$keyType": "Chain ID",
+        "values": {
+          "1": "0x0000000000000000000000000000000000000002"
+        }
+      },
+      "chains": {
+        "$keyType": "uint",
+        "values": {
+          "1": 10
+        }
+      },
+      "selectors": {
+        "$keyType": "Chain ID",
+        "values": {
+          "1": "0x12345678"
+        }
+      },
+      "amounts": {
+        "$keyType": "Chain ID",
+        "values": {
+          "1": 1000
+        }
+      },
+      "senders": {
+        "$keyType": "Chain ID",
+        "values": {
+          "1": "0x0000000000000000000000000000000000000003"
+        }
+      }
+    }
+  },
+  "display": {
+    "formats": {
+      "transfer(address token,uint256 amount)": {
+        "intent": "Transfer",
+        "fields": [
+          {
+            "path": "amount",
+            "label": "Amount",
+            "format": "tokenAmount",
+            "params": {
+              "token": {
+                "map": "$.metadata.constants.token",
+                "keyPath": "@.chainId"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
