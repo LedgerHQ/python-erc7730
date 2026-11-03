@@ -279,6 +279,13 @@ class ResolvedCallDataParameters(Model):
         "lookup.",
     )
 
+    chainId: ResolvedValueOrMap | None = Field(
+        default=None,
+        title="Chain ID",
+        description="The resolved chain ID of the called contract, if it differs from the current contract's chain, "
+        "either as path, constant value or map lookup.",
+    )
+
 
 class ResolvedNftNameParameters(Model):
     """

@@ -155,12 +155,14 @@ def resolve_calldata_parameters(
     selector_resolved = resolve(params.selectorPath, params.selector, ABIDataType.STRING)
     amount_resolved = resolve(params.amountPath, params.amount, ABIDataType.UINT)
     spender_resolved = resolve(params.spenderPath, params.spender, ABIDataType.ADDRESS)
+    chain_id_resolved = resolve(params.chainIdPath, params.chainId, ABIDataType.UINT)
 
     # an optional parameter that is set but fails to resolve must reject the field, not be omitted
     if (
         (selector_resolved is None and (params.selector is not None or params.selectorPath is not None))
         or (amount_resolved is None and (params.amount is not None or params.amountPath is not None))
         or (spender_resolved is None and (params.spender is not None or params.spenderPath is not None))
+        or (chain_id_resolved is None and (params.chainId is not None or params.chainIdPath is not None))
     ):
         return None
 
@@ -169,6 +171,7 @@ def resolve_calldata_parameters(
         selector=selector_resolved,
         amount=amount_resolved,
         spender=spender_resolved,
+        chainId=chain_id_resolved,
     )
 
 
