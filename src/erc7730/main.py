@@ -253,7 +253,7 @@ def command_calldata(
     v2: Annotated[bool, Option("--v2", help="Force v2 mode")] = False,
 ) -> None:
     source_url = HttpUrl(source) if source is not None else None
-    out = ConsoleOutputAdder()
+    out = ConsoleOutputAdder(stderr=True)
 
     if v2 or _any_v2_descriptor([input_erc7730_path]):
         from erc7730.model.input.v2.descriptor import InputERC7730Descriptor as InputERC7730DescriptorV2

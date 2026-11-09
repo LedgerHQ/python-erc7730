@@ -162,4 +162,5 @@ def test_calldata_fails_on_conversion_error(tmp_path: Path) -> None:
     result = runner.invoke(app, ["calldata", "--v2", str(input_file)])
 
     assert result.exit_code == 1, result.output
-    assert "Invalid map key" in result.output
+    assert json.loads(result.stdout) == []
+    assert "Invalid map key" in result.stderr
