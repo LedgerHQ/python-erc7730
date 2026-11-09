@@ -3,7 +3,8 @@ from pathlib import Path
 from shutil import copytree
 
 import pytest
-from typer.testing import CliRunner
+from pydantic import ValidationError
+from typer.testing import CliRunner, Result
 
 from erc7730.main import app
 from erc7730.model import ERC7730ModelType
@@ -128,39 +129,96 @@ def test_convert_registry_files_to_legacy_eip712_files(input_file: Path, tmp_pat
     assert "✅" in out
 
 
-def test_calldata_fails_on_conversion_error(tmp_path: Path) -> None:
-    # a map key that cannot be encoded as a uint32 makes the selector fail to convert
-    descriptor = {
+CALLDATA_TEST_ADDRESS = "0x0000000000000000000000000000000000000001"
+CALLDATA_TEST_UNKNOWN_CHAIN_ID = 987654321
+CALLDATA_TEST_DEPOSIT_FORMATS = {
+    "deposit(uint256 assets)": {
+        "intent": "Deposit",
+        "fields": [{"path": "assets", "label": "Amount", "format": "raw"}],
+    }
+}
+
+
+def _calldata_v2_descriptor(chain_ids: list[int], metadata: dict, formats: dict) -> dict:
+    return {
         "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
         "context": {
             "$id": "test",
-            "contract": {"deployments": [{"chainId": 1, "address": "0x0000000000000000000000000000000000000001"}]},
+            "contract": {"deployments": [{"chainId": c, "address": CALLDATA_TEST_ADDRESS} for c in chain_ids]},
         },
-        "metadata": {
-            "owner": "Test Owner",
-            "maps": {"tokens": {"values": {"4294967296": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"}}},
-        },
-        "display": {
-            "formats": {
-                "deposit(uint256 assets, uint32 marketId)": {
-                    "intent": "Deposit",
-                    "fields": [
-                        {
-                            "path": "assets",
-                            "label": "Amount",
-                            "format": "tokenAmount",
-                            "params": {"token": {"map": "$.metadata.maps.tokens", "keyPath": "#.marketId"}},
-                        }
-                    ],
-                }
-            }
-        },
+        "metadata": {"owner": "Test Owner", **metadata},
+        "display": {"formats": formats},
     }
+
+
+def _invoke_calldata(tmp_path: Path, descriptor: dict) -> Result:
     input_file = tmp_path / "calldata-test.json"
     input_file.write_text(json.dumps(descriptor))
+    return runner.invoke(app, ["calldata", "--v2", str(input_file)])
 
-    result = runner.invoke(app, ["calldata", "--v2", str(input_file)])
+
+def test_calldata_success_prints_only_json_on_stdout(tmp_path: Path) -> None:
+    descriptor = _calldata_v2_descriptor(chain_ids=[1], metadata={}, formats=CALLDATA_TEST_DEPOSIT_FORMATS)
+
+    result = _invoke_calldata(tmp_path, descriptor)
+
+    assert result.exit_code == 0, result.output
+    assert [d["chain_id"] for d in json.loads(result.stdout)] == [1]
+    assert result.stderr == ""
+    assert result.output == result.stdout
+
+
+def test_calldata_warning_goes_to_stderr_and_keeps_stdout_json(tmp_path: Path) -> None:
+    descriptor = _calldata_v2_descriptor(
+        chain_ids=[1, CALLDATA_TEST_UNKNOWN_CHAIN_ID], metadata={}, formats=CALLDATA_TEST_DEPOSIT_FORMATS
+    )
+
+    result = _invoke_calldata(tmp_path, descriptor)
+
+    assert result.exit_code == 0, result.output
+    assert [d["chain_id"] for d in json.loads(result.stdout)] == [1]
+    assert f"warning: Chain id {CALLDATA_TEST_UNKNOWN_CHAIN_ID} is not known" in result.stderr
+    assert "warning" not in result.stdout
+    assert "warning" in result.output
+
+
+def test_calldata_conversion_error_goes_to_stderr_and_exits_1(tmp_path: Path) -> None:
+    # a map key that cannot be encoded as a uint32 makes the selector fail to convert
+    descriptor = _calldata_v2_descriptor(
+        chain_ids=[1],
+        metadata={"maps": {"tokens": {"values": {"4294967296": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"}}}},
+        formats={
+            "deposit(uint256 assets, uint32 marketId)": {
+                "intent": "Deposit",
+                "fields": [
+                    {
+                        "path": "assets",
+                        "label": "Amount",
+                        "format": "tokenAmount",
+                        "params": {"token": {"map": "$.metadata.maps.tokens", "keyPath": "#.marketId"}},
+                    }
+                ],
+            }
+        },
+    )
+
+    result = _invoke_calldata(tmp_path, descriptor)
 
     assert result.exit_code == 1, result.output
     assert json.loads(result.stdout) == []
-    assert "Invalid map key" in result.stderr
+    assert "error: Invalid map key" in result.stderr
+    assert "Invalid map key" not in result.stdout
+    assert "Invalid map key" in result.output
+
+
+def test_calldata_invalid_descriptor_raises_and_exits_1(tmp_path: Path) -> None:
+    descriptor = _calldata_v2_descriptor(chain_ids=[1], metadata={}, formats=CALLDATA_TEST_DEPOSIT_FORMATS)
+    descriptor["display"] = "not an object"
+
+    result = _invoke_calldata(tmp_path, descriptor)
+
+    assert result.exit_code == 1, result.output
+    assert isinstance(result.exception, ValidationError)
+    assert result.stdout == ""
+    assert result.stderr == ""
+    assert result.output == ""
