@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 from shutil import copytree
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -139,7 +140,7 @@ CALLDATA_TEST_DEPOSIT_FORMATS = {
 }
 
 
-def _calldata_v2_descriptor(chain_ids: list[int], metadata: dict, formats: dict) -> dict:
+def _calldata_v2_descriptor(chain_ids: list[int], metadata: dict[str, Any], formats: dict[str, Any]) -> dict[str, Any]:
     return {
         "$schema": "https://eips.ethereum.org/assets/eip-7730/erc7730-v2.schema.json",
         "context": {
@@ -151,7 +152,7 @@ def _calldata_v2_descriptor(chain_ids: list[int], metadata: dict, formats: dict)
     }
 
 
-def _invoke_calldata(tmp_path: Path, descriptor: dict) -> Result:
+def _invoke_calldata(tmp_path: Path, descriptor: dict[str, Any]) -> Result:
     input_file = tmp_path / "calldata-test.json"
     input_file.write_text(json.dumps(descriptor))
     return runner.invoke(app, ["calldata", "--v2", str(input_file)])
