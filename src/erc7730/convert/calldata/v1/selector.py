@@ -62,7 +62,7 @@ def convert_selector(
         creator_url = owner_info.url
         deploy_date = owner_info.deploymentDate.strftime("%Y-%m-%dT%H:%M:%SZ") if owner_info.deploymentDate else None
 
-    enums = convert_enums(deployment, selector, descriptor.metadata.enums)
+    enums = convert_enums(deployment.chainId, deployment.address, descriptor.metadata.enums, selector=selector)
 
     enums_by_id = {enum.enum_id: enum.id for enum in enums}
 
