@@ -9,6 +9,7 @@ from typing import assert_never, final, override
 from pydantic import BaseModel, ConfigDict, FilePath, ValidationError
 from pydantic_core import ErrorDetails
 from rich import print
+from rich.console import Console
 
 MUX = threading.Lock()
 
@@ -115,7 +116,11 @@ class SetOutputAdder(OutputAdder):
 
 
 class ConsoleOutputAdder(OutputAdder):
-    """An output adder that prints to the console."""
+    """An output adder that prints to the console, on stdout or on stderr."""
+
+    def __init__(self, stderr: bool = False) -> None:
+        super().__init__()
+        self._console = Console(stderr=stderr)
 
     @override
     def add(self, output: Output) -> None:
@@ -151,7 +156,7 @@ class ConsoleOutputAdder(OutputAdder):
             log += "\n"
         log += output.message
 
-        print(log)
+        self._console.print(log)
 
 
 class RaisingOutputAdder(ConsoleOutputAdder):
