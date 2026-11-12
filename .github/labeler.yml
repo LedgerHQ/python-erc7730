@@ -8,7 +8,7 @@ ci:
 
 sources:
   - changed-files:
-      - any-glob-to-any-file: ['src/**', 'test/**', 'pyproject.toml']
+      - any-glob-to-any-file: ['src/**', 'tests/**', 'pyproject.toml']
 
 dependencies:
   - changed-files:
