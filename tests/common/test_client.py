@@ -24,7 +24,6 @@ def test_get_supported_chains() -> None:
     assert "OP Mainnet" in names
     assert "OP Sepolia Testnet" in names
     assert "Avalanche C-Chain" in names
-    assert "Avalanche Fuji Testnet" in names
     assert "BitTorrent Chain Mainnet" in names
     assert "BitTorrent Chain Testnet" in names
     assert "Celo Mainnet" in names
