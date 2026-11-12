@@ -17,7 +17,7 @@ from erc7730.model.calldata.v1.instruction import (
     CalldataDescriptorInstructionMapEntryV1,
     CalldataDescriptorInstructionTransactionInfoV1,
 )
-from erc7730.model.types import HexStr, Selector
+from erc7730.model.types import Address, HexStr, Id, Selector
 
 
 class CalldataDescriptorV1(CalldataDescriptorBase):
@@ -31,6 +31,22 @@ class CalldataDescriptorV1(CalldataDescriptorBase):
         default="calldata",
         title="Descriptor type",
         description="Type of the descriptor (contract calldata).",
+    )
+
+    network: Id = Field(
+        title="Ledger Network identifier",
+        description="The Ledger network this descriptor applies to.",
+    )
+
+    chain_id: int = Field(
+        title="Chain ID",
+        description="The contract deployment EIP-155 chain id.",
+        ge=1,
+    )
+
+    address: Address = Field(
+        title="Contract address",
+        description="The contract deployment address.",
     )
 
     selector: Selector = Field(
@@ -88,6 +104,26 @@ class CalldataDescriptorEIP712V1(CalldataDescriptorBase):
         title="Descriptor type version",
         description="Version of the descriptor type (not the version of this specific descriptor, the version of the "
         "descriptor specification)",
+    )
+
+    network: Id | None = Field(
+        default=None,
+        title="Ledger Network identifier",
+        description="The Ledger network this descriptor applies to, if the descriptor is bound to a chain.",
+    )
+
+    chain_id: int | None = Field(
+        default=None,
+        title="Chain ID",
+        description="The EIP-155 chain id of the deployment, if the descriptor is bound to a chain.",
+        ge=1,
+    )
+
+    address: Address | None = Field(
+        default=None,
+        title="Contract address",
+        description="The verifying contract address, if the domain has one. The descriptor is addressed by its domain "
+        "separator and primary type hash, the contract is only a way to look it up.",
     )
 
     domain_separator: HexStr = Field(

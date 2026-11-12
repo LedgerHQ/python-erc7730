@@ -31,7 +31,7 @@ def enum_ordinal(ordinal: str) -> int:
 
 
 def convert_enums(
-    deployment: ResolvedDeployment,
+    deployment: ResolvedDeployment | None,
     enums: dict[Id, EnumDefinition] | None,
     selector: Selector | None = None,
     domain_separator: HexStr | None = None,
@@ -52,8 +52,8 @@ def convert_enums(
 
     return [
         CalldataDescriptorInstructionEnumValueV1(
-            chain_id=deployment.chainId,
-            address=deployment.address,
+            chain_id=deployment.chainId if deployment else None,
+            address=deployment.address if deployment else None,
             selector=selector,
             domain_separator=domain_separator,
             primary_type_hash=primary_type_hash,

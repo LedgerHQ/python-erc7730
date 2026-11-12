@@ -75,7 +75,7 @@ class MapEntries:
 
     def __init__(
         self,
-        deployment: ResolvedDeployment,
+        deployment: ResolvedDeployment | None,
         selector: Selector | None = None,
         domain_separator: HexStr | None = None,
         primary_type_hash: HexStr | None = None,
@@ -132,8 +132,8 @@ class MapEntries:
             for key_source, key_bytes, value_bytes in encoded:
                 self.entries.append(
                     CalldataDescriptorInstructionMapEntryV1(
-                        chain_id=self.deployment.chainId,
-                        address=Address(self.deployment.address),
+                        chain_id=self.deployment.chainId if self.deployment else None,
+                        address=Address(self.deployment.address) if self.deployment else None,
                         selector=self.selector,
                         domain_separator=self.domain_separator,
                         primary_type_hash=self.primary_type_hash,

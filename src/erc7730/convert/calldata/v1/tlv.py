@@ -429,6 +429,8 @@ def _tlv_operation_context(
     """
     out = bytearray()
     if obj.selector is not None:
+        if obj.chain_id is None or obj.address is None:
+            raise ValueError("A chain id and a contract address are required with a selector.")
         out += tlv(tags["CHAIN_ID"], obj.chain_id.to_bytes(8))
         out += tlv(tags["CONTRACT_ADDR"], from_hex(obj.address))
         out += tlv(tags["SELECTOR"], from_hex(obj.selector))

@@ -3,6 +3,7 @@ from typing import Any
 
 from eth_utils import keccak
 
+from erc7730.common.output import ListOutputAdder, OutputAdder
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import (
     erc7730_v2_descriptor_to_calldata_descriptors,
 )
@@ -38,6 +39,9 @@ def _convert(
     domain: dict[str, Any] | None = None,
     chain_id: int = DEFAULT_CHAIN_ID,
     address: str = DEFAULT_ADDRESS,
+    deployments: list[dict[str, Any]] | None = None,
+    domain_separator: str | None = None,
+    out: OutputAdder | None = None,
 ) -> CalldataDescriptorEIP712V1:
     """Build a minimal EIP-712 v2 descriptor and return the single converted calldata descriptor."""
     descriptor = InputERC7730Descriptor.model_validate_json(
@@ -47,8 +51,11 @@ def _convert(
                 "context": {
                     "$id": "test",
                     "eip712": {
-                        "deployments": [{"chainId": chain_id, "address": address}],
+                        "deployments": [{"chainId": chain_id, "address": address}]
+                        if deployments is None
+                        else deployments,
                         "domain": domain if domain is not None else {"name": "Test", "version": "1"},
+                        **({"domainSeparator": domain_separator} if domain_separator else {}),
                     },
                 },
                 "metadata": {"owner": "Test Owner"},
@@ -57,7 +64,7 @@ def _convert(
         )
     )
 
-    descriptors = erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=chain_id)
+    descriptors = erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=chain_id, out=out)
     assert len(descriptors) == 1
     descriptor_out = descriptors[0]
     assert isinstance(descriptor_out, CalldataDescriptorEIP712V1)
@@ -240,3 +247,87 @@ def test_eip712_domain_separator_matches_eip712_reference_vector() -> None:
         address="0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
     )
     assert descriptor.domain_separator == "0xf2cee375fa42b42143804025fc449deafd50cc031ca257e0b194a650a912090f"
+
+
+def _domain_separator(fields: list[tuple[str, str, bytes]]) -> str:
+    """Reference hashStruct(EIP712Domain), encoded by hand: (type, name, 32 bytes encoded value) per field."""
+    domain_type = "EIP712Domain(" + ",".join(f"{t} {n}" for t, n, _ in fields) + ")"
+    return "0x" + keccak(keccak(text=domain_type) + b"".join(v for _, _, v in fields)).hex()
+
+
+def test_eip712_domain_separator_with_salt_and_without_contract() -> None:
+    salt = "0x" + "11" * 32
+    expected = _domain_separator(
+        [("string", "name", keccak(text="Test")), ("bytes32", "salt", bytes.fromhex("11" * 32))]
+    )
+    out = ListOutputAdder()
+    descriptor = _convert(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": "amount"}],
+        domain={"name": "Test", "salt": salt},
+        deployments=[],
+        domain_separator=expected,
+        out=out,
+    )
+
+    assert not out.has_warnings
+    assert descriptor.domain_separator == expected
+    assert [f.name for f in descriptor.schema_info.structs[0].fields] == ["name", "salt"]
+
+
+def test_eip712_descriptor_without_deployment_is_not_bound_to_a_chain() -> None:
+    descriptor = _convert(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": "amount"}],
+        deployments=[],
+        domain_separator="0x" + "ab" * 32,
+        chain_id=137,
+    )
+
+    assert descriptor.chain_id is None
+    assert descriptor.address is None
+    assert descriptor.network is None
+    assert descriptor.message_info.chain_id is None
+    assert descriptor.message_info.address is None
+    assert descriptor.message_info.descriptor
+    assert descriptor.model_dump_json()
+
+
+def test_eip712_descriptor_without_deployment_takes_chain_and_contract_from_the_domain() -> None:
+    expected = _domain_separator(
+        [
+            ("string", "name", keccak(text="Test")),
+            ("uint256", "chainId", (1).to_bytes(32)),
+            ("address", "verifyingContract", bytes.fromhex(DEFAULT_ADDRESS[2:]).rjust(32, b"\x00")),
+        ]
+    )
+    out = ListOutputAdder()
+    descriptor = _convert(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": "amount"}],
+        domain={"name": "Test", "chainId": 1, "verifyingContract": DEFAULT_ADDRESS},
+        deployments=[],
+        domain_separator=expected,
+        out=out,
+    )
+
+    assert not out.has_warnings
+    assert descriptor.chain_id == 1
+    assert descriptor.address == DEFAULT_ADDRESS.lower()
+    assert descriptor.network is not None
+    assert descriptor.domain_separator == expected
+
+
+def test_eip712_domain_separator_given_by_the_descriptor_is_checked() -> None:
+    out = ListOutputAdder()
+    descriptor = _convert(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": "amount"}],
+        deployments=[],
+        domain_separator="0x" + "ab" * 32,
+        out=out,
+    )
+
+    assert descriptor.domain_separator == "0x" + "ab" * 32
+    assert out.has_warnings
+    assert any("does not match" in o.message for o in out.outputs)

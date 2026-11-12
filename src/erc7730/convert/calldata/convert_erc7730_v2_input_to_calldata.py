@@ -794,6 +794,11 @@ def _convert_v2_param(
         return None
 
     def _deployment_map_key(value_map: ResolvedValueMap) -> str | None:
+        if maps.deployment is None:
+            return out.error(
+                title="Missing deployment",
+                message=f"Map {value_map.map} is keyed by the deployment, which the descriptor does not declare.",
+            )
         return deployment_map_key(value_map.keyPath, maps.deployment.chainId, maps.deployment.address)
 
     def _lookup_deployment_value(value_map: ResolvedValueMap, key: str) -> ResolvedValueConstant | None:
@@ -823,7 +828,9 @@ def _convert_v2_param(
         other_chain_path = chain_id_path is not None and not (
             isinstance(chain_id_path, ContainerPath) and chain_id_path.field == ContainerField.CHAIN_ID
         )
-        if (chain_id is not None and chain_id != maps.deployment.chainId) or other_chain_path:
+        if (
+            chain_id is not None and (maps.deployment is None or chain_id != maps.deployment.chainId)
+        ) or other_chain_path:
             out.error(
                 title="Unsupported token chain",
                 message=f"""Token "{field.label}" may be on another chain than the transaction, which cannot be """
@@ -1104,7 +1111,7 @@ def _convert_eip712_descriptors(
     if not isinstance(context, InputEIP712Context):
         return []
 
-    if chain_id is not None:
+    if chain_id is not None and context.eip712.deployments:
         deployment_chain_ids = {d.chainId for d in context.eip712.deployments}
         if chain_id not in deployment_chain_ids:
             return []
@@ -1118,12 +1125,17 @@ def _convert_eip712_descriptors(
 
     output_descriptors: list[CalldataDescriptor] = []
 
-    for deployment in resolved_context.eip712.deployments:
-        if chain_id is not None and chain_id != deployment.chainId:
+    # a descriptor without deployment is addressed by its domain separator only: its domain is the one of the descriptor
+    deployments: list[ResolvedDeployment | None] = [*resolved_context.eip712.deployments] or [None]
+
+    for deployment in deployments:
+        deployment_chain_id = deployment.chainId if deployment else (domain.chainId if domain else None)
+
+        if chain_id is not None and deployment_chain_id is not None and chain_id != deployment_chain_id:
             continue
 
-        if ledger_network_id(deployment.chainId) is None:
-            out.warning(f"Chain id {deployment.chainId} is not known, skipping it")
+        if deployment_chain_id is not None and ledger_network_id(deployment_chain_id) is None:
+            out.warning(f"Chain id {deployment_chain_id} is not known, skipping it")
             continue
 
         for encode_type_key, format in resolved_descriptor.display.formats.items():
@@ -1150,7 +1162,7 @@ def _convert_eip712_descriptors(
 
 def _convert_eip712_message(
     descriptor: ResolvedERC7730Descriptor,
-    deployment: ResolvedDeployment,
+    deployment: ResolvedDeployment | None,
     domain: ResolvedDomain | None,
     domain_separator: str | None,
     schema: ReconstructedSchema,
@@ -1162,7 +1174,7 @@ def _convert_eip712_message(
     Generate a calldata descriptor for a single EIP-712 message primary type.
 
     :param descriptor: resolved v2 source ERC-7730 descriptor
-    :param deployment: chain id / verifying contract address for which the descriptor is generated
+    :param deployment: chain id / verifying contract address for which the descriptor is generated, if any
     :param domain: EIP-712 domain of the messages
     :param domain_separator: domain separator given by the descriptor, computed from the domain when not set
     :param schema: reconstructed EIP-712 schema (structs + primary type hash)
@@ -1187,6 +1199,15 @@ def _convert_eip712_message(
             else None
         )
 
+    # without deployment, the chain id and verifying contract can only come from the domain
+    chain_id = deployment.chainId if deployment else (domain.chainId if domain else None)
+    address = deployment.address if deployment else (domain.verifyingContract if domain else None)
+    if deployment is None and chain_id is not None and address is not None:
+        deployment = ResolvedDeployment(chainId=chain_id, address=address)
+
+    has_domain_fields = bool(schema.types["EIP712Domain"])
+    computed = compute_domain_separator(schema, domain, chain_id, address, out) if has_domain_fields else None
+
     if domain_separator:
         try:
             separator_bytes = from_hex(domain_separator)
@@ -1199,7 +1220,17 @@ def _convert_eip712_message(
                 "string.",
             )
         domain_separator_hex = HexStr("0x" + separator_bytes.hex())
-    elif (computed := compute_domain_separator(schema, domain, deployment, out)) is None:
+        if computed is not None and computed != domain_separator_hex:
+            out.warning(
+                f"Domain separator {domain_separator_hex} does not match the one computed from the domain "
+                f"({computed}), the device will not match the messages of this descriptor."
+            )
+    elif computed is None:
+        if not has_domain_fields:
+            return out.error(
+                title="Missing domain",
+                message="The domain separator cannot be computed: set the domain or the domain separator.",
+            )
         return None
     else:
         domain_separator_hex = computed
@@ -1238,8 +1269,8 @@ def _convert_eip712_message(
     schema_info = CalldataDescriptorInstructionEIP712SchemaV1(structs=schema.structs)
 
     message_info = CalldataDescriptorInstructionEIP712MessageInfoV1(
-        chain_id=deployment.chainId,
-        address=deployment.address,
+        chain_id=chain_id,
+        address=address,
         domain_separator=domain_separator_hex,
         primary_type_hash=schema.primary_type_hash,
         hash=hash.digest().hex(),
@@ -1253,9 +1284,9 @@ def _convert_eip712_message(
 
     return CalldataDescriptorEIP712V1(
         source=source,
-        network=cast(str, ledger_network_id(deployment.chainId)),
-        chain_id=deployment.chainId,
-        address=deployment.address,
+        network=ledger_network_id(chain_id) if chain_id is not None else None,
+        chain_id=chain_id,
+        address=address,
         domain_separator=domain_separator_hex,
         primary_type_hash=schema.primary_type_hash,
         schema_info=schema_info,
