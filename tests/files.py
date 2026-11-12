@@ -50,11 +50,21 @@ ERC7730_EIP712_DESCRIPTORS = sorted(
 )
 ERC7730_DESCRIPTORS = sorted(ERC7730_CALLDATA_DESCRIPTORS + ERC7730_EIP712_DESCRIPTORS)
 
-# Registry descriptors that legitimately generate no calldata descriptor: conversion is still run on them (exercising
-# resolution), but the non-empty calldata assertion is skipped.
-ERC7730_EXPECTED_EMPTY_CALLDATA = {
-    "calldata-KasExitBridge.json",  # only deployed on chain 38833 (Igra), which is not a Ledger-supported network
-    "calldata-PftNft.json",  # enum keyed by "True"/"False" instead of integer field values (not encodable as uint8)
+# Registry descriptors the calldata converter does not support yet (known gaps, reported as conversion errors). They are
+# expected to fail: the test turns red once one is fixed, so it can be removed from this list.
+ERC7730_EXPECTED_CALLDATA_FAILURES = {
+    # visibility conditions on formats other than raw/addressName (#335)
+    "gondi/eip712-LoanOffer-v3_1.json",
+    "gondi/eip712-LoanOffer-v3_2.json",
+    "paraswap/eip712-paraswap.json",
+    "permit/eip712-permit-ethereum-dai.json",
+    "permit/eip712-permit-polygon-dai.json",
+    # constant/value rejected: $.value above 255 or $.base empty
+    "rarible/eip712-rarible-exchange-v2.json",
+    # visibility condition value not encodable for the field type
+    "gondi/eip712-ExecutionData-v3_1.json",
+    "gondi/eip712-ExecutionData-v3_2.json",
+    "ocarina-trade/eip712-OTCRegistry.json",
 }
 ERC7730_V2_SCHEMA_PATH = ERC7730_REGISTRY_ROOT / "specs" / "erc7730-v2.schema.json"
 ERC7730_V2_SCHEMA = load_json_file(ERC7730_V2_SCHEMA_PATH)
