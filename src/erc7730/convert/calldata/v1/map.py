@@ -9,11 +9,14 @@ byte for byte, so each map key is encoded exactly as the device reads the key va
  - the chain id is a 64 bits big endian integer, the sender / target addresses are 20 bytes, the native value is a
    256 bits big endian integer
 
+In a typed message, the key is the leaf as the host sends it (see "Leaf encoding" in doc/eip712.md): an integer in its
+minimal big-endian form (``7`` is ``0x07``), a ``bytesN`` on exactly N bytes, an address on 20 bytes.
+
 See doc/tlv_structs.md#map_entry in https://github.com/LedgerHQ/app-ethereum for specifications of these structs.
 """
 
 from collections.abc import Callable
-from typing import assert_never
+from typing import Any, assert_never
 
 from erc7730.common.abi import ABIDataType
 from erc7730.common.binary import from_hex
@@ -25,6 +28,8 @@ from erc7730.model.calldata.v1.value import (
     CalldataDescriptorContainerPathV1,
     CalldataDescriptorContainerPathValueV1,
     CalldataDescriptorDataPathV1,
+    CalldataDescriptorEIP712PathElementArraySliceV1,
+    CalldataDescriptorEIP712PathV1,
     CalldataDescriptorMapRefV1,
     CalldataDescriptorPathElementArrayV1,
     CalldataDescriptorPathElementLeafV1,
@@ -60,16 +65,25 @@ _Invalid = Callable[[str], bytes | None]
 
 class MapEntries:
     """
-    Device side maps of a calldata descriptor (bound to a single deployment and selector).
+    Device side maps of a calldata descriptor, bound to a single deployment and either a selector (transaction), or the
+    domain separator and primary type hash of the message (EIP-712 message).
 
     Map ids are allocated per descriptor: a map looked up several times with the same key and value encodings shares
     its id and MAP_ENTRY structs, a map looked up with different encodings (for instance its values read as addresses
     in one field and as strings in another) gets one id per encoding.
     """
 
-    def __init__(self, deployment: ResolvedDeployment, selector: Selector) -> None:
+    def __init__(
+        self,
+        deployment: ResolvedDeployment,
+        selector: Selector | None = None,
+        domain_separator: HexStr | None = None,
+        primary_type_hash: HexStr | None = None,
+    ) -> None:
         self.deployment = deployment
         self.selector = selector
+        self.domain_separator = domain_separator
+        self.primary_type_hash = primary_type_hash
         self.entries: list[CalldataDescriptorInstructionMapEntryV1] = []
         self._ids: dict[tuple[str, tuple[tuple[bytes, bytes], ...]], int] = {}
 
@@ -121,6 +135,8 @@ class MapEntries:
                         chain_id=self.deployment.chainId,
                         address=Address(self.deployment.address),
                         selector=self.selector,
+                        domain_separator=self.domain_separator,
+                        primary_type_hash=self.primary_type_hash,
                         map=map_name,
                         id=map_id,
                         key_source=key_source,
@@ -197,15 +213,20 @@ def _convert_key_path(
         case DataPath() as data_path:
             if (key := convert_path(data_path, out)) is None:
                 return None
-            if not isinstance(key.binary_path, CalldataDescriptorDataPathV1):
+            if isinstance(key.binary_path, CalldataDescriptorEIP712PathV1):
+                path_elements: list[Any] = list(key.binary_path.elements)
+            elif isinstance(key.binary_path, CalldataDescriptorDataPathV1):
+                path_elements = list(key.binary_path.elements)
+            else:
                 return out.error(
                     title="Unsupported map key",
-                    message=f"Path {data_path} used as key of map {value_map.map} cannot be looked up by the "
-                    "device: maps are only supported on transaction fields.",
+                    message=f"Path {data_path} cannot be used as key of map {value_map.map}.",
                 )
             # the device looks up a single key: it rejects a path reading several values
-            for element in key.binary_path.elements:
-                if isinstance(element, CalldataDescriptorPathElementArrayV1) and not _is_single_element(element):
+            for element in path_elements:
+                if isinstance(
+                    element, CalldataDescriptorPathElementArrayV1 | CalldataDescriptorEIP712PathElementArraySliceV1
+                ) and not _is_single_element(element):
                     return out.error(
                         title="Unsupported map key",
                         message=f"Path {data_path} used as key of map {value_map.map} references several values, a "
@@ -217,7 +238,9 @@ def _convert_key_path(
             assert_never(value_map.keyPath)
 
 
-def _is_single_element(element: CalldataDescriptorPathElementArrayV1) -> bool:
+def _is_single_element(
+    element: CalldataDescriptorPathElementArrayV1 | CalldataDescriptorEIP712PathElementArraySliceV1,
+) -> bool:
     """Whether an array path element selects a single array element."""
     match element.start, element.end:
         case int(start), int(end):
@@ -281,8 +304,51 @@ def _encode_key(key_source: str, key: CalldataDescriptorValuePathV1, map_name: s
                 return _encode_static_key(key_source, key, invalid)
             return _encode_dynamic_key(key_source, key, invalid)
 
+        case CalldataDescriptorEIP712PathV1():
+            return _encode_eip712_key(key_source, key, invalid)
+
         case _:
             assert_never(key.binary_path)
+
+
+def _encode_eip712_key(key_source: str, key: CalldataDescriptorValuePathV1, invalid: _Invalid) -> bytes | None:
+    """Encode a key read from a leaf of a typed message: the device compares the leaf as the host sends it."""
+    size = key.type_size
+    match key.type_family:
+        case CalldataDescriptorTypeFamily.UINT | CalldataDescriptorTypeFamily.INT:
+            if (value := _parse_int(key_source)) is None:
+                return invalid("expected an integer")
+            if size is None:
+                return invalid("the size of the integer is unknown")
+            if key.type_family is CalldataDescriptorTypeFamily.UINT:
+                if value < 0:
+                    return invalid("expected an unsigned integer")
+                if value.bit_length() > size * 8:
+                    return invalid(f"it does not fit in {size} bytes")
+            elif not -(1 << (size * 8 - 1)) <= value < 1 << (size * 8 - 1):
+                return invalid(f"it does not fit in {size} bytes")
+            if value < 0:
+                # a negative integer takes exactly the size of its type, which is how the device tells its sign
+                return _check_key_size(value.to_bytes(size, byteorder="big", signed=True), invalid)
+            return _check_key_size(value.to_bytes(max(1, (value.bit_length() + 7) // 8), byteorder="big"), invalid)
+        case CalldataDescriptorTypeFamily.ADDRESS:
+            if (address := _encode_hex(key_source, ADDRESS_LENGTH, invalid)) is None:
+                return None
+            if len(address) != ADDRESS_LENGTH:
+                return invalid(f"an address is exactly {ADDRESS_LENGTH} bytes")
+            return address
+        case CalldataDescriptorTypeFamily.BOOL:
+            return _encode_bool(key_source, invalid)
+        case CalldataDescriptorTypeFamily.BYTES:
+            if (hex_encoded := _encode_hex(key_source, MAX_MAP_ENTRY_SIZE, invalid)) is None:
+                return None
+            if size is not None and len(hex_encoded) != size:
+                return invalid(f"a bytes{size} value is exactly {size} bytes, got {len(hex_encoded)}")
+            return _check_key_size(hex_encoded, invalid)
+        case CalldataDescriptorTypeFamily.STRING:
+            return _check_key_size(key_source.encode("utf-8"), invalid)
+        case _:
+            return invalid(f"{key.type_family.name.lower()} keys are not supported")
 
 
 def _encode_static_key(key_source: str, key: CalldataDescriptorValuePathV1, invalid: _Invalid) -> bytes | None:

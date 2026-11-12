@@ -5,10 +5,11 @@ The device reads the key from the transaction and matches it byte for byte again
 be encodable as the value at the key path (for instance, a uint32 key must fit in 4 bytes).
 """
 
+from collections.abc import Callable
 from typing import assert_never, final, override
 
 from erc7730.common.output import OutputAdder
-from erc7730.convert.calldata.v1.abi import function_to_abi_tree
+from erc7730.convert.calldata.v1.abi import ABITree, function_to_abi_tree
 from erc7730.convert.calldata.v1.map import encode_map_keys
 from erc7730.convert.calldata.v1.path import convert_data_path
 from erc7730.convert.resolved.v2.values import is_deployment_key
@@ -53,12 +54,8 @@ class ValidateMapKeysLinter(ERC7730Linter):
                         continue
                     # only built when needed: some ABI types (fixed point numbers) cannot be converted to a tree
                     abi_tree = function_to_abi_tree(abi)
-
-                    def convert_path(data_path: DataPath, out: OutputAdder) -> CalldataDescriptorValuePathV1 | None:
-                        return convert_data_path(data_path, abi_tree, out)
-
                     for value_map in value_maps:
-                        encode_map_keys(value_map, convert_path, out)
+                        encode_map_keys(value_map, _path_converter(abi_tree), out)
             case _:
                 assert_never(descriptor.context)
 
@@ -78,3 +75,10 @@ def _value_maps(field: ResolvedField) -> list[ResolvedValueMap]:
             return [value_map for sub_field in field.fields for value_map in _value_maps(sub_field)]
         case _:
             assert_never(field)
+
+
+def _path_converter(abi_tree: ABITree) -> Callable[[DataPath, OutputAdder], CalldataDescriptorValuePathV1 | None]:
+    def convert_path(data_path: DataPath, out: OutputAdder) -> CalldataDescriptorValuePathV1 | None:
+        return convert_data_path(data_path, abi_tree, out)
+
+    return convert_path

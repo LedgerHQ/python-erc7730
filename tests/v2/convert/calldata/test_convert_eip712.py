@@ -6,11 +6,12 @@ from eth_utils import keccak
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import (
     erc7730_v2_descriptor_to_calldata_descriptors,
 )
-from erc7730.convert.calldata.v1.tlv import tlv_eip712_field, tlv_eip712_path_element
+from erc7730.convert.calldata.v1.tlv import tlv_eip712_field, tlv_eip712_message_info, tlv_eip712_path_element
 from erc7730.model.calldata.v1.descriptor import CalldataDescriptorEIP712V1
 from erc7730.model.calldata.v1.eip712 import CalldataDescriptorEIP712FieldV1, CalldataDescriptorEIP712SolType
 from erc7730.model.calldata.v1.value import (
     CalldataDescriptorEIP712PathElementArraySliceV1,
+    CalldataDescriptorEIP712PathElementLeafSliceV1,
     CalldataDescriptorEIP712PathElementStructFieldV1,
     CalldataDescriptorEIP712PathV1,
     CalldataDescriptorValuePathV1,
@@ -36,6 +37,7 @@ def _convert(
     *,
     domain: dict[str, Any] | None = None,
     chain_id: int = DEFAULT_CHAIN_ID,
+    address: str = DEFAULT_ADDRESS,
 ) -> CalldataDescriptorEIP712V1:
     """Build a minimal EIP-712 v2 descriptor and return the single converted calldata descriptor."""
     descriptor = InputERC7730Descriptor.model_validate_json(
@@ -45,7 +47,7 @@ def _convert(
                 "context": {
                     "$id": "test",
                     "eip712": {
-                        "deployments": [{"chainId": chain_id, "address": DEFAULT_ADDRESS}],
+                        "deployments": [{"chainId": chain_id, "address": address}],
                         "domain": domain if domain is not None else {"name": "Test", "version": "1"},
                     },
                 },
@@ -200,3 +202,41 @@ def test_eip712_path_element_tlv_encoding() -> None:
 
     # wildcard slice (no START/END) is an empty payload
     assert tlv_eip712_path_element(CalldataDescriptorEIP712PathElementArraySliceV1()).hex() == "0200"
+
+
+def test_eip712_leaf_slice_tlv_encoding() -> None:
+    # EIP712_LEAF_SLICE: tag 0x03 wrapping START (0x01) / END (0x02)
+    assert (
+        tlv_eip712_path_element(CalldataDescriptorEIP712PathElementLeafSliceV1(start=0, end=4)).hex()
+        == "03080102000002020004"
+    )
+
+
+def _tags(tlv: bytes) -> list[int]:
+    """List the tags of a flat TLV (single byte tag, single byte length)."""
+    tags = []
+    i = 0
+    while i < len(tlv):
+        tags.append(tlv[i])
+        i += 2 + tlv[i + 1]
+    return tags
+
+
+def test_eip712_message_info_is_bound_by_domain_separator_and_primary_type_hash() -> None:
+    descriptor = _convert(PERMIT_TYPE, [{"path": "value", "label": "Value", "format": "amount"}])
+    tags = _tags(tlv_eip712_message_info(descriptor.message_info))
+
+    assert 0x0B in tags  # DOMAIN_SEPARATOR
+    assert 0x0C in tags  # PRIMARY_TYPE_HASH
+    assert descriptor.domain_separator == descriptor.message_info.domain_separator
+
+
+def test_eip712_domain_separator_matches_eip712_reference_vector() -> None:
+    # EIP-712 reference example (Ether Mail)
+    descriptor = _convert(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": "amount"}],
+        domain={"name": "Ether Mail", "version": "1"},
+        address="0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+    )
+    assert descriptor.domain_separator == "0xf2cee375fa42b42143804025fc449deafd50cc031ca257e0b194a650a912090f"

@@ -14,13 +14,14 @@ from dataclasses import dataclass, field
 from eth_utils import keccak
 
 from erc7730.common.abi import parse_encode_type, to_encode_type
+from erc7730.common.binary import from_hex
 from erc7730.common.output import OutputAdder
 from erc7730.model.calldata.v1.eip712 import (
     CalldataDescriptorEIP712FieldV1,
     CalldataDescriptorEIP712SolType,
     CalldataDescriptorEIP712StructV1,
 )
-from erc7730.model.resolved.v2.context import ResolvedDomain
+from erc7730.model.resolved.v2.context import ResolvedDeployment, ResolvedDomain
 from erc7730.model.types import HexStr
 
 
@@ -186,3 +187,52 @@ def reconstruct_schema(
         types=types,
         structs=structs,
     )
+
+
+def compute_domain_separator(
+    schema: ReconstructedSchema,
+    domain: ResolvedDomain | None,
+    deployment: ResolvedDeployment,
+    out: OutputAdder,
+) -> HexStr | None:
+    """
+    Compute the domain separator, ``hashStruct(domain)``, of the messages of one deployment.
+
+    The domain is made of the values of the descriptor domain, with the chain id and contract address of the
+    deployment.
+
+    :param schema: reconstructed schema, which holds the type of the domain
+    :param domain: the resolved EIP-712 domain
+    :param deployment: deployment providing the chain id and verifying contract of the domain
+    :param out: error handler
+    :return: the domain separator, or None on error
+    """
+    domain_fields = schema.types["EIP712Domain"]
+    domain_type = f"EIP712Domain({','.join(f'{type_str} {name}' for type_str, name in domain_fields)})"
+
+    encoded = bytearray(keccak(text=domain_type))
+    for _, name in domain_fields:
+        match name:
+            case "name" | "version":
+                value = getattr(domain, name)
+                encoded += keccak(text=value)
+            case "chainId":
+                encoded += deployment.chainId.to_bytes(32)
+            case "verifyingContract":
+                encoded += from_hex(deployment.address).rjust(32, b"\x00")
+            case "salt":
+                salt_hex = domain.salt if domain is not None else None
+                try:
+                    salt = from_hex(salt_hex) if salt_hex is not None else b""
+                except ValueError:
+                    salt = b""
+                if len(salt) != 32:
+                    return out.error(
+                        title="Invalid domain salt",
+                        message=f"Domain salt {salt_hex} must be a 32 bytes hexadecimal string.",
+                    )
+                encoded += salt
+            case _:
+                raise ValueError(f"Unexpected domain field {name}")
+
+    return HexStr("0x" + keccak(bytes(encoded)).hex())

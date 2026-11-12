@@ -90,6 +90,13 @@ class CalldataDescriptorEIP712V1(CalldataDescriptorBase):
         "descriptor specification)",
     )
 
+    domain_separator: HexStr = Field(
+        title="Domain separator",
+        description="hashStruct(domain) of the EIP-712 message domain.",
+        min_length=64,
+        max_length=66,
+    )
+
     primary_type_hash: HexStr = Field(
         title="Primary type hash",
         description="keccak256(encodeType(primaryType)) of the EIP-712 message primary type.",
@@ -110,6 +117,13 @@ class CalldataDescriptorEIP712V1(CalldataDescriptorBase):
     enums: list[CalldataDescriptorInstructionEnumValueV1] = Field(
         title="ENUM_VALUE instructions descriptors",
         description="Descriptor and metadata to craft ENUM APDUs.",
+    )
+
+    maps: list[CalldataDescriptorInstructionMapEntryV1] = Field(
+        default_factory=list,
+        title="MAP_ENTRY instructions descriptors",
+        description="Descriptor and metadata to craft MAP_ENTRY APDUs, one per key of the maps looked up by the "
+        "device. Only the entries matching the keys read from the message need to be provided.",
     )
 
     fields: list[CalldataDescriptorInstructionFieldV1] = Field(
