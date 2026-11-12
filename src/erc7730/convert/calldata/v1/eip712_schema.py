@@ -21,7 +21,7 @@ from erc7730.model.calldata.v1.eip712 import (
     CalldataDescriptorEIP712SolType,
     CalldataDescriptorEIP712StructV1,
 )
-from erc7730.model.resolved.v2.context import ResolvedDeployment, ResolvedDomain
+from erc7730.model.resolved.v2.context import ResolvedDomain
 from erc7730.model.types import HexStr
 
 
@@ -192,18 +192,20 @@ def reconstruct_schema(
 def compute_domain_separator(
     schema: ReconstructedSchema,
     domain: ResolvedDomain | None,
-    deployment: ResolvedDeployment,
+    chain_id: int | None,
+    address: str | None,
     out: OutputAdder,
 ) -> HexStr | None:
     """
     Compute the domain separator, ``hashStruct(domain)``, of the messages of one deployment.
 
-    The domain is made of the values of the descriptor domain, with the chain id and contract address of the
-    deployment.
+    The fields of the domain are the ones of its reconstructed type (see ``reconstruct_schema``): their values are the
+    ones of the descriptor domain, with the chain id and contract address of the deployment.
 
     :param schema: reconstructed schema, which holds the type of the domain
     :param domain: the resolved EIP-712 domain
-    :param deployment: deployment providing the chain id and verifying contract of the domain
+    :param chain_id: chain id of the domain
+    :param address: verifying contract of the domain
     :param out: error handler
     :return: the domain separator, or None on error
     """
@@ -217,9 +219,15 @@ def compute_domain_separator(
                 value = getattr(domain, name)
                 encoded += keccak(text=value)
             case "chainId":
-                encoded += deployment.chainId.to_bytes(32)
+                if chain_id is None:
+                    _missing_domain_value(name, out)
+                    return None
+                encoded += chain_id.to_bytes(32)
             case "verifyingContract":
-                encoded += from_hex(deployment.address).rjust(32, b"\x00")
+                if address is None:
+                    _missing_domain_value(name, out)
+                    return None
+                encoded += from_hex(address).rjust(32, b"\x00")
             case "salt":
                 salt_hex = domain.salt if domain is not None else None
                 try:
@@ -236,3 +244,10 @@ def compute_domain_separator(
                 raise ValueError(f"Unexpected domain field {name}")
 
     return HexStr("0x" + keccak(bytes(encoded)).hex())
+
+
+def _missing_domain_value(name: str, out: OutputAdder) -> None:
+    out.error(
+        title="Missing domain value",
+        message=f"Domain field {name} has no value: declare a deployment, or set it in the domain.",
+    )

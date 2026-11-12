@@ -65,13 +65,19 @@ class CalldataDescriptorFieldVisibilityV1(IntEnum):
 
 
 def _validate_operation_context(
-    selector: str | None, domain_separator: str | None, primary_type_hash: str | None
+    selector: str | None,
+    chain_id: int | None,
+    address: str | None,
+    domain_separator: str | None,
+    primary_type_hash: str | None,
 ) -> None:
     """
     Check an ENUM_VALUE / MAP_ENTRY is bound to exactly one kind of operation: a transaction (selector), or an EIP-712
     message (domain separator and primary type hash). The device refuses a struct with tags of both, or of none.
     """
     if selector is not None:
+        if chain_id is None or address is None:
+            raise ValueError("A chain id and a contract address are required with a selector.")
         if domain_separator is not None or primary_type_hash is not None:
             raise ValueError("A selector cannot be combined with a domain separator or a primary type hash.")
     elif domain_separator is None or primary_type_hash is None:
@@ -96,17 +102,6 @@ class CalldataDescriptorInstructionTransactionInfoBaseV1(CalldataDescriptorInstr
         default=1,
         title="Struct version",
         description="Version of the struct",
-    )
-
-    chain_id: int = Field(
-        title="Chain ID",
-        description="The contract deployment EIP-155 chain id.",
-        ge=1,
-    )
-
-    address: Address = Field(
-        title="Contract address",
-        description="The contract deployment address.",
     )
 
     hash: str = Field(
@@ -166,6 +161,17 @@ class CalldataDescriptorInstructionTransactionInfoBaseV1(CalldataDescriptorInstr
 class CalldataDescriptorInstructionTransactionInfoV1(CalldataDescriptorInstructionTransactionInfoBaseV1):
     """Instruction descriptor for the TRANSACTION_INFO struct."""
 
+    chain_id: int = Field(
+        title="Chain ID",
+        description="The contract deployment EIP-155 chain id.",
+        ge=1,
+    )
+
+    address: Address = Field(
+        title="Contract address",
+        description="The contract deployment address.",
+    )
+
     selector: Selector = Field(
         title="Function selector",
         description="The 4-bytes function selector this descriptor applies to.",
@@ -190,6 +196,19 @@ class CalldataDescriptorInstructionEIP712MessageInfoV1(CalldataDescriptorInstruc
     are only kept as metadata of the deployment the domain separator was computed for). Referred to as "EIP712 v2" in
     the Ethereum app specifications.
     """
+
+    chain_id: int | None = Field(
+        default=None,
+        title="Chain ID",
+        description="The contract deployment EIP-155 chain id (metadata only, not part of the struct).",
+        ge=1,
+    )
+
+    address: Address | None = Field(
+        default=None,
+        title="Contract address",
+        description="The verifying contract address (metadata only, not part of the struct).",
+    )
 
     domain_separator: HexStr = Field(
         title="Domain separator",
@@ -224,15 +243,17 @@ class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBase
         description="Version of the ENUM struct",
     )
 
-    chain_id: int = Field(
+    chain_id: int | None = Field(
+        default=None,
         title="Chain ID",
-        description="The contract deployment EIP-155 chain id.",
+        description="The contract deployment EIP-155 chain id (required for transactions).",
         ge=1,
     )
 
-    address: Address = Field(
+    address: Address | None = Field(
+        default=None,
         title="Contract address",
-        description="The contract deployment address.",
+        description="The contract deployment address (required for transactions).",
     )
 
     selector: Selector | None = Field(
@@ -260,7 +281,9 @@ class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBase
 
     @model_validator(mode="after")
     def _validate_context(self) -> Self:
-        _validate_operation_context(self.selector, self.domain_separator, self.primary_type_hash)
+        _validate_operation_context(
+            self.selector, self.chain_id, self.address, self.domain_separator, self.primary_type_hash
+        )
         return self
 
     enum_id: str = Field(
@@ -311,15 +334,17 @@ class CalldataDescriptorInstructionMapEntryV1(CalldataDescriptorInstructionBaseV
         description="Version of the MAP_ENTRY struct",
     )
 
-    chain_id: int = Field(
+    chain_id: int | None = Field(
+        default=None,
         title="Chain ID",
-        description="The contract deployment EIP-155 chain id.",
+        description="The contract deployment EIP-155 chain id (required for transactions).",
         ge=1,
     )
 
-    address: Address = Field(
+    address: Address | None = Field(
+        default=None,
         title="Contract address",
-        description="The contract deployment address.",
+        description="The contract deployment address (required for transactions).",
     )
 
     selector: Selector | None = Field(
@@ -347,7 +372,9 @@ class CalldataDescriptorInstructionMapEntryV1(CalldataDescriptorInstructionBaseV
 
     @model_validator(mode="after")
     def _validate_context(self) -> Self:
-        _validate_operation_context(self.selector, self.domain_separator, self.primary_type_hash)
+        _validate_operation_context(
+            self.selector, self.chain_id, self.address, self.domain_separator, self.primary_type_hash
+        )
         return self
 
     map: str = Field(
