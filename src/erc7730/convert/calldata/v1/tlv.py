@@ -43,11 +43,12 @@ from erc7730.model.calldata.v1.param import (
 from erc7730.model.calldata.v1.value import (
     CalldataDescriptorContainerPathV1,
     CalldataDescriptorDataPathV1,
-    CalldataDescriptorMapRefV1,
     CalldataDescriptorEIP712PathElementArraySliceV1,
+    CalldataDescriptorEIP712PathElementLeafSliceV1,
     CalldataDescriptorEIP712PathElementStructFieldV1,
     CalldataDescriptorEIP712PathElementV1,
     CalldataDescriptorEIP712PathV1,
+    CalldataDescriptorMapRefV1,
     CalldataDescriptorPathElementArrayV1,
     CalldataDescriptorPathElementLeafV1,
     CalldataDescriptorPathElementRefV1,
@@ -63,8 +64,8 @@ from erc7730.model.calldata.v1.value import (
 
 @pydantic_enum_by_name
 class CalldataDescriptorTransactionInfoTag(IntEnum):
-    # TRANSACTION_INFO and EIP712_MESSAGE_INFO share this structure; tag 0x03 is context-dependent, carrying a
-    # SELECTOR (SignTx) or a PRIMARY_TYPE_HASH (EIP-712 message, see CalldataDescriptorEIP712MessageInfoTag).
+    # OPERATION_INFO is TRANSACTION_INFO or EIP712_MESSAGE_INFO depending on its context: CHAIN_ID, CONTRACT_ADDR and
+    # SELECTOR are for a transaction only, DOMAIN_SEPARATOR and PRIMARY_TYPE_HASH for an EIP-712 message only.
     VERSION = 0x00
     CHAIN_ID = 0x01
     CONTRACT_ADDR = 0x02
@@ -76,13 +77,9 @@ class CalldataDescriptorTransactionInfoTag(IntEnum):
     CREATOR_URL = 0x08
     CONTRACT_NAME = 0x09
     DEPLOY_DATE = 0x0A
+    DOMAIN_SEPARATOR = 0x0B
+    PRIMARY_TYPE_HASH = 0x0C
     SIGNATURE = 0xFF
-
-
-@pydantic_enum_by_name
-class CalldataDescriptorEIP712MessageInfoTag(IntEnum):
-    # EIP712_MESSAGE_INFO reuses the TRANSACTION_INFO tags; only tag 0x03 differs (same value as SELECTOR).
-    PRIMARY_TYPE_HASH = 0x03
 
 
 @pydantic_enum_by_name
@@ -113,10 +110,17 @@ class CalldataDescriptorEIP712PathTag(IntEnum):
     VERSION = 0x00
     EIP712_STRUCT_FIELD = 0x01
     EIP712_ARRAY_SLICE = 0x02
+    EIP712_LEAF_SLICE = 0x03
 
 
 @pydantic_enum_by_name
 class CalldataDescriptorEIP712ArraySliceTag(IntEnum):
+    START = 0x01
+    END = 0x02
+
+
+@pydantic_enum_by_name
+class CalldataDescriptorEIP712LeafSliceTag(IntEnum):
     START = 0x01
     END = 0x02
 
@@ -130,6 +134,8 @@ class CalldataDescriptorEnumValueTag(IntEnum):
     ID = 0x04
     VALUE = 0x05
     NAME = 0x06
+    DOMAIN_SEPARATOR = 0x07
+    PRIMARY_TYPE_HASH = 0x08
 
 
 @pydantic_enum_by_name
@@ -141,6 +147,8 @@ class CalldataDescriptorMapEntryTag(IntEnum):
     ID = 0x04
     KEY = 0x05
     VALUE = 0x06
+    DOMAIN_SEPARATOR = 0x07
+    PRIMARY_TYPE_HASH = 0x08
     SIGNATURE = 0xFF
 
 
@@ -286,27 +294,15 @@ class CalldataDescriptorPathSliceElementTag(IntEnum):
     END = 0x02
 
 
-def _tlv_transaction_info_base(
-    obj: CalldataDescriptorInstructionTransactionInfoBaseV1,
-    target_tag: CalldataDescriptorTransactionInfoTag | CalldataDescriptorEIP712MessageInfoTag,
-    target_value: bytes,
-) -> bytes:
+def _tlv_operation_info_body(obj: CalldataDescriptorInstructionTransactionInfoBaseV1) -> bytes:
     """
-    Encode the structure shared by TRANSACTION_INFO and EIP712_MESSAGE_INFO.
-
-    The two structs share every tag but tag 0x03, which identifies what the descriptor applies to (a function
-    selector or an EIP-712 message primary type), passed by the caller.
+    Encode the tags TRANSACTION_INFO and EIP712_MESSAGE_INFO have in common, which are all but the VERSION and the tags
+    identifying the operation.
 
     @param obj: object representation of struct
-    @param target_tag: tag 0x03 (SELECTOR or PRIMARY_TYPE_HASH)
-    @param target_value: payload for tag 0x03
-    @return: encoded struct TLV
+    @return: encoded tags TLV
     """
     out = bytearray()
-    out += tlv(CalldataDescriptorTransactionInfoTag.VERSION, obj.version.to_bytes(1))
-    out += tlv(CalldataDescriptorTransactionInfoTag.CHAIN_ID, obj.chain_id.to_bytes(8))
-    out += tlv(CalldataDescriptorTransactionInfoTag.CONTRACT_ADDR, from_hex(obj.address))
-    out += tlv(target_tag, target_value)
     out += tlv(CalldataDescriptorTransactionInfoTag.FIELDS_HASH, from_hex(obj.hash))
     out += tlv(CalldataDescriptorTransactionInfoTag.OPERATION_TYPE, obj.operation_type)
 
@@ -336,22 +332,31 @@ def tlv_transaction_info(obj: CalldataDescriptorInstructionTransactionInfoV1) ->
     @param obj: object representation of struct
     @return: encoded struct TLV
     """
-    return _tlv_transaction_info_base(obj, CalldataDescriptorTransactionInfoTag.SELECTOR, from_hex(obj.selector))
+    out = bytearray()
+    out += tlv(CalldataDescriptorTransactionInfoTag.VERSION, obj.version.to_bytes(1))
+    out += tlv(CalldataDescriptorTransactionInfoTag.CHAIN_ID, obj.chain_id.to_bytes(8))
+    out += tlv(CalldataDescriptorTransactionInfoTag.CONTRACT_ADDR, from_hex(obj.address))
+    out += tlv(CalldataDescriptorTransactionInfoTag.SELECTOR, from_hex(obj.selector))
+    out += _tlv_operation_info_body(obj)
+    return out
 
 
 def tlv_eip712_message_info(obj: CalldataDescriptorInstructionEIP712MessageInfoV1) -> bytes:
     """
-    Encode a struct of type EIP712_MESSAGE_INFO.
+    Encode a struct of type EIP712_MESSAGE_INFO (without its signature, which is computed by CAL).
 
-    Same wire structure as TRANSACTION_INFO, except tag 0x03 carries the primary type hash (32 bytes) instead of a
-    function selector.
+    The device refuses CHAIN_ID, CONTRACT_ADDR and SELECTOR in a message info: it is bound to the message by the
+    domain separator and the primary type hash.
 
     @param obj: object representation of struct
     @return: encoded struct TLV
     """
-    return _tlv_transaction_info_base(
-        obj, CalldataDescriptorEIP712MessageInfoTag.PRIMARY_TYPE_HASH, from_hex(obj.primary_type_hash)
-    )
+    out = bytearray()
+    out += tlv(CalldataDescriptorTransactionInfoTag.VERSION, obj.version.to_bytes(1))
+    out += _tlv_operation_info_body(obj)
+    out += tlv(CalldataDescriptorTransactionInfoTag.DOMAIN_SEPARATOR, from_hex(obj.domain_separator))
+    out += tlv(CalldataDescriptorTransactionInfoTag.PRIMARY_TYPE_HASH, from_hex(obj.primary_type_hash))
+    return out
 
 
 def tlv_eip712_schema(obj: CalldataDescriptorInstructionEIP712SchemaV1) -> bytes:
@@ -376,7 +381,7 @@ def tlv_eip712_struct(obj: CalldataDescriptorEIP712StructV1) -> bytes:
     @return: encoded struct TLV
     """
     out = bytearray()
-    out += tlv(CalldataDescriptorEIP712StructTag.VERSION, (0).to_bytes(1))
+    out += tlv(CalldataDescriptorEIP712StructTag.VERSION, (1).to_bytes(1))
     out += tlv(CalldataDescriptorEIP712StructTag.NAME, obj.name)
     for field in obj.fields:
         out += tlv(CalldataDescriptorEIP712StructTag.EIP712_FIELD, tlv_eip712_field(field))
@@ -391,7 +396,7 @@ def tlv_eip712_field(obj: CalldataDescriptorEIP712FieldV1) -> bytes:
     @return: encoded struct TLV
     """
     out = bytearray()
-    out += tlv(CalldataDescriptorEIP712FieldTag.VERSION, (0).to_bytes(1))
+    out += tlv(CalldataDescriptorEIP712FieldTag.VERSION, (1).to_bytes(1))
     out += tlv(CalldataDescriptorEIP712FieldTag.NAME, obj.name)
     out += tlv(CalldataDescriptorEIP712FieldTag.TYPE, obj.sol_type.value.to_bytes(1))
 
@@ -403,14 +408,33 @@ def tlv_eip712_field(obj: CalldataDescriptorEIP712FieldV1) -> bytes:
             # empty payload marks a dynamic dimension
             out += tlv(CalldataDescriptorEIP712FieldTag.ARRAY_DIM)
         else:
-            # TODO spec declares ARRAY_DIM as uint32 but examples encode it minimally (T[2] -> 04 01 02); encoded
-            #      here as minimal big-endian (>= 1 byte) to match the spec examples, pending clarification
+            # a fixed dimension is minimal big-endian on at least one byte (T[0] -> 04 01 00, T[2] -> 04 01 02), as an
+            # empty payload is a dynamic dimension
             length = max(1, (dimension.bit_length() + 7) // 8)
             out += tlv(CalldataDescriptorEIP712FieldTag.ARRAY_DIM, dimension.to_bytes(length))
 
     if (struct_name := obj.struct_name) is not None:
         out += tlv(CalldataDescriptorEIP712FieldTag.STRUCT_NAME, struct_name)
 
+    return out
+
+
+def _tlv_operation_context(
+    tags: type[CalldataDescriptorEnumValueTag] | type[CalldataDescriptorMapEntryTag],
+    obj: CalldataDescriptorInstructionEnumValueV1 | CalldataDescriptorInstructionMapEntryV1,
+) -> bytes:
+    """
+    Encode the tags binding an ENUM_VALUE or MAP_ENTRY to an operation: chain, contract and selector for a
+    transaction, domain separator and primary type hash for an EIP-712 message, and none of the other.
+    """
+    out = bytearray()
+    if obj.selector is not None:
+        out += tlv(tags["CHAIN_ID"], obj.chain_id.to_bytes(8))
+        out += tlv(tags["CONTRACT_ADDR"], from_hex(obj.address))
+        out += tlv(tags["SELECTOR"], from_hex(obj.selector))
+    elif obj.domain_separator is not None and obj.primary_type_hash is not None:
+        out += tlv(tags["DOMAIN_SEPARATOR"], from_hex(obj.domain_separator))
+        out += tlv(tags["PRIMARY_TYPE_HASH"], from_hex(obj.primary_type_hash))
     return out
 
 
@@ -423,9 +447,7 @@ def tlv_enum_value(obj: CalldataDescriptorInstructionEnumValueV1) -> bytes:
     """
     out = bytearray()
     out += tlv(CalldataDescriptorEnumValueTag.VERSION, obj.version.to_bytes(1))
-    out += tlv(CalldataDescriptorEnumValueTag.CHAIN_ID, obj.chain_id.to_bytes(8))
-    out += tlv(CalldataDescriptorEnumValueTag.CONTRACT_ADDR, from_hex(obj.address))
-    out += tlv(CalldataDescriptorEnumValueTag.SELECTOR, from_hex(obj.selector))
+    out += _tlv_operation_context(CalldataDescriptorEnumValueTag, obj)
     out += tlv(CalldataDescriptorEnumValueTag.ID, obj.id.to_bytes(1))
     out += tlv(CalldataDescriptorEnumValueTag.VALUE, obj.value.to_bytes(1))
     out += tlv(CalldataDescriptorEnumValueTag.NAME, obj.name)
@@ -441,9 +463,7 @@ def tlv_map_entry(obj: CalldataDescriptorInstructionMapEntryV1) -> bytes:
     """
     out = bytearray()
     out += tlv(CalldataDescriptorMapEntryTag.VERSION, obj.version.to_bytes(1))
-    out += tlv(CalldataDescriptorMapEntryTag.CHAIN_ID, obj.chain_id.to_bytes(8))
-    out += tlv(CalldataDescriptorMapEntryTag.CONTRACT_ADDR, from_hex(obj.address))
-    out += tlv(CalldataDescriptorMapEntryTag.SELECTOR, from_hex(obj.selector))
+    out += _tlv_operation_context(CalldataDescriptorMapEntryTag, obj)
     out += tlv(CalldataDescriptorMapEntryTag.ID, obj.id.to_bytes(1))
     out += tlv(CalldataDescriptorMapEntryTag.KEY, from_hex(obj.key))
     out += tlv(CalldataDescriptorMapEntryTag.VALUE, from_hex(obj.value))
@@ -840,7 +860,7 @@ def tlv_data_path_element(obj: CalldataDescriptorPathElementV1) -> bytes:
 
 def tlv_eip712_path_element(obj: CalldataDescriptorEIP712PathElementV1) -> bytes:
     """
-    Encode an element of an EIP712_PATH (either a struct field index or an array slice).
+    Encode an element of an EIP712_PATH (a struct field index, an array slice or a leaf slice).
 
     @param obj: object representation of struct
     @return: encoded struct TLV
@@ -860,6 +880,17 @@ def tlv_eip712_path_element(obj: CalldataDescriptorEIP712PathElementV1) -> bytes
                 slice_out += tlv(CalldataDescriptorEIP712ArraySliceTag.END, end.to_bytes(2, signed=True))
 
             out += tlv(CalldataDescriptorEIP712PathTag.EIP712_ARRAY_SLICE, bytes(slice_out))
+
+        case CalldataDescriptorEIP712PathElementLeafSliceV1() as leaf_slice:
+            slice_out = bytearray()
+
+            if (start := leaf_slice.start) is not None:
+                slice_out += tlv(CalldataDescriptorEIP712LeafSliceTag.START, start.to_bytes(2, signed=True))
+
+            if (end := leaf_slice.end) is not None:
+                slice_out += tlv(CalldataDescriptorEIP712LeafSliceTag.END, end.to_bytes(2, signed=True))
+
+            out += tlv(CalldataDescriptorEIP712PathTag.EIP712_LEAF_SLICE, bytes(slice_out))
 
         case _:
             assert_never(obj)

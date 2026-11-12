@@ -10,7 +10,9 @@ from erc7730.common.output import OutputAdder
 from erc7730.convert.calldata.v1.eip712_schema import ParsedSolidityType, parse_solidity_type
 from erc7730.model.calldata.v1.eip712 import CalldataDescriptorEIP712SolType
 from erc7730.model.calldata.v1.value import (
+    MAX_EIP712_PATH_ELEMENTS,
     CalldataDescriptorEIP712PathElementArraySliceV1,
+    CalldataDescriptorEIP712PathElementLeafSliceV1,
     CalldataDescriptorEIP712PathElementStructFieldV1,
     CalldataDescriptorEIP712PathElementV1,
     CalldataDescriptorEIP712PathV1,
@@ -34,6 +36,14 @@ _SOL_TYPE_TO_FAMILY: dict[CalldataDescriptorEIP712SolType, CalldataDescriptorTyp
     CalldataDescriptorEIP712SolType.BYTES_FIX: CalldataDescriptorTypeFamily.BYTES,
     CalldataDescriptorEIP712SolType.BYTES_DYN: CalldataDescriptorTypeFamily.BYTES,
 }
+
+
+# leaf types a leaf slice applies to
+_SLICEABLE_LEAVES = (
+    CalldataDescriptorEIP712SolType.BYTES_FIX,
+    CalldataDescriptorEIP712SolType.BYTES_DYN,
+    CalldataDescriptorEIP712SolType.STRING,
+)
 
 
 def _leaf_type_family_size(parsed: ParsedSolidityType) -> tuple[CalldataDescriptorTypeFamily, int | None]:
@@ -72,8 +82,10 @@ def convert_eip712_data_path(
     current_struct: str = primary_type
     current_parsed: ParsedSolidityType | None = None
     remaining_dims = 0
+    leaf_sliced = False
 
-    for element in data_path.elements:
+    last_index = len(data_path.elements) - 1
+    for position, element in enumerate(data_path.elements):
         match element:
             case Field(identifier=name):
                 if current_parsed is not None:
@@ -129,6 +141,20 @@ def convert_eip712_data_path(
                 elements.append(CalldataDescriptorEIP712PathElementArraySliceV1(start=array_index, end=end))
                 remaining_dims -= 1
 
+            case ArraySlice(start=start, end=end) if (
+                remaining_dims == 0
+                and position == last_index
+                and current_parsed is not None
+                and current_parsed.sol_type in _SLICEABLE_LEAVES
+            ):
+                if start is not None and end is not None and start >= 0 and end >= 0 and end <= start:
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f"Leaf slice [{start}:{end}] is empty, the device refuses a slice with no byte.",
+                    )
+                elements.append(CalldataDescriptorEIP712PathElementLeafSliceV1(start=start, end=end))
+                leaf_sliced = True
+
             case ArraySlice(start=start, end=end):
                 if remaining_dims <= 0:
                     return out.error(
@@ -156,7 +182,17 @@ def convert_eip712_data_path(
             message=f'EIP-712 path ends on struct "{current_parsed.struct_name}"; a scalar leaf is required.',
         )
 
+    if len(elements) > MAX_EIP712_PATH_ELEMENTS:
+        return out.error(
+            title="Invalid EIP-712 path",
+            message=f"EIP-712 path {data_path} has {len(elements)} elements, the device accepts at most "
+            f"{MAX_EIP712_PATH_ELEMENTS}.",
+        )
+
     type_family, type_size = _leaf_type_family_size(current_parsed)
+    if leaf_sliced:
+        # the size of a slice is not the size of the type it is cut from
+        type_size = None
 
     return CalldataDescriptorValuePathV1(
         type_family=type_family,

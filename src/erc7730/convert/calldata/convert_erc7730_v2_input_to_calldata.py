@@ -8,8 +8,9 @@ logic.
 """
 
 import hashlib
-from typing import cast
+from typing import Any, cast
 
+from pydantic import BaseModel
 from pydantic_string_url import HttpUrl
 
 from erc7730.common.abi import (
@@ -24,7 +25,7 @@ from erc7730.common.options import first_not_none
 from erc7730.common.output import ConsoleOutputAdder, OutputAdder, exception_to_output
 from erc7730.convert.calldata.v1.abi import function_to_abi_tree
 from erc7730.convert.calldata.v1.eip712_path import convert_eip712_data_path
-from erc7730.convert.calldata.v1.eip712_schema import ReconstructedSchema, reconstruct_schema
+from erc7730.convert.calldata.v1.eip712_schema import ReconstructedSchema, compute_domain_separator, reconstruct_schema
 from erc7730.convert.calldata.v1.enum import convert_enums
 from erc7730.convert.calldata.v1.map import MapEntries
 from erc7730.convert.calldata.v1.path import (
@@ -70,7 +71,10 @@ from erc7730.model.calldata.v1.param import (
     CalldataDescriptorParamV1,
 )
 from erc7730.model.calldata.v1.value import (
+    CalldataDescriptorContainerPathV1,
+    CalldataDescriptorContainerPathValueV1,
     CalldataDescriptorDataPathV1,
+    CalldataDescriptorEIP712PathV1,
     CalldataDescriptorPathElementLeafV1,
     CalldataDescriptorPathLeafType,
     CalldataDescriptorTypeFamily,
@@ -88,6 +92,7 @@ from erc7730.model.resolved.display import ResolvedValueConstant, ResolvedValueP
 from erc7730.model.resolved.v2.context import (
     ResolvedContractContext,
     ResolvedDeployment,
+    ResolvedDomain,
     ResolvedEIP712Context,
 )
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
@@ -108,6 +113,9 @@ CALLDATA_CHUNK_SIZE = 32
 
 # length of an EVM address (ADDRESS_LENGTH in app-ethereum)
 ADDRESS_LENGTH = 20
+
+# length of a domain separator (keccak256 hash)
+DOMAIN_SEPARATOR_LENGTH = 32
 
 
 def _describe(input_descriptor: InputERC7730Descriptor, source: HttpUrl | None) -> str:
@@ -264,7 +272,7 @@ def _convert_v2_selector(
         )
 
     # Use v1 convert_enums — v2 ResolvedDeployment is duck-type compatible with v1
-    enums = convert_enums(deployment, selector, descriptor.metadata.enums)  # type: ignore[arg-type]
+    enums = convert_enums(deployment, descriptor.metadata.enums, selector=selector)  # type: ignore[arg-type]
     enums_by_id = {enum.enum_id: enum.id for enum in enums}
     maps = MapEntries(deployment, selector)
 
@@ -401,6 +409,13 @@ def _convert_v2_field(
                 )
             ) is None:
                 return None
+            if (
+                isinstance(param.value, CalldataDescriptorValuePathV1)
+                and isinstance(param.value.binary_path, CalldataDescriptorEIP712PathV1)
+                and (constraints := _normalize_eip712_constraints(constraints, type_family, param.value.type_size, out))
+                is None
+            ):
+                return None
 
         return [
             CalldataDescriptorInstructionFieldV1(name=name, param=param, visibility=visibility, constraints=constraints)
@@ -424,6 +439,44 @@ def _convert_v2_field(
             title="Unknown field type",
             message=f"Unexpected field type: {type(field)}",
         )
+
+
+def _normalize_eip712_constraints(
+    constraints: list[str], type_family: CalldataDescriptorTypeFamily, type_size: int | None, out: OutputAdder
+) -> list[str] | None:
+    """
+    Encode visibility constraints the way the device compares the leaf of a typed message: byte for byte, on the one
+    encoding a value has (see "Leaf encoding" in doc/eip712.md of app-ethereum-dev).
+
+    :param constraints: hex encoded constraints, encoded for the type family
+    :param type_family: type family of the leaf
+    :param type_size: size of the type of the leaf, in bytes
+    :param out: error handler
+    :return: hex encoded constraints, or None on error
+    """
+    normalized: list[str] = []
+    for constraint in constraints:
+        payload = from_hex(constraint)
+        match type_family:
+            case CalldataDescriptorTypeFamily.UINT | CalldataDescriptorTypeFamily.INT:
+                # no leading zero byte, unless the value is zero (a leaf of the size of the type is a negative integer)
+                if type_family is CalldataDescriptorTypeFamily.UINT or len(payload) != type_size:
+                    payload = payload.lstrip(b"\x00") or b"\x00"
+            case CalldataDescriptorTypeFamily.ADDRESS:
+                if len(payload) > ADDRESS_LENGTH:
+                    return out.error(
+                        title="Invalid visibility condition value",
+                        message=f"An address constraint is {ADDRESS_LENGTH} bytes, {constraint} is {len(payload)}.",
+                    )
+                payload = payload.rjust(ADDRESS_LENGTH, b"\x00")
+            case CalldataDescriptorTypeFamily.BYTES if type_size is not None and len(payload) != type_size:
+                return out.error(
+                    title="Invalid visibility condition value",
+                    message=f"A bytes{type_size} constraint is exactly {type_size} bytes, {constraint} is "
+                    f"{len(payload)}.",
+                )
+        normalized.append(f"0x{payload.hex()}")
+    return normalized
 
 
 def _constrained_value_width(value: CalldataDescriptorValueV1) -> int | None:
@@ -1081,6 +1134,8 @@ def _convert_eip712_descriptors(
             descriptor = _convert_eip712_message(
                 descriptor=resolved_descriptor,
                 deployment=deployment,
+                domain=domain,
+                domain_separator=resolved_context.eip712.domainSeparator,
                 schema=schema,
                 format=format,
                 source=source,
@@ -1096,6 +1151,8 @@ def _convert_eip712_descriptors(
 def _convert_eip712_message(
     descriptor: ResolvedERC7730Descriptor,
     deployment: ResolvedDeployment,
+    domain: ResolvedDomain | None,
+    domain_separator: str | None,
     schema: ReconstructedSchema,
     format: ResolvedFormat,
     source: HttpUrl | None,
@@ -1106,6 +1163,8 @@ def _convert_eip712_message(
 
     :param descriptor: resolved v2 source ERC-7730 descriptor
     :param deployment: chain id / verifying contract address for which the descriptor is generated
+    :param domain: EIP-712 domain of the messages
+    :param domain_separator: domain separator given by the descriptor, computed from the domain when not set
     :param schema: reconstructed EIP-712 schema (structs + primary type hash)
     :param format: v2 resolved format for the message
     :param source: source of the descriptor file
@@ -1128,17 +1187,49 @@ def _convert_eip712_message(
             else None
         )
 
-    # TODO the ENUM_VALUE struct carries a SELECTOR tag whose meaning for EIP-712 messages is not defined in the
-    #      specification; a zeroed selector is used until it is clarified.
-    enum_selector = Selector("0x00000000")
-    enums = convert_enums(deployment, enum_selector, descriptor.metadata.enums)  # type: ignore[arg-type]
+    if domain_separator:
+        try:
+            separator_bytes = from_hex(domain_separator)
+        except ValueError:
+            separator_bytes = b""
+        if len(separator_bytes) != DOMAIN_SEPARATOR_LENGTH:
+            return out.error(
+                title="Invalid domain separator",
+                message=f"Domain separator {domain_separator} must be a {DOMAIN_SEPARATOR_LENGTH} bytes hexadecimal "
+                "string.",
+            )
+        domain_separator_hex = HexStr("0x" + separator_bytes.hex())
+    elif (computed := compute_domain_separator(schema, domain, deployment, out)) is None:
+        return None
+    else:
+        domain_separator_hex = computed
+
+    # enums and maps are provided to the device keyed by the message they are for
+    enums = convert_enums(
+        deployment,  # type: ignore[arg-type]
+        descriptor.metadata.enums,
+        domain_separator=domain_separator_hex,
+        primary_type_hash=schema.primary_type_hash,
+    )
     enums_by_id = {enum.enum_id: enum.id for enum in enums}
+    maps = MapEntries(deployment, domain_separator=domain_separator_hex, primary_type_hash=schema.primary_type_hash)
 
     fields: list[CalldataDescriptorInstructionFieldV1] = []
     for input_field in format.fields:
-        if (output_fields := _convert_v2_field(convert_path, input_field, enums_by_id, out)) is None:
+        if (
+            output_fields := _convert_v2_field(
+                convert_path=convert_path, field=input_field, enums=enums_by_id, maps=maps, out=out
+            )
+        ) is None:
             return None
         fields.extend(output_fields)
+
+    # the device refuses a descriptor reading the value of the container, which a typed message does not have
+    if any(_reads_container_value(field) for field in fields):
+        return out.error(
+            title="Unsupported container path",
+            message="@.value cannot be used in an EIP-712 message, the device refuses it.",
+        )
 
     hash = hashlib.sha3_256()
     for field in fields:
@@ -1149,6 +1240,7 @@ def _convert_eip712_message(
     message_info = CalldataDescriptorInstructionEIP712MessageInfoV1(
         chain_id=deployment.chainId,
         address=deployment.address,
+        domain_separator=domain_separator_hex,
         primary_type_hash=schema.primary_type_hash,
         hash=hash.digest().hex(),
         operation_type=first_not_none(format.intent, format.id, schema.primary_type),  # type: ignore[arg-type]
@@ -1164,9 +1256,24 @@ def _convert_eip712_message(
         network=cast(str, ledger_network_id(deployment.chainId)),
         chain_id=deployment.chainId,
         address=deployment.address,
+        domain_separator=domain_separator_hex,
         primary_type_hash=schema.primary_type_hash,
         schema_info=schema_info,
         message_info=message_info,
         enums=enums,
+        maps=maps.entries,
         fields=fields,
     )
+
+
+def _reads_container_value(model: Any) -> bool:
+    """Whether a serialized instruction holds a CONTAINER path reading the VALUE of the container."""
+    match model:
+        case CalldataDescriptorContainerPathV1(value=CalldataDescriptorContainerPathValueV1.VALUE):
+            return True
+        case BaseModel():
+            return any(_reads_container_value(getattr(model, name)) for name in type(model).model_fields)
+        case list():
+            return any(_reads_container_value(item) for item in model)
+        case _:
+            return False

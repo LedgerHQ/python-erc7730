@@ -64,6 +64,20 @@ class CalldataDescriptorFieldVisibilityV1(IntEnum):
     IF_NOT_IN = 0x02
 
 
+def _validate_operation_context(
+    selector: str | None, domain_separator: str | None, primary_type_hash: str | None
+) -> None:
+    """
+    Check an ENUM_VALUE / MAP_ENTRY is bound to exactly one kind of operation: a transaction (selector), or an EIP-712
+    message (domain separator and primary type hash). The device refuses a struct with tags of both, or of none.
+    """
+    if selector is not None:
+        if domain_separator is not None or primary_type_hash is not None:
+            raise ValueError("A selector cannot be combined with a domain separator or a primary type hash.")
+    elif domain_separator is None or primary_type_hash is None:
+        raise ValueError("Either a selector, or both a domain separator and a primary type hash, are required.")
+
+
 # extra must be ignored because of descriptor computed field
 class CalldataDescriptorInstructionBaseV1(CalldataDescriptorStructV1, ABC, extra="ignore"):
     """Base class for calldata descriptor instructions."""
@@ -73,8 +87,9 @@ class CalldataDescriptorInstructionTransactionInfoBaseV1(CalldataDescriptorInstr
     """
     Common fields for the TRANSACTION_INFO / EIP712_MESSAGE_INFO structs.
 
-    These two structs share the same wire structure and are handled as a single structure in the Ethereum app; they
-    differ only by tag 0x03 (SELECTOR for calldata, PRIMARY_TYPE_HASH for EIP-712 messages).
+    These two structs are the OPERATION_INFO structure of the Ethereum app in two contexts: they share every tag but
+    the ones identifying the operation (CHAIN_ID, CONTRACT_ADDR and SELECTOR for a transaction, DOMAIN_SEPARATOR and
+    PRIMARY_TYPE_HASH for an EIP-712 message).
     """
 
     version: Literal[1] = Field(
@@ -170,9 +185,18 @@ class CalldataDescriptorInstructionEIP712MessageInfoV1(CalldataDescriptorInstruc
     """
     Instruction descriptor for the EIP712_MESSAGE_INFO struct.
 
-    Same wire structure as TRANSACTION_INFO, except tag 0x03 carries the EIP-712 primary type hash (32 bytes) instead
-    of a function selector (4 bytes). Referred to as "EIP712 v2" in the Ethereum app specifications.
+    The OPERATION_INFO structure in the context of an EIP-712 message: it is bound to the message by its domain
+    separator and primary type hash, and carries neither chain id, contract address nor selector on the wire (they
+    are only kept as metadata of the deployment the domain separator was computed for). Referred to as "EIP712 v2" in
+    the Ethereum app specifications.
     """
+
+    domain_separator: HexStr = Field(
+        title="Domain separator",
+        description="hashStruct(domain) of the EIP-712 message domain.",
+        min_length=64,
+        max_length=66,
+    )
 
     primary_type_hash: HexStr = Field(
         title="Primary type hash",
@@ -211,10 +235,33 @@ class CalldataDescriptorInstructionEnumValueV1(CalldataDescriptorInstructionBase
         description="The contract deployment address.",
     )
 
-    selector: Selector = Field(
+    selector: Selector | None = Field(
+        default=None,
         title="Function selector",
-        description="The 4-bytes function selector this descriptor applies to.",
+        description="The 4-bytes function selector this descriptor applies to (transactions only).",
     )
+
+    domain_separator: HexStr | None = Field(
+        default=None,
+        title="Domain separator",
+        description="hashStruct(domain) of the EIP-712 message this descriptor applies to (EIP-712 messages only).",
+        min_length=64,
+        max_length=66,
+    )
+
+    primary_type_hash: HexStr | None = Field(
+        default=None,
+        title="Primary type hash",
+        description="keccak256(encodeType(primaryType)) of the EIP-712 message this descriptor applies to (EIP-712 "
+        "messages only).",
+        min_length=64,
+        max_length=66,
+    )
+
+    @model_validator(mode="after")
+    def _validate_context(self) -> Self:
+        _validate_operation_context(self.selector, self.domain_separator, self.primary_type_hash)
+        return self
 
     enum_id: str = Field(
         title="Source enum identifier",
@@ -275,10 +322,33 @@ class CalldataDescriptorInstructionMapEntryV1(CalldataDescriptorInstructionBaseV
         description="The contract deployment address.",
     )
 
-    selector: Selector = Field(
+    selector: Selector | None = Field(
+        default=None,
         title="Function selector",
-        description="The 4-bytes function selector this descriptor applies to.",
+        description="The 4-bytes function selector this descriptor applies to (transactions only).",
     )
+
+    domain_separator: HexStr | None = Field(
+        default=None,
+        title="Domain separator",
+        description="hashStruct(domain) of the EIP-712 message this descriptor applies to (EIP-712 messages only).",
+        min_length=64,
+        max_length=66,
+    )
+
+    primary_type_hash: HexStr | None = Field(
+        default=None,
+        title="Primary type hash",
+        description="keccak256(encodeType(primaryType)) of the EIP-712 message this descriptor applies to (EIP-712 "
+        "messages only).",
+        min_length=64,
+        max_length=66,
+    )
+
+    @model_validator(mode="after")
+    def _validate_context(self) -> Self:
+        _validate_operation_context(self.selector, self.domain_separator, self.primary_type_hash)
+        return self
 
     map: str = Field(
         title="Source map reference",

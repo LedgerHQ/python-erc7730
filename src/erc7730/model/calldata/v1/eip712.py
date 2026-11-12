@@ -8,9 +8,9 @@ These model classes represent the exact same data fields that are serialized int
 
 from enum import IntEnum
 from functools import cached_property
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, model_validator
 
 from erc7730.common.pydantic import pydantic_enum_by_name
 from erc7730.model.base import Model
@@ -32,6 +32,18 @@ class CalldataDescriptorEIP712SolType(IntEnum):
     STRING = 0x05
     BYTES_FIX = 0x06
     BYTES_DYN = 0x07
+
+
+# limits of the device (doc/eip712.md#implementation-limits in app-ethereum-dev)
+MAX_ARRAY_DIMENSIONS = 8
+MAX_ARRAY_DIMENSION_SIZE = 255
+
+# base types carrying a TYPE_SIZE
+_SIZED_TYPES = (
+    CalldataDescriptorEIP712SolType.INT,
+    CalldataDescriptorEIP712SolType.UINT,
+    CalldataDescriptorEIP712SolType.BYTES_FIX,
+)
 
 
 class CalldataDescriptorEIP712FieldV1(Model):
@@ -70,6 +82,20 @@ class CalldataDescriptorEIP712FieldV1(Model):
         description="Referenced struct name, only set if the type is STRUCT.",
     )
 
+    @model_validator(mode="after")
+    def _validate_field(self) -> Self:
+        if any(c in self.name for c in "(),"):
+            raise ValueError(f'Field name "{self.name}" cannot contain "(", ")" or ",".')
+        if (self.sol_type in _SIZED_TYPES) != (self.type_size is not None):
+            raise ValueError(f"A type size is required for INT, UINT and BYTES_FIX only, got {self.sol_type.name}.")
+        if (self.sol_type == CalldataDescriptorEIP712SolType.STRUCT) != (self.struct_name is not None):
+            raise ValueError(f"A struct name is required for STRUCT only, got {self.sol_type.name}.")
+        if len(self.array_dimensions) > MAX_ARRAY_DIMENSIONS:
+            raise ValueError(f"At most {MAX_ARRAY_DIMENSIONS} array dimensions are supported per field.")
+        if any(d is not None and not 0 <= d <= MAX_ARRAY_DIMENSION_SIZE for d in self.array_dimensions):
+            raise ValueError(f"Fixed array dimensions must be between 0 and {MAX_ARRAY_DIMENSION_SIZE}.")
+        return self
+
 
 class CalldataDescriptorEIP712StructV1(Model):
     """Descriptor for the EIP712_STRUCT struct (one EIP-712 struct type declaration)."""
@@ -85,6 +111,15 @@ class CalldataDescriptorEIP712StructV1(Model):
         description="One entry per declared field, in declaration order.",
     )
 
+    @model_validator(mode="after")
+    def _validate_struct(self) -> Self:
+        if any(c in self.name for c in " ()[],"):
+            raise ValueError(f'Struct name "{self.name}" cannot contain a space or any of "(", ")", "[", "]", ",".')
+        names = [f.name for f in self.fields]
+        if len(set(names)) != len(names):
+            raise ValueError(f'Struct "{self.name}" has several fields of the same name.')
+        return self
+
 
 class CalldataDescriptorInstructionEIP712SchemaV1(CalldataDescriptorInstructionBaseV1):
     """Instruction descriptor for the EIP712_SCHEMA struct (whole schema, all struct types nested)."""
@@ -98,7 +133,17 @@ class CalldataDescriptorInstructionEIP712SchemaV1(CalldataDescriptorInstructionB
     structs: list[CalldataDescriptorEIP712StructV1] = Field(
         title="Structs",
         description="One entry per declared struct type.",
+        min_length=1,
     )
+
+    @model_validator(mode="after")
+    def _validate_schema(self) -> Self:
+        names = [struct.name for struct in self.structs]
+        if len(set(names)) != len(names):
+            raise ValueError("The schema has several structs of the same name.")
+        if "EIP712Domain" not in names:
+            raise ValueError("The schema must contain the EIP712Domain struct.")
+        return self
 
     @computed_field(title="Descriptor", description="Hex encoded EIP712_SCHEMA TLV struct")  # type: ignore[misc]
     @cached_property

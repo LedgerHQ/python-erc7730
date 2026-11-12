@@ -7,7 +7,7 @@ from erc7730.model.calldata.v1.instruction import (
 )
 from erc7730.model.metadata import EnumDefinition
 from erc7730.model.resolved.context import ResolvedDeployment
-from erc7730.model.types import Id, Selector
+from erc7730.model.types import HexStr, Id, Selector
 
 # A bool holds 0 or 1 in calldata, and an enum key is the field value it matches, so these are
 # the keys a descriptor writes for a bool field. JSON has no bool object key, so they arrive as
@@ -31,12 +31,20 @@ def enum_ordinal(ordinal: str) -> int:
 
 
 def convert_enums(
-    deployment: ResolvedDeployment, selector: Selector, enums: dict[Id, EnumDefinition] | None
+    deployment: ResolvedDeployment,
+    enums: dict[Id, EnumDefinition] | None,
+    selector: Selector | None = None,
+    domain_separator: HexStr | None = None,
+    primary_type_hash: HexStr | None = None,
 ) -> list[CalldataDescriptorInstructionEnumValueV1]:
     """
     Convert descriptor enum definitions to calldata descriptor enum value instructions.
 
+    @param deployment: deployment the enums are bound to
     @param enums: descriptor enum definitions
+    @param selector: function selector the enums are bound to (transactions)
+    @param domain_separator: domain separator the enums are bound to (EIP-712 messages)
+    @param primary_type_hash: primary type hash the enums are bound to (EIP-712 messages)
     @return: instructions for each enum entry
     """
     if enums is None:
@@ -47,6 +55,8 @@ def convert_enums(
             chain_id=deployment.chainId,
             address=deployment.address,
             selector=selector,
+            domain_separator=domain_separator,
+            primary_type_hash=primary_type_hash,
             id=i,
             enum_id=enum_id,
             value=enum_ordinal(ordinal),

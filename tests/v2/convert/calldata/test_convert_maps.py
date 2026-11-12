@@ -67,7 +67,7 @@ def convert(
             }
         )
     )
-    return erc7730_v2_descriptor_to_calldata_descriptors(descriptor)
+    return [d for d in erc7730_v2_descriptor_to_calldata_descriptors(descriptor) if isinstance(d, CalldataDescriptorV1)]
 
 
 def convert_one(signature: str, fields: list[dict[str, Any]], maps: dict[str, dict[str, Any]]) -> CalldataDescriptorV1:
