@@ -39,6 +39,10 @@ _SOL_TYPE_TO_FAMILY: dict[CalldataDescriptorEIP712SolType, CalldataDescriptorTyp
 
 
 # leaf types a leaf slice applies to
+_MIN_BOUND = -32768
+_MAX_BOUND = 32767
+_MAX_FIELD_INDEX = 255
+
 _SLICEABLE_LEAVES = (
     CalldataDescriptorEIP712SolType.BYTES_FIX,
     CalldataDescriptorEIP712SolType.BYTES_DYN,
@@ -46,14 +50,19 @@ _SLICEABLE_LEAVES = (
 )
 
 
+def _unrepresentable_bound(*bounds: int | None) -> int | None:
+    """First bound the device cannot represent (signed 16 bits), if any."""
+    return next((bound for bound in bounds if bound is not None and not _MIN_BOUND <= bound <= _MAX_BOUND), None)
+
+
 def _leaf_slice_width(parsed: ParsedSolidityType, start: int | None, end: int | None) -> int | None:
-    """Width in bytes of a slice of a leaf, only known when the leaf has a fixed size (``bytesN``)."""
+    """Width in bytes of a slice of a leaf, only known when the leaf has a fixed size (``bytesN``), 0 if empty."""
     if parsed.sol_type != CalldataDescriptorEIP712SolType.BYTES_FIX or parsed.type_size is None:
         return None
     size = parsed.type_size
     first = min(max((start or 0) + (size if start is not None and start < 0 else 0), 0), size)
     last = size if end is None else min(max(end + (size if end < 0 else 0), 0), size)
-    return last - first if last > first else None
+    return max(last - first, 0)
 
 
 def _leaf_type_family_size(parsed: ParsedSolidityType) -> tuple[CalldataDescriptorTypeFamily, int | None]:
@@ -128,6 +137,13 @@ def convert_eip712_data_path(
                         message=f'Field "{name}" not found in struct "{current_struct}".',
                     )
 
+                if index > _MAX_FIELD_INDEX:
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f'Field "{name}" is the field {index} of struct "{current_struct}", the device '
+                        f"addresses at most {_MAX_FIELD_INDEX + 1} fields.",
+                    )
+
                 elements.append(CalldataDescriptorEIP712PathElementStructFieldV1(index=index))
                 current_parsed = parse_solidity_type(struct_fields[index][0])
                 remaining_dims = len(current_parsed.array_dimensions)
@@ -156,6 +172,11 @@ def convert_eip712_data_path(
                     )
                 # a single element [i] is a slice [i, i+1); for i == -1, end defaults to the array length
                 end = None if array_index == -1 else array_index + 1
+                if (bound := _unrepresentable_bound(array_index, end)) is not None:
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f"Array index {array_index} is not supported, the device cannot represent {bound}.",
+                    )
                 elements.append(CalldataDescriptorEIP712PathElementArraySliceV1(start=array_index, end=end))
                 remaining_dims -= 1
 
@@ -170,15 +191,30 @@ def convert_eip712_data_path(
                         title="Invalid EIP-712 path",
                         message=f"Leaf slice [{start}:{end}] is empty, the device refuses a slice with no byte.",
                     )
+                if (bound := _unrepresentable_bound(start, end)) is not None:
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f"Leaf slice [{start}:{end}] is not supported, the device cannot represent {bound}.",
+                    )
+                slice_width = _leaf_slice_width(current_parsed, start, end)
+                if slice_width == 0:
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f"Leaf slice [{start}:{end}] is empty, the device refuses a slice with no byte.",
+                    )
                 elements.append(CalldataDescriptorEIP712PathElementLeafSliceV1(start=start, end=end))
                 leaf_sliced = True
-                slice_width = _leaf_slice_width(current_parsed, start, end)
 
             case ArraySlice(start=start, end=end):
                 if remaining_dims <= 0:
                     return out.error(
                         title="Invalid EIP-712 path",
                         message="Array slice applied to a non-array value.",
+                    )
+                if (bound := _unrepresentable_bound(start, end)) is not None:
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f"Array slice [{start}:{end}] is not supported, the device cannot represent {bound}.",
                     )
                 elements.append(CalldataDescriptorEIP712PathElementArraySliceV1(start=start, end=end))
                 remaining_dims -= 1

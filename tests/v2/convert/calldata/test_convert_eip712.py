@@ -21,6 +21,7 @@ from erc7730.model.calldata.v1.value import (
     CalldataDescriptorValuePathV1,
 )
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
+from erc7730.model.resolved.v2.context import ResolvedDomain
 
 DEFAULT_CHAIN_ID = 1
 DEFAULT_ADDRESS = "0x000000000000000000000000000000000000dEaD"
@@ -488,3 +489,70 @@ def test_eip712_full_width_int_constraint_is_padded_for_negative_values_only(
     )
 
     assert descriptor.fields[0].constraints == [expected]
+
+
+def test_eip712_chain_filter_does_not_report_conflicts_of_other_chains() -> None:
+    out = ListOutputAdder()
+    descriptors = _convert_all(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": "amount"}],
+        domain={"name": "Test", "chainId": 1},
+        deployments=[{"chainId": 1, "address": DEFAULT_ADDRESS}, {"chainId": 10, "address": DEFAULT_ADDRESS}],
+        chain_id=1,
+        out=out,
+    )
+
+    assert len(descriptors) == 1
+    assert not out.has_errors
+
+
+@pytest.mark.parametrize(
+    "type_str,path",
+    [
+        ("Batch(uint256[] values)", "values.[32767]"),
+        ("Batch(uint256[] values)", "values.[32768:]"),
+        ("Msg(bytes key)", "key.[0:32768]"),
+        ("Msg(bytes32 key)", "key.[32:40]"),
+        ("Msg(bytes32 key)", "key.[-1:0]"),
+        ("Msg(" + ",".join(f"uint8 f{i}" for i in range(257)) + ")", "f256"),
+    ],
+)
+def test_eip712_paths_the_device_cannot_represent_are_reported(type_str: str, path: str) -> None:
+    out = ListOutputAdder()
+
+    assert _convert_all(type_str, [{"path": path, "label": "V", "format": "raw"}], out=out) == []
+    assert _errors(out) == ["Invalid EIP-712 path"]
+
+
+@pytest.mark.parametrize("type_str", ["uint9", "uint", "int", "uint0", "uint264", "uint08", "bytes0", "bytes33"])
+def test_eip712_non_canonical_types_are_rejected(type_str: str) -> None:
+    out = ListOutputAdder()
+
+    assert reconstruct_schema(f"Msg({type_str} value)", None, False, out) is None
+    assert _errors(out) == ["Unsupported EIP-712 type"]
+
+
+def test_eip712_message_type_matching_the_domain_is_reused() -> None:
+    schema = reconstruct_schema(
+        "Msg(EIP712Domain d)EIP712Domain(string name)", ResolvedDomain(name="Test"), False, ListOutputAdder()
+    )
+
+    assert schema is not None
+    assert [struct.name for struct in schema.structs] == ["EIP712Domain", "Msg"]
+
+
+def test_eip712_message_type_conflicting_with_the_domain_is_rejected() -> None:
+    out = ListOutputAdder()
+
+    assert (
+        reconstruct_schema("Msg(EIP712Domain d)EIP712Domain(string version)", ResolvedDomain(name="Test"), False, out)
+        is None
+    )
+    assert _errors(out) == ["Conflicting EIP712Domain"]
+
+
+def test_eip712_undefined_referenced_struct_is_rejected() -> None:
+    out = ListOutputAdder()
+
+    assert reconstruct_schema("Msg(uint256 value,Missing other)", None, False, out) is None
+    assert _errors(out) == ["Unsupported EIP-712 type"]

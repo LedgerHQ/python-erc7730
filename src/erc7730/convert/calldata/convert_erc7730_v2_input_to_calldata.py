@@ -1144,6 +1144,10 @@ def _convert_eip712_descriptors(
     deployments: list[ResolvedDeployment | None] = [*resolved_context.eip712.deployments] or [None]
 
     for deployment in deployments:
+        # a deployment of another chain is not converted, so its conflicts with the domain are not reported either
+        if chain_id is not None and deployment is not None and deployment.chainId != chain_id:
+            continue
+
         if (binding := bind_domain(domain, deployment, out)) is None:
             continue
 
@@ -1204,7 +1208,8 @@ def _convert_eip712_message(
     creator_url: str | None = None
     deploy_date: str | None = None
     if descriptor.metadata.info is not None:
-        creator_legal_name = descriptor.metadata.owner
+        # the v2 schema has no legal name: the owner is the one of the entity
+        creator_legal_name = descriptor.metadata.info.legalName or descriptor.metadata.owner
         creator_url = str(descriptor.metadata.info.url) if descriptor.metadata.info.url else None
         deploy_date = (
             descriptor.metadata.info.deploymentDate.strftime("%Y-%m-%dT%H:%M:%SZ")

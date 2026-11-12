@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from erc7730.common.output import ListOutputAdder
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import (
     erc7730_v2_descriptor_to_calldata_descriptors,
 )
@@ -20,8 +21,11 @@ def test_registry_files(request: pytest.FixtureRequest, input_file: Path) -> Non
     if path_id(input_file) in ERC7730_EXPECTED_CALLDATA_FAILURES:
         request.applymarker(pytest.mark.xfail(strict=True, reason="unsupported by the calldata converter"))
 
-    descriptors = erc7730_v2_descriptor_to_calldata_descriptors(InputERC7730Descriptor.load(input_file))
+    out = ListOutputAdder()
+    descriptors = erc7730_v2_descriptor_to_calldata_descriptors(InputERC7730Descriptor.load(input_file), out=out)
 
+    # the converter skips what it cannot convert and returns the rest, so an error means a partial result
+    assert not out.has_errors, out.outputs
     assert descriptors
     # model_dump_json evaluates every computed TLV .descriptor field, exercising the full TLV encoding
     for descriptor in descriptors:
