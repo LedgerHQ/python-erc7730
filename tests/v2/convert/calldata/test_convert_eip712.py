@@ -318,7 +318,7 @@ def test_eip712_descriptor_without_deployment_takes_chain_and_contract_from_the_
     assert descriptor.domain_separator == expected
 
 
-def test_eip712_domain_separator_given_by_the_descriptor_is_checked() -> None:
+def test_eip712_domain_separator_given_by_the_descriptor_is_used_as_is() -> None:
     out = ListOutputAdder()
     descriptor = _convert(
         PERMIT_TYPE,
@@ -329,5 +329,4 @@ def test_eip712_domain_separator_given_by_the_descriptor_is_checked() -> None:
     )
 
     assert descriptor.domain_separator == "0x" + "ab" * 32
-    assert out.has_warnings
-    assert any("does not match" in o.message for o in out.outputs)
+    assert not out.outputs

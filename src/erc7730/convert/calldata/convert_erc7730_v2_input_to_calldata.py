@@ -1205,9 +1205,8 @@ def _convert_eip712_message(
     if deployment is None and chain_id is not None and address is not None:
         deployment = ResolvedDeployment(chainId=chain_id, address=address)
 
-    has_domain_fields = bool(schema.types["EIP712Domain"])
-    computed = compute_domain_separator(schema, domain, chain_id, address, out) if has_domain_fields else None
-
+    # a separator given by the descriptor is used as is (the domain of the descriptor may be only partial, it is up to
+    # the linter to check it against the domain)
     if domain_separator:
         try:
             separator_bytes = from_hex(domain_separator)
@@ -1220,17 +1219,12 @@ def _convert_eip712_message(
                 "string.",
             )
         domain_separator_hex = HexStr("0x" + separator_bytes.hex())
-        if computed is not None and computed != domain_separator_hex:
-            out.warning(
-                f"Domain separator {domain_separator_hex} does not match the one computed from the domain "
-                f"({computed}), the device will not match the messages of this descriptor."
-            )
-    elif computed is None:
-        if not has_domain_fields:
-            return out.error(
-                title="Missing domain",
-                message="The domain separator cannot be computed: set the domain or the domain separator.",
-            )
+    elif not schema.types["EIP712Domain"]:
+        return out.error(
+            title="Missing domain",
+            message="The domain separator cannot be computed: set the domain or the domain separator.",
+        )
+    elif (computed := compute_domain_separator(schema, domain, chain_id, address, out)) is None:
         return None
     else:
         domain_separator_hex = computed
