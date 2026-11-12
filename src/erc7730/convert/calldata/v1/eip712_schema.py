@@ -21,7 +21,7 @@ from erc7730.model.calldata.v1.eip712 import (
     CalldataDescriptorEIP712SolType,
     CalldataDescriptorEIP712StructV1,
 )
-from erc7730.model.resolved.v2.context import ResolvedDomain
+from erc7730.model.resolved.v2.context import ResolvedDeployment, ResolvedDomain
 from erc7730.model.types import HexStr
 
 
@@ -44,6 +44,48 @@ class ReconstructedSchema:
     # struct name -> ordered list of (type string, field name), including EIP712Domain
     types: dict[str, list[tuple[str, str]]] = field(default_factory=dict)
     structs: list[CalldataDescriptorEIP712StructV1] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class EIP712DomainBinding:
+    """Chain id and verifying contract of the domain of the messages, either of which may be unknown."""
+
+    chain_id: int | None
+    address: str | None
+
+
+def bind_domain(
+    domain: ResolvedDomain | None, deployment: ResolvedDeployment | None, out: OutputAdder
+) -> EIP712DomainBinding | None:
+    """
+    Resolve the chain id and verifying contract of the domain of the messages of a deployment.
+
+    The deployment provides them when the domain does not declare them, which is also the only source for a descriptor
+    without deployment. A domain declaring a chain id or a verifying contract the deployment is not on is rejected,
+    as no message of the deployment can have this domain.
+
+    :param domain: the resolved EIP-712 domain
+    :param deployment: the deployment the descriptor is generated for, if any
+    :param out: error handler
+    :return: the binding, or None on error
+    """
+    domain_chain_id = domain.chainId if domain is not None else None
+    domain_address = domain.verifyingContract if domain is not None else None
+    if deployment is None:
+        return EIP712DomainBinding(chain_id=domain_chain_id, address=domain_address)
+
+    if domain_chain_id is not None and domain_chain_id != deployment.chainId:
+        return out.error(
+            title="Conflicting domain chain id",
+            message=f"The domain chain id {domain_chain_id} is not the one of the deployment {deployment.chainId}.",
+        )
+    if domain_address is not None and domain_address.lower() != deployment.address.lower():
+        return out.error(
+            title="Conflicting domain verifying contract",
+            message=f"The domain verifying contract {domain_address} is not the one of the deployment "
+            f"{deployment.address}.",
+        )
+    return EIP712DomainBinding(chain_id=deployment.chainId, address=deployment.address)
 
 
 def parse_solidity_type(type_str: str) -> ParsedSolidityType:
@@ -94,7 +136,7 @@ def parse_solidity_type(type_str: str) -> ParsedSolidityType:
     )
 
 
-def _reconstruct_domain_fields(domain: ResolvedDomain | None, has_deployments: bool) -> list[tuple[str, str]]:
+def reconstruct_domain_fields(domain: ResolvedDomain | None, has_deployments: bool) -> list[tuple[str, str]]:
     """
     Reconstruct the ``EIP712Domain`` type fields, in canonical EIP-712 order.
 
@@ -169,13 +211,21 @@ def reconstruct_schema(
     types: dict[str, list[tuple[str, str]]] = {}
     structs: list[CalldataDescriptorEIP712StructV1] = []
 
-    domain_fields = _reconstruct_domain_fields(domain, has_deployments)
+    domain_fields = reconstruct_domain_fields(domain, has_deployments)
     types["EIP712Domain"] = domain_fields
-    structs.append(_build_struct("EIP712Domain", domain_fields))
 
     for type_name, type_fields in raw_types.items():
         types[type_name] = type_fields
-        structs.append(_build_struct(type_name, type_fields))
+
+    # a type outside the limits of the device is reported for this format only
+    try:
+        structs.append(_build_struct("EIP712Domain", domain_fields))
+        structs.extend(_build_struct(type_name, type_fields) for type_name, type_fields in raw_types.items())
+    except ValueError as e:
+        return out.error(
+            title="Unsupported EIP-712 type",
+            message=f"Format key '{encode_type_key}' has a type the device cannot handle: {e}",
+        )
 
     # PRIMARY_TYPE_HASH = keccak256(encodeType(primaryType)); normalize to canonical order so the hash does not
     # depend on the ordering of the source format key
@@ -190,26 +240,20 @@ def reconstruct_schema(
 
 
 def compute_domain_separator(
-    schema: ReconstructedSchema,
+    domain_fields: list[tuple[str, str]],
     domain: ResolvedDomain | None,
-    chain_id: int | None,
-    address: str | None,
+    binding: EIP712DomainBinding,
     out: OutputAdder,
 ) -> HexStr | None:
     """
     Compute the domain separator, ``hashStruct(domain)``, of the messages of one deployment.
 
-    The fields of the domain are the ones of its reconstructed type (see ``reconstruct_schema``): their values are the
-    ones of the descriptor domain, with the chain id and contract address of the deployment.
-
-    :param schema: reconstructed schema, which holds the type of the domain
-    :param domain: the resolved EIP-712 domain
-    :param chain_id: chain id of the domain
-    :param address: verifying contract of the domain
+    :param domain_fields: the fields of the type of the domain (see ``reconstruct_domain_fields``)
+    :param domain: the resolved EIP-712 domain, which holds the values of its name, version and salt
+    :param binding: chain id and verifying contract of the domain
     :param out: error handler
     :return: the domain separator, or None on error
     """
-    domain_fields = schema.types["EIP712Domain"]
     domain_type = f"EIP712Domain({','.join(f'{type_str} {name}' for type_str, name in domain_fields)})"
 
     encoded = bytearray(keccak(text=domain_type))
@@ -219,15 +263,15 @@ def compute_domain_separator(
                 value = getattr(domain, name)
                 encoded += keccak(text=value)
             case "chainId":
-                if chain_id is None:
+                if binding.chain_id is None:
                     _missing_domain_value(name, out)
                     return None
-                encoded += chain_id.to_bytes(32)
+                encoded += binding.chain_id.to_bytes(32)
             case "verifyingContract":
-                if address is None:
+                if binding.address is None:
                     _missing_domain_value(name, out)
                     return None
-                encoded += from_hex(address).rjust(32, b"\x00")
+                encoded += from_hex(binding.address).rjust(32, b"\x00")
             case "salt":
                 salt_hex = domain.salt if domain is not None else None
                 try:

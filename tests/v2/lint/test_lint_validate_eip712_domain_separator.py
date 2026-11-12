@@ -112,5 +112,6 @@ def test_invalid_domain_separator_length() -> None:
     assert [title for title, _ in outputs] == ["Invalid domain separator"]
 
 
-def test_domain_separator_without_domain_is_not_compared() -> None:
-    assert lint({"domainSeparator": "0x" + "ab" * 32}) == []
+def test_domain_separator_without_domain_is_a_mismatch() -> None:
+    outputs = lint({"domainSeparator": "0x" + "ab" * 32})
+    assert [title for title, _ in outputs] == ["Domain separator mismatch"]
