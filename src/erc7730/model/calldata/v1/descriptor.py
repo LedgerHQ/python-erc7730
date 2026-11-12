@@ -129,14 +129,14 @@ class CalldataDescriptorEIP712V1(CalldataDescriptorBase):
     domain_separator: HexStr = Field(
         title="Domain separator",
         description="hashStruct(domain) of the EIP-712 message domain.",
-        min_length=64,
+        min_length=66,
         max_length=66,
     )
 
     primary_type_hash: HexStr = Field(
         title="Primary type hash",
         description="keccak256(encodeType(primaryType)) of the EIP-712 message primary type.",
-        min_length=64,
+        min_length=66,
         max_length=66,
     )
 

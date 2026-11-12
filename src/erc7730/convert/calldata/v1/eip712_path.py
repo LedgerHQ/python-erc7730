@@ -46,6 +46,16 @@ _SLICEABLE_LEAVES = (
 )
 
 
+def _leaf_slice_width(parsed: ParsedSolidityType, start: int | None, end: int | None) -> int | None:
+    """Width in bytes of a slice of a leaf, only known when the leaf has a fixed size (``bytesN``)."""
+    if parsed.sol_type != CalldataDescriptorEIP712SolType.BYTES_FIX or parsed.type_size is None:
+        return None
+    size = parsed.type_size
+    first = min(max((start or 0) + (size if start is not None and start < 0 else 0), 0), size)
+    last = size if end is None else min(max(end + (size if end < 0 else 0), 0), size)
+    return last - first if last > first else None
+
+
 def _leaf_type_family_size(parsed: ParsedSolidityType) -> tuple[CalldataDescriptorTypeFamily, int | None]:
     """Determine the VALUE type family and size (in bytes) from the leaf Solidity type."""
     match parsed.sol_type:
@@ -83,6 +93,7 @@ def convert_eip712_data_path(
     current_parsed: ParsedSolidityType | None = None
     remaining_dims = 0
     leaf_sliced = False
+    slice_width: int | None = None
 
     last_index = len(data_path.elements) - 1
     for position, element in enumerate(data_path.elements):
@@ -136,6 +147,13 @@ def convert_eip712_data_path(
                         title="Invalid EIP-712 path",
                         message="Array index applied to a non-array value.",
                     )
+                # the dimension this selector applies to, outermost first
+                dimension = current_parsed.array_dimensions[remaining_dims - 1] if current_parsed else None
+                if dimension is not None and not -dimension <= array_index < dimension:
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f"Array index {array_index} is out of bounds for array of dimension {dimension}.",
+                    )
                 # a single element [i] is a slice [i, i+1); for i == -1, end defaults to the array length
                 end = None if array_index == -1 else array_index + 1
                 elements.append(CalldataDescriptorEIP712PathElementArraySliceV1(start=array_index, end=end))
@@ -154,6 +172,7 @@ def convert_eip712_data_path(
                     )
                 elements.append(CalldataDescriptorEIP712PathElementLeafSliceV1(start=start, end=end))
                 leaf_sliced = True
+                slice_width = _leaf_slice_width(current_parsed, start, end)
 
             case ArraySlice(start=start, end=end):
                 if remaining_dims <= 0:
@@ -191,8 +210,8 @@ def convert_eip712_data_path(
 
     type_family, type_size = _leaf_type_family_size(current_parsed)
     if leaf_sliced:
-        # the size of a slice is not the size of the type it is cut from
-        type_size = None
+        # the size of a slice is not the size of the type it is cut from, it is only known for a fixed size leaf
+        type_size = slice_width
 
     return CalldataDescriptorValuePathV1(
         type_family=type_family,

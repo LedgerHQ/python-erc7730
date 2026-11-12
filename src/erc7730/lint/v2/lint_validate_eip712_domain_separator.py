@@ -1,17 +1,17 @@
 """
 V2 linter that validates the ``domainSeparator`` of an EIP-712 context against the domain of the descriptor.
 
-The converter uses a ``domainSeparator`` given by the descriptor as is, as the ``domain`` constraint of a descriptor may
-be only partial (the signed domain can have more members than the ones listed). This linter recomputes the separator
-from the declared domain and deployments, and reports when none of them gives the declared value: the device would
-never match the messages with it.
+The device is given the type of the domain reconstructed from the descriptor, so a ``domainSeparator`` has to be the
+one of this domain: the calldata converter rejects a descriptor whose separator differs from the one computed from the
+declared domain and deployments. This linter reports it, for instance when the signed domain has more members (such as
+a ``version``) than the descriptor declares.
 """
 
 from typing import final, override
 
 from erc7730.common.binary import from_hex
 from erc7730.common.output import ListOutputAdder, OutputAdder
-from erc7730.convert.calldata.v1.eip712_schema import compute_domain_separator, reconstruct_schema
+from erc7730.convert.calldata.v1.eip712_schema import bind_domain, compute_domain_separator, reconstruct_domain_fields
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.v2.context import ResolvedEIP712Context
@@ -22,9 +22,6 @@ from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 class ValidateEIP712DomainSeparatorLinter(ERC7730Linter):
     """
     Validates that the ``domainSeparator`` of an EIP-712 context matches the separator computed from the domain.
-
-    Nothing is reported when the separator cannot be computed (no domain member, or a missing chain id / verifying
-    contract), as there is nothing to compare it to.
     """
 
     @override
@@ -49,39 +46,30 @@ class ValidateEIP712DomainSeparatorLinter(ERC7730Linter):
             )
             return
 
-        # the type of the domain does not depend on the format key: any valid one gives it
-        schema = None
-        for key in descriptor.display.formats:
-            if schema := reconstruct_schema(str(key), eip712.domain, bool(eip712.deployments), ListOutputAdder()):
-                break
-        if schema is None or not schema.types["EIP712Domain"]:
-            return
-
-        # without deployment the chain id and verifying contract can only come from the domain
-        bindings: list[tuple[int | None, str | None]] = [(d.chainId, d.address) for d in eip712.deployments]
-        if not bindings:
-            domain = eip712.domain
-            bindings = [(domain.chainId, domain.verifyingContract) if domain else (None, None)]
+        domain_fields = reconstruct_domain_fields(eip712.domain, bool(eip712.deployments))
+        bindings = [bind_domain(eip712.domain, deployment, ListOutputAdder()) for deployment in eip712.deployments]
+        if not eip712.deployments:
+            bindings = [bind_domain(eip712.domain, None, ListOutputAdder())]
 
         computed = [
-            compute_domain_separator(schema, eip712.domain, chain_id, address, ListOutputAdder())
-            for chain_id, address in bindings
+            compute_domain_separator(domain_fields, eip712.domain, binding, ListOutputAdder()) if binding else None
+            for binding in bindings
         ]
         known = [separator for separator in computed if separator is not None]
-        if not known:
-            return
+        matching = [separator for separator in known if from_hex(separator) == declared_bytes]
 
-        expected = {bytes.fromhex(separator[2:]) for separator in known}
-        if declared_bytes not in expected:
-            out.warning(
+        if not matching:
+            out.error(
                 title="Domain separator mismatch",
                 message=f"Domain separator {declared} is not the one computed from the domain "
-                f"({', '.join(sorted(known))}). If the domain is partial this is expected, otherwise the device will "
-                "not match the messages of this descriptor.",
+                f"({', '.join(sorted(known)) or 'it cannot be computed'}). Declare every member of the domain (name, "
+                "version, chainId, verifyingContract, salt), otherwise the converter rejects the descriptor and the "
+                "device cannot match its messages.",
             )
-        elif len(known) > 1:
+        elif len(matching) < len(computed):
             out.warning(
                 title="Domain separator shared by several deployments",
-                message=f"Domain separator {declared} matches only some of the {len(known)} deployments, as it "
-                "depends on the chain id and the verifying contract. Omit it to compute one per deployment.",
+                message=f"Domain separator {declared} matches only some of the {len(computed)} deployments, as it "
+                "depends on the chain id and the verifying contract: the others are rejected by the converter. Omit it "
+                "to compute one per deployment.",
             )

@@ -40,7 +40,6 @@ from erc7730.model.calldata.v1.value import (
     CalldataDescriptorValuePathV1,
 )
 from erc7730.model.paths import ContainerPath, DataPath
-from erc7730.model.resolved.v2.context import ResolvedDeployment
 from erc7730.model.resolved.v2.display import ResolvedValueMap
 from erc7730.model.types import Address, HexStr, Selector
 
@@ -65,8 +64,8 @@ _Invalid = Callable[[str], bytes | None]
 
 class MapEntries:
     """
-    Device side maps of a calldata descriptor, bound to a single deployment and either a selector (transaction), or the
-    domain separator and primary type hash of the message (EIP-712 message).
+    Device side maps of a calldata descriptor, bound to a single chain and contract and either a selector
+    (transaction), or the domain separator and primary type hash of the message (EIP-712 message).
 
     Map ids are allocated per descriptor: a map looked up several times with the same key and value encodings shares
     its id and MAP_ENTRY structs, a map looked up with different encodings (for instance its values read as addresses
@@ -75,12 +74,14 @@ class MapEntries:
 
     def __init__(
         self,
-        deployment: ResolvedDeployment | None,
+        chain_id: int | None,
+        address: str | None,
         selector: Selector | None = None,
         domain_separator: HexStr | None = None,
         primary_type_hash: HexStr | None = None,
     ) -> None:
-        self.deployment = deployment
+        self.chain_id = chain_id
+        self.address = address
         self.selector = selector
         self.domain_separator = domain_separator
         self.primary_type_hash = primary_type_hash
@@ -132,8 +133,8 @@ class MapEntries:
             for key_source, key_bytes, value_bytes in encoded:
                 self.entries.append(
                     CalldataDescriptorInstructionMapEntryV1(
-                        chain_id=self.deployment.chainId if self.deployment else None,
-                        address=Address(self.deployment.address) if self.deployment else None,
+                        chain_id=self.chain_id,
+                        address=Address(self.address) if self.address else None,
                         selector=self.selector,
                         domain_separator=self.domain_separator,
                         primary_type_hash=self.primary_type_hash,

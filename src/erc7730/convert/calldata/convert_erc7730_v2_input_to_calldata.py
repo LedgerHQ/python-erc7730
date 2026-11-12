@@ -22,10 +22,16 @@ from erc7730.common.abi import (
 from erc7730.common.binary import from_hex
 from erc7730.common.ledger import ledger_network_id
 from erc7730.common.options import first_not_none
-from erc7730.common.output import ConsoleOutputAdder, OutputAdder, exception_to_output
+from erc7730.common.output import ConsoleOutputAdder, ListOutputAdder, OutputAdder, exception_to_output
 from erc7730.convert.calldata.v1.abi import function_to_abi_tree
 from erc7730.convert.calldata.v1.eip712_path import convert_eip712_data_path
-from erc7730.convert.calldata.v1.eip712_schema import ReconstructedSchema, compute_domain_separator, reconstruct_schema
+from erc7730.convert.calldata.v1.eip712_schema import (
+    EIP712DomainBinding,
+    ReconstructedSchema,
+    bind_domain,
+    compute_domain_separator,
+    reconstruct_schema,
+)
 from erc7730.convert.calldata.v1.enum import convert_enums
 from erc7730.convert.calldata.v1.map import MapEntries
 from erc7730.convert.calldata.v1.path import (
@@ -36,7 +42,7 @@ from erc7730.convert.calldata.v1.path import (
 from erc7730.convert.resolved.v2.convert_erc7730_input_to_resolved import (
     ERC7730InputToResolved,
 )
-from erc7730.convert.resolved.v2.values import deployment_map_key, encode_value, lookup_map_value
+from erc7730.convert.resolved.v2.values import encode_value, is_deployment_key, lookup_map_value
 from erc7730.model.abi import Function
 from erc7730.model.calldata.descriptor import (
     CalldataDescriptor,
@@ -271,10 +277,9 @@ def _convert_v2_selector(
             else None
         )
 
-    # Use v1 convert_enums — v2 ResolvedDeployment is duck-type compatible with v1
-    enums = convert_enums(deployment, descriptor.metadata.enums, selector=selector)  # type: ignore[arg-type]
+    enums = convert_enums(deployment.chainId, deployment.address, descriptor.metadata.enums, selector=selector)
     enums_by_id = {enum.enum_id: enum.id for enum in enums}
-    maps = MapEntries(deployment, selector)
+    maps = MapEntries(deployment.chainId, deployment.address, selector)
 
     fields: list[CalldataDescriptorInstructionFieldV1] = []
     for input_field in format.fields:
@@ -459,8 +464,11 @@ def _normalize_eip712_constraints(
         payload = from_hex(constraint)
         match type_family:
             case CalldataDescriptorTypeFamily.UINT | CalldataDescriptorTypeFamily.INT:
-                # no leading zero byte, unless the value is zero (a leaf of the size of the type is a negative integer)
-                if type_family is CalldataDescriptorTypeFamily.UINT or len(payload) != type_size:
+                # no leading zero byte, unless the value is zero; only a negative integer has the size of its type
+                negative = (
+                    type_family is CalldataDescriptorTypeFamily.INT and len(payload) == type_size and payload[0] >= 0x80
+                )
+                if not negative:
                     payload = payload.lstrip(b"\x00") or b"\x00"
             case CalldataDescriptorTypeFamily.ADDRESS:
                 if len(payload) > ADDRESS_LENGTH:
@@ -794,12 +802,15 @@ def _convert_v2_param(
         return None
 
     def _deployment_map_key(value_map: ResolvedValueMap) -> str | None:
-        if maps.deployment is None:
+        # only for maps keyed on the chain id or the contract address, which the descriptor may not know
+        key_path = value_map.keyPath
+        by_chain_id = isinstance(key_path, ContainerPath) and key_path.field == ContainerField.CHAIN_ID
+        if (key := maps.chain_id if by_chain_id else maps.address) is None:
             return out.error(
                 title="Missing deployment",
-                message=f"Map {value_map.map} is keyed by the deployment, which the descriptor does not declare.",
+                message=f"Map {value_map.map} is keyed by {key_path}, which the descriptor does not declare.",
             )
-        return deployment_map_key(value_map.keyPath, maps.deployment.chainId, maps.deployment.address)
+        return str(key)
 
     def _lookup_deployment_value(value_map: ResolvedValueMap, key: str) -> ResolvedValueConstant | None:
         if (map_value := lookup_map_value(value_map.values, key)) is None:
@@ -819,7 +830,9 @@ def _convert_v2_param(
         :return: True if the token is on the transaction chain, False on error (reported)
         """
         chain_id = getattr(params, "chainId", None)
-        if isinstance(chain_id, ResolvedValueMap) and (key := _deployment_map_key(chain_id)) is not None:
+        if isinstance(chain_id, ResolvedValueMap) and is_deployment_key(chain_id.keyPath):
+            if (key := _deployment_map_key(chain_id)) is None:
+                return False
             if (map_value := _lookup_deployment_value(chain_id, key)) is None:
                 return False
             chain_id = map_value.value
@@ -828,9 +841,7 @@ def _convert_v2_param(
         other_chain_path = chain_id_path is not None and not (
             isinstance(chain_id_path, ContainerPath) and chain_id_path.field == ContainerField.CHAIN_ID
         )
-        if (
-            chain_id is not None and (maps.deployment is None or chain_id != maps.deployment.chainId)
-        ) or other_chain_path:
+        if (chain_id is not None and (maps.chain_id is None or chain_id != maps.chain_id)) or other_chain_path:
             out.error(
                 title="Unsupported token chain",
                 message=f"""Token "{field.label}" may be on another chain than the transaction, which cannot be """
@@ -849,8 +860,10 @@ def _convert_v2_param(
             # the calldata descriptor is generated for a single deployment, so a map keyed on the chain id or target
             # contract address resolves to a constant, other keys are only known when the transaction is signed and
             # the device looks the value up in the map entries provided with the descriptor
-            if (key := _deployment_map_key(resolved_value)) is None:
+            if not is_deployment_key(resolved_value.keyPath):
                 return maps.map_ref(resolved_value, abi_type, convert_path, out)
+            if (key := _deployment_map_key(resolved_value)) is None:
+                return None
             if (map_value := _lookup_deployment_value(resolved_value, key)) is None:
                 return None
             resolved_value = map_value
@@ -910,13 +923,15 @@ def _convert_v2_param(
                 input_sender_addresses = getattr(address_params, "senderAddress", None)
                 if isinstance(input_sender_addresses, ResolvedValueMap):
                     # sender addresses are constants in the TRUSTED_NAME struct, the device cannot look them up
-                    if (key := _deployment_map_key(input_sender_addresses)) is None:
+                    if not is_deployment_key(input_sender_addresses.keyPath):
                         return out.error(
                             title="Unsupported map key",
                             message=f"Sender addresses cannot be looked up in map {input_sender_addresses.map} using "
                             f"key {input_sender_addresses.keyPath}: the device only accepts constant sender "
                             "addresses, so only @.chainId and @.to keys are supported.",
                         )
+                    if (key := _deployment_map_key(input_sender_addresses)) is None:
+                        return None
                     if (sender_address := _lookup_deployment_value(input_sender_addresses, key)) is None:
                         return None
                     sender_addresses = [Address(str(sender_address.value))]
@@ -1129,15 +1144,13 @@ def _convert_eip712_descriptors(
     deployments: list[ResolvedDeployment | None] = [*resolved_context.eip712.deployments] or [None]
 
     for deployment in deployments:
-        deployment_chain_id = deployment.chainId if deployment else (domain.chainId if domain else None)
-
-        if chain_id is not None and deployment_chain_id is not None and chain_id != deployment_chain_id:
+        if (binding := bind_domain(domain, deployment, out)) is None:
             continue
 
-        if deployment_chain_id is not None and ledger_network_id(deployment_chain_id) is None:
-            out.warning(f"Chain id {deployment_chain_id} is not known, skipping it")
+        if chain_id is not None and binding.chain_id is not None and chain_id != binding.chain_id:
             continue
 
+        # the domain separator and the primary type hash address the message, an unknown network does not prevent that
         for encode_type_key, format in resolved_descriptor.display.formats.items():
             schema = reconstruct_schema(str(encode_type_key), domain, has_deployments, out)
             if schema is None:
@@ -1145,7 +1158,7 @@ def _convert_eip712_descriptors(
 
             descriptor = _convert_eip712_message(
                 descriptor=resolved_descriptor,
-                deployment=deployment,
+                binding=binding,
                 domain=domain,
                 domain_separator=resolved_context.eip712.domainSeparator,
                 schema=schema,
@@ -1162,7 +1175,7 @@ def _convert_eip712_descriptors(
 
 def _convert_eip712_message(
     descriptor: ResolvedERC7730Descriptor,
-    deployment: ResolvedDeployment | None,
+    binding: EIP712DomainBinding,
     domain: ResolvedDomain | None,
     domain_separator: str | None,
     schema: ReconstructedSchema,
@@ -1174,7 +1187,7 @@ def _convert_eip712_message(
     Generate a calldata descriptor for a single EIP-712 message primary type.
 
     :param descriptor: resolved v2 source ERC-7730 descriptor
-    :param deployment: chain id / verifying contract address for which the descriptor is generated, if any
+    :param binding: chain id / verifying contract address of the domain for which the descriptor is generated
     :param domain: EIP-712 domain of the messages
     :param domain_separator: domain separator given by the descriptor, computed from the domain when not set
     :param schema: reconstructed EIP-712 schema (structs + primary type hash)
@@ -1199,14 +1212,12 @@ def _convert_eip712_message(
             else None
         )
 
-    # without deployment, the chain id and verifying contract can only come from the domain
-    chain_id = deployment.chainId if deployment else (domain.chainId if domain else None)
-    address = deployment.address if deployment else (domain.verifyingContract if domain else None)
-    if deployment is None and chain_id is not None and address is not None:
-        deployment = ResolvedDeployment(chainId=chain_id, address=address)
+    domain_fields = schema.types["EIP712Domain"]
+    computed = compute_domain_separator(domain_fields, domain, binding, ListOutputAdder() if domain_separator else out)
 
-    # a separator given by the descriptor is used as is (the domain of the descriptor may be only partial, it is up to
-    # the linter to check it against the domain)
+    # a separator given by the descriptor has to be the one of the domain the descriptor declares: the device is given
+    # the type of this domain, so a separator of another domain (for instance one with more members than the
+    # descriptor declares) could never match a message
     if domain_separator:
         try:
             separator_bytes = from_hex(domain_separator)
@@ -1219,25 +1230,38 @@ def _convert_eip712_message(
                 "string.",
             )
         domain_separator_hex = HexStr("0x" + separator_bytes.hex())
-    elif not schema.types["EIP712Domain"]:
+        if computed is None or from_hex(computed) != separator_bytes:
+            return out.error(
+                title="Domain separator mismatch",
+                message=f"Domain separator {domain_separator} is not the one of the domain of the descriptor "
+                f"({computed or 'it cannot be computed'}). Declare every member of the domain (name, version, "
+                "chainId, verifyingContract, salt) so that its type can be reconstructed.",
+            )
+    elif computed is None:
+        return None
+    elif not domain_fields:
         return out.error(
             title="Missing domain",
             message="The domain separator cannot be computed: set the domain or the domain separator.",
         )
-    elif (computed := compute_domain_separator(schema, domain, chain_id, address, out)) is None:
-        return None
     else:
         domain_separator_hex = computed
 
+    chain_id = binding.chain_id
+    address = binding.address
+
     # enums and maps are provided to the device keyed by the message they are for
     enums = convert_enums(
-        deployment,  # type: ignore[arg-type]
+        chain_id,
+        address,
         descriptor.metadata.enums,
         domain_separator=domain_separator_hex,
         primary_type_hash=schema.primary_type_hash,
     )
     enums_by_id = {enum.enum_id: enum.id for enum in enums}
-    maps = MapEntries(deployment, domain_separator=domain_separator_hex, primary_type_hash=schema.primary_type_hash)
+    maps = MapEntries(
+        chain_id, address, domain_separator=domain_separator_hex, primary_type_hash=schema.primary_type_hash
+    )
 
     fields: list[CalldataDescriptorInstructionFieldV1] = []
     for input_field in format.fields:

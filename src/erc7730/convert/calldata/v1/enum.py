@@ -6,7 +6,6 @@ from erc7730.model.calldata.v1.instruction import (
     CalldataDescriptorInstructionEnumValueV1,
 )
 from erc7730.model.metadata import EnumDefinition
-from erc7730.model.resolved.context import ResolvedDeployment
 from erc7730.model.types import HexStr, Id, Selector
 
 # A bool holds 0 or 1 in calldata, and an enum key is the field value it matches, so these are
@@ -31,7 +30,8 @@ def enum_ordinal(ordinal: str) -> int:
 
 
 def convert_enums(
-    deployment: ResolvedDeployment | None,
+    chain_id: int | None,
+    address: str | None,
     enums: dict[Id, EnumDefinition] | None,
     selector: Selector | None = None,
     domain_separator: HexStr | None = None,
@@ -40,7 +40,8 @@ def convert_enums(
     """
     Convert descriptor enum definitions to calldata descriptor enum value instructions.
 
-    @param deployment: deployment the enums are bound to
+    @param chain_id: chain id the enums are bound to
+    @param address: contract address the enums are bound to
     @param enums: descriptor enum definitions
     @param selector: function selector the enums are bound to (transactions)
     @param domain_separator: domain separator the enums are bound to (EIP-712 messages)
@@ -52,8 +53,8 @@ def convert_enums(
 
     return [
         CalldataDescriptorInstructionEnumValueV1(
-            chain_id=deployment.chainId if deployment else None,
-            address=deployment.address if deployment else None,
+            chain_id=chain_id,
+            address=address,
             selector=selector,
             domain_separator=domain_separator,
             primary_type_hash=primary_type_hash,
