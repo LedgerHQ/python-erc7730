@@ -1,4 +1,5 @@
 from pydantic import RootModel, ValidationError
+from pydantic_string_url import HttpUrl
 
 from erc7730.common.output import ListOutputAdder, Output
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import erc7730_v2_descriptor_to_calldata_descriptors
@@ -16,9 +17,14 @@ def compile_json(body: bytes) -> CompileResult:
 
 def parse_descriptor(body: bytes) -> InputERC7730Descriptor | InvalidDescriptor:
     try:
-        return InputERC7730Descriptor.model_validate_json(body, strict=False)
+        descriptor = InputERC7730Descriptor.model_validate_json(body, strict=False)
     except ValidationError as e:
         return InvalidDescriptor(_errors(e))
+    if descriptor.includes is not None:
+        return InvalidDescriptor("includes: not supported, send the merged descriptor")
+    if remote := sorted(name for name, enum in (descriptor.metadata.enums or {}).items() if isinstance(enum, HttpUrl)):
+        return InvalidDescriptor(f"metadata.enums: remote enums are not supported: {', '.join(remote)}")
+    return descriptor
 
 
 def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
