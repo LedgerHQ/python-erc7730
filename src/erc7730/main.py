@@ -30,6 +30,7 @@ from erc7730.model.calldata.descriptor import CalldataDescriptor
 from erc7730.model.input.descriptor import InputERC7730Descriptor
 from erc7730.model.resolved.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.types import Address
+from erc7730.serve.app import serve
 
 if os.environ.get("DEBUG") is not None:
     logging.basicConfig(
@@ -274,6 +275,24 @@ def command_calldata(
     # descriptors failing to convert are left out of the output, so the output alone does not tell an error happened
     if out.has_errors:
         raise Exit(1)
+
+
+@app.command(
+    name="serve",
+    short_help="Serve calldata descriptors over HTTP.",
+    help="""
+    Serve an HTTP API that generates calldata descriptors.
+
+    POST /v2/calldata takes an ERC-7730 v2 descriptor as JSON body and returns its calldata descriptors.
+    The descriptor must be self-contained: includes and remote enums are refused.
+    GET /health answers when the server is up.
+    """,
+)
+def command_serve(
+    host: Annotated[str, Option(help="The interface to listen on")] = "127.0.0.1",
+    port: Annotated[int, Option(help="The port to listen on")] = 8730,
+) -> None:
+    serve(host, port)
 
 
 if __name__ == "__main__":
