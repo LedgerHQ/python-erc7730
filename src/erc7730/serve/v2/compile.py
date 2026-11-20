@@ -49,7 +49,11 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
     )
     if out.has_errors:
         return ConversionFailed(diagnostics)
-    payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
+    # TLV lengths fit in one byte, and the TLV is only encoded during serialization
+    try:
+        payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
+    except OverflowError:
+        return InvalidDescriptor("a text is too long for the calldata TLV encoding")
     return Compiled(tuple(payload), diagnostics)
 
 
