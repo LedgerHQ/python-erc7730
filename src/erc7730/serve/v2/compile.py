@@ -1,3 +1,5 @@
+import json
+
 from pydantic import RootModel, ValidationError
 from pydantic_string_url import HttpUrl
 
@@ -17,7 +19,17 @@ def compile_json(body: bytes) -> CompileResult:
 
 def parse_descriptor(body: bytes) -> InputERC7730Descriptor | InvalidDescriptor:
     try:
-        descriptor = InputERC7730Descriptor.model_validate_json(body, strict=False)
+        data = json.loads(body)
+    except ValueError as e:
+        return InvalidDescriptor(f"Invalid JSON: {e}")
+    # the TLV encoding of calldata descriptors only accepts ASCII
+    text = json.dumps(data, ensure_ascii=False)
+    if not text.isascii():
+        return InvalidDescriptor(
+            f"descriptors only accept ASCII text, found {next(c for c in text if not c.isascii())!r}"
+        )
+    try:
+        descriptor = InputERC7730Descriptor.model_validate(data, strict=False)
     except ValidationError as e:
         return InvalidDescriptor(_errors(e))
     if descriptor.includes is not None:
@@ -37,11 +49,7 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
     )
     if out.has_errors:
         return ConversionFailed(diagnostics)
-    # the TLV encoding of calldata descriptors only accepts ASCII, and only runs during serialization
-    try:
-        payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
-    except UnicodeEncodeError as e:
-        return InvalidDescriptor(f"calldata descriptors only accept ASCII text: {e.object[e.start : e.end]!r}")
+    payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
     return Compiled(tuple(payload), diagnostics)
 
 

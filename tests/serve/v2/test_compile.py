@@ -16,6 +16,12 @@ def _descriptor(**changes: Any) -> dict[str, Any]:
     return load_json_file(RESOURCES / "usdt-descriptor.json") | changes
 
 
+def _with_label(label: str) -> dict[str, Any]:
+    descriptor = _descriptor()
+    next(iter(descriptor["display"]["formats"].values()))["fields"][0]["label"] = label
+    return descriptor
+
+
 @pytest.mark.parametrize("token", ["usdc", "usdt"])
 def test_compile_json_matches_reference_output(token: str) -> None:
     result = compile_json((RESOURCES / f"{token}-descriptor.json").read_bytes())
@@ -30,9 +36,11 @@ def test_compile_json_matches_reference_output(token: str) -> None:
     [
         (b"{not json", "Invalid JSON"),
         (json.dumps(_descriptor(display="not an object")).encode(), "display:"),
-        (json.dumps(_descriptor(metadata={"owner": "Café"})).encode(), "calldata descriptors only accept ASCII text"),
+        (b"\xff", "Invalid JSON"),
+        (json.dumps(_descriptor(metadata={"owner": "Café"})).encode(), "only accept ASCII text, found 'é'"),
+        (json.dumps(_with_label("Café"), ensure_ascii=False).encode(), "only accept ASCII text, found 'é'"),
     ],
-    ids=["not json", "not a descriptor", "not ascii"],
+    ids=["not json", "not a descriptor", "not utf-8", "escaped non-ascii owner", "raw non-ascii label"],
 )
 def test_compile_json_rejects_invalid_descriptors(body: bytes, message: str) -> None:
     result = compile_json(body)
