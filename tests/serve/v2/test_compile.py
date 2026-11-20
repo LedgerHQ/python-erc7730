@@ -79,6 +79,21 @@ def test_compile_json_refuses_external_resources(
     assert compile_json(json.dumps(_descriptor(**changes)).encode()) == InvalidDescriptor(message)
 
 
+def test_compile_json_refuses_descriptors_that_expand_too_much() -> None:
+    deployments = [{"chainId": 1, "address": f"0x{i:040x}"} for i in range(1, 102)]
+    formats = {
+        f"f{i}(uint256 a)": {"intent": "x", "fields": [{"path": "a", "label": "A", "format": "raw"}]}
+        for i in range(100)
+    }
+    descriptor = _descriptor(
+        context={"$id": "x", "contract": {"deployments": deployments}}, display={"formats": formats}
+    )
+
+    result = compile_json(json.dumps(descriptor).encode())
+
+    assert result == InvalidDescriptor("descriptor too large: it would generate 10100 items, the limit is 10000")
+
+
 def test_compile_json_returns_conversion_errors() -> None:
     # a map key that cannot be encoded as a uint32 makes the selector fail to convert
     descriptor = _descriptor(
