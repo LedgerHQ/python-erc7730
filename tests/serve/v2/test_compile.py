@@ -101,6 +101,7 @@ def _expanding(deployments: int, formats: dict[str, Any], metadata: dict[str, An
 
 
 RAW_FIELD = {"path": "a", "label": "A", "format": "raw"}
+LITERAL_FIELD = {"value": "x", "label": "A", "format": "raw"}
 MAP_FIELD = {
     "path": "assets",
     "label": "Amount",
@@ -129,8 +130,17 @@ MAP_FIELD = {
             ),
             150_200,
         ),
+        (_expanding(100, {"f(uint256 a)": {"intent": "x", "fields": [LITERAL_FIELD] * 1600}}, {}), 160_100),
+        (
+            _expanding(
+                100,
+                {"deposit(uint256 assets, uint32 marketId)": {"intent": "x", "fields": [MAP_FIELD, MAP_FIELD]}},
+                {"maps": {"tokens": {"values": {str(i): f"0x{i + 1:040x}" for i in range(400)}}}},
+            ),
+            160_300,
+        ),
     ],
-    ids=["formats x enum entries", "fields", "map entries"],
+    ids=["formats x enum entries", "fields", "map entries", "literal fields", "repeated map lookups"],
 )
 def test_compile_json_refuses_descriptors_that_expand_too_much(descriptor: dict[str, Any], items: int) -> None:
     result = compile_json(json.dumps(descriptor).encode())

@@ -65,22 +65,23 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
     return Compiled(tuple(payload), diagnostics)
 
 
-# per deployment, the converter rebuilds each format with every enum entry, and each field with every map entry
+# per deployment, the converter rebuilds each format with every enum entry, and each field with its map lookups
 def _generated_items(descriptor: InputERC7730Descriptor) -> int:
     context = descriptor.context
     deployments = len(context.contract.deployments) if isinstance(context, InputContractContext) else 0
     formats = descriptor.display.formats.values()
-    fields = sum(_fields(f.model_dump(by_alias=True, exclude_none=True)) for f in formats)
+    fields = sum(_nodes(f.model_dump(by_alias=True, exclude_none=True), {"path", "$ref", "value"}) for f in formats)
+    map_lookups = _nodes(descriptor.display.model_dump(by_alias=True, exclude_none=True), {"map"})
     enum_entries = sum(len(enum) for enum in (descriptor.metadata.enums or {}).values() if isinstance(enum, dict))
     map_entries = sum(len(m.values) for m in (descriptor.metadata.maps or {}).values())
-    return deployments * (len(formats) * (1 + enum_entries) + fields * (1 + map_entries))
+    return deployments * (len(formats) * (1 + enum_entries) + fields * (1 + map_lookups * map_entries))
 
 
-def _fields(node: Any) -> int:
+def _nodes(node: Any, keys: set[str]) -> int:
     if isinstance(node, dict):
-        return ("path" in node or "$ref" in node) + sum(_fields(value) for value in node.values())
+        return bool(keys & node.keys()) + sum(_nodes(value, keys) for value in node.values())
     if isinstance(node, list):
-        return sum(_fields(value) for value in node)
+        return sum(_nodes(value, keys) for value in node)
     return 0
 
 
