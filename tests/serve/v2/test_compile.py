@@ -79,19 +79,53 @@ def test_compile_json_refuses_external_resources(
     assert compile_json(json.dumps(_descriptor(**changes)).encode()) == InvalidDescriptor(message)
 
 
-def test_compile_json_refuses_descriptors_that_expand_too_much() -> None:
-    deployments = [{"chainId": 1, "address": f"0x{i:040x}"} for i in range(1, 102)]
-    formats = {
-        f"f{i}(uint256 a)": {"intent": "x", "fields": [{"path": "a", "label": "A", "format": "raw"}]}
-        for i in range(100)
-    }
-    descriptor = _descriptor(
-        context={"$id": "x", "contract": {"deployments": deployments}}, display={"formats": formats}
+def _expanding(deployments: int, formats: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+    return _descriptor(
+        context={
+            "$id": "x",
+            "contract": {"deployments": [{"chainId": 1, "address": f"0x{i:040x}"} for i in range(1, deployments + 1)]},
+        },
+        metadata={"owner": "x", **metadata},
+        display={"formats": formats},
     )
 
+
+RAW_FIELD = {"path": "a", "label": "A", "format": "raw"}
+MAP_FIELD = {
+    "path": "assets",
+    "label": "Amount",
+    "format": "tokenAmount",
+    "params": {"token": {"map": "$.metadata.maps.tokens", "keyPath": "#.marketId"}},
+}
+
+
+@pytest.mark.parametrize(
+    "descriptor, items",
+    [
+        (
+            _expanding(
+                10,
+                {f"f{i}(uint256 a)": {"intent": "x", "fields": [RAW_FIELD]} for i in range(100)},
+                {"enums": {f"e{n}": {str(i): f"v{i}" for i in range(32)} for n in range(7)}},
+            ),
+            226_000,
+        ),
+        (_expanding(100, {"f(uint256 a)": {"intent": "x", "fields": [RAW_FIELD] * 1600}}, {}), 160_100),
+        (
+            _expanding(
+                100,
+                {"deposit(uint256 assets, uint32 marketId)": {"intent": "x", "fields": [MAP_FIELD]}},
+                {"maps": {"tokens": {"values": {str(i): f"0x{i + 1:040x}" for i in range(1500)}}}},
+            ),
+            150_200,
+        ),
+    ],
+    ids=["formats x enum entries", "fields", "map entries"],
+)
+def test_compile_json_refuses_descriptors_that_expand_too_much(descriptor: dict[str, Any], items: int) -> None:
     result = compile_json(json.dumps(descriptor).encode())
 
-    assert result == InvalidDescriptor("descriptor too large: it would generate 10100 items, the limit is 10000")
+    assert result == InvalidDescriptor(f"descriptor too large: it would generate {items} items, the limit is 150000")
 
 
 def test_compile_json_returns_conversion_errors() -> None:
