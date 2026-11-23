@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import pytest
@@ -66,3 +67,26 @@ async def test_unexpected_error_returns_500_and_logs_traceback(
     assert response.status_code == 500
     assert response.json() == {"error": "RuntimeError"}
     assert any(r.exc_info is not None and "boom" in str(r.exc_info[1]) for r in caplog.records)
+
+
+async def test_busy_server_returns_503_and_still_answers_health(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(calldata, "_slots", asyncio.Semaphore(0))
+
+    response = await request("POST", URL, content=USDC)
+
+    assert response.status_code == 503
+    assert [d["title"] for d in response.json()["diagnostics"]] == ["Busy"]
+    assert (await request("GET", "/health")).status_code == 200
+
+
+async def test_failed_requests_release_their_slot(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail(body: bytes) -> ConversionFailed:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(calldata, "compile_json", fail)
+
+    statuses = [
+        (await request("POST", URL, content=USDC)).status_code for _ in range(calldata.MAX_CONCURRENT_REQUESTS + 1)
+    ]
+
+    assert set(statuses) == {500}

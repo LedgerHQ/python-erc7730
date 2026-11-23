@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from dataclasses import asdict
 from typing import Any, assert_never
@@ -10,11 +11,21 @@ from erc7730.serve.v2.compile import compile_json
 from erc7730.serve.v2.model import Compiled, CompileResult, ConversionFailed, Diagnostic, InvalidDescriptor
 
 MAX_BODY_BYTES = 1024 * 1024
+MAX_CONCURRENT_REQUESTS = 4
 
 logger = logging.getLogger(__name__)
+_slots = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
 
 
 async def calldata(request: Request) -> JSONResponse:
+    # no await between the check and the acquire, so a full server answers 503 without waiting or reading the body
+    if _slots.locked():
+        return _response(503, (), (Diagnostic(level="error", title="Busy", message="too many concurrent requests"),))
+    async with _slots:
+        return await _compile_request(request)
+
+
+async def _compile_request(request: Request) -> JSONResponse:
     body = await _read_body(request, MAX_BODY_BYTES)
     if body is None:
         message = f"the body is over {MAX_BODY_BYTES} bytes"
