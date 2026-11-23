@@ -37,8 +37,11 @@ def test_compile_json_matches_reference_output(token: str) -> None:
         (b"{not json", "Invalid JSON"),
         (json.dumps(_descriptor(display="not an object")).encode(), "display:"),
         (b"\xff", "Invalid JSON"),
-        (json.dumps(_descriptor(metadata={"owner": "Café"})).encode(), "only accept ASCII text, found 'é'"),
-        (json.dumps(_with_label("Café"), ensure_ascii=False).encode(), "only accept ASCII text, found 'é'"),
+        (
+            json.dumps(_descriptor(metadata={"owner": "Café"})).encode(),
+            "calldata descriptors: ASCII text only, found 'é'",
+        ),
+        (json.dumps(_with_label("Café"), ensure_ascii=False).encode(), "display: ASCII text only, found 'é'"),
         (json.dumps(_descriptor(metadata={"owner": "A" * 256})).encode(), "too long for the calldata TLV encoding"),
     ],
     ids=[
@@ -55,6 +58,13 @@ def test_compile_json_rejects_invalid_descriptors(body: bytes, message: str) -> 
 
     assert isinstance(result, InvalidDescriptor)
     assert message in result.message
+
+
+def test_compile_json_accepts_non_ascii_text_outside_the_tlv() -> None:
+    descriptor = _descriptor()
+    descriptor["metadata"]["token"]["name"] = "USD₮0"
+
+    assert isinstance(compile_json(json.dumps(descriptor, ensure_ascii=False).encode()), Compiled)
 
 
 @pytest.mark.parametrize(

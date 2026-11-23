@@ -26,12 +26,10 @@ def parse_descriptor(body: bytes) -> InputERC7730Descriptor | InvalidDescriptor:
         data = json.loads(body)
     except ValueError as e:
         return InvalidDescriptor(f"Invalid JSON: {e}")
-    # the TLV encoding of calldata descriptors only accepts ASCII
-    text = json.dumps(data, ensure_ascii=False)
-    if not text.isascii():
-        return InvalidDescriptor(
-            f"descriptors only accept ASCII text, found {next(c for c in text if not c.isascii())!r}"
-        )
+    # display texts are TLV-encoded inside the converter, which turns an encoding error into a conversion error
+    display = json.dumps(data.get("display") if isinstance(data, dict) else None, ensure_ascii=False)
+    if not display.isascii():
+        return InvalidDescriptor(f"display: ASCII text only, found {next(c for c in display if not c.isascii())!r}")
     try:
         descriptor = InputERC7730Descriptor.model_validate(data, strict=False)
     except ValidationError as e:
@@ -57,11 +55,13 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
     )
     if out.has_errors:
         return ConversionFailed(diagnostics)
-    # TLV lengths fit in one byte, and the TLV is only encoded during serialization
+    # the TLV is only encoded during serialization, with one-byte lengths and ASCII text
     try:
         payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
     except OverflowError:
         return InvalidDescriptor("a text is too long for the calldata TLV encoding")
+    except UnicodeEncodeError as e:
+        return InvalidDescriptor(f"calldata descriptors: ASCII text only, found {e.object[e.start : e.end]!r}")
     return Compiled(tuple(payload), diagnostics)
 
 
