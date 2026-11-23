@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.1"
-content_hash = "sha256:d7ccd938a2186850319d796daf72005b0b491482ebaf54e847829a9d23bb6323"
+content_hash = "sha256:50e6d7a9158175bd51cef7b71b8459b39661490f75cee8c38d17ce0d83d73bfa"
 
 [[metadata.targets]]
 requires_python = ">=3.12,<3.13"
@@ -192,6 +192,17 @@ files = [
     {file = "charset_normalizer-3.4.4-cp312-cp312-win_arm64.whl", hash = "sha256:376bec83a63b8021bb5c8ea75e21c4ccb86e7e45ca4eb81146091b56599b80c3"},
     {file = "charset_normalizer-3.4.4-py3-none-any.whl", hash = "sha256:7a32c560861a02ff789ad905a2fe94e3f840803362c84fecf1851cb4cf3dc37f"},
     {file = "charset_normalizer-3.4.4.tar.gz", hash = "sha256:94537985111c35f28720e43603b8e7b43a6ecfb2ce1d3058bbe955b73404e21a"},
+]
+
+[[package]]
+name = "click"
+version = "8.5.1"
+requires_python = ">=3.10"
+summary = "Composable command line interface toolkit"
+groups = ["default"]
+files = [
+    {file = "click-8.5.1-py3-none-any.whl", hash = "sha256:8bb5376d2006950386f8c6427613334a2acadc5f559cb80e638d00b4df957e37"},
+    {file = "click-8.5.1.tar.gz", hash = "sha256:9bbfada76703fd1d784b83eea012e3e8c6a001a876543ef104fa56aaaeb072b4"},
 ]
 
 [[package]]
@@ -1516,6 +1527,21 @@ files = [
 ]
 
 [[package]]
+name = "starlette"
+version = "1.10.0"
+requires_python = ">=3.11"
+summary = "The little ASGI library that shines."
+groups = ["default"]
+dependencies = [
+    "anyio<5,>=4.0.0",
+    "typing-extensions>=4.10.0; python_version < \"3.13\"",
+]
+files = [
+    {file = "starlette-1.10.0-py3-none-any.whl", hash = "sha256:478c0ab3b4ced6e82719849c118fa406f0278a3499c1a898cd15cd31bdc38ce4"},
+    {file = "starlette-1.10.0.tar.gz", hash = "sha256:b8399098d4c1e3522734f7235dc79b1fc967f96cf139c81e0fa30479e0685f9b"},
+]
+
+[[package]]
 name = "strenum"
 version = "0.4.15"
 summary = "An Enum that inherits from str."
@@ -1622,6 +1648,22 @@ groups = ["dev"]
 files = [
     {file = "urllib3-2.6.3-py3-none-any.whl", hash = "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4"},
     {file = "urllib3-2.6.3.tar.gz", hash = "sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed"},
+]
+
+[[package]]
+name = "uvicorn"
+version = "0.54.0"
+requires_python = ">=3.10"
+summary = "The lightning-fast ASGI server."
+groups = ["default"]
+dependencies = [
+    "click>=7.0",
+    "h11>=0.8",
+    "typing-extensions>=4.0; python_version < \"3.11\"",
+]
+files = [
+    {file = "uvicorn-0.54.0-py3-none-any.whl", hash = "sha256:505bdb0f318731d45f1f712071fc781a8981f6847a31c902c9f5e652d4f67faf"},
+    {file = "uvicorn-0.54.0.tar.gz", hash = "sha256:a2e33cbfaa0306f8e6b0c13e0cb89d7d7a2da3e62b90c66e18c33d9807b28620"},
 ]
 
 [[package]]

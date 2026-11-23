@@ -1,0 +1,259 @@
+[
+  {
+    "type": "calldata",
+    "network": "ethereum",
+    "chain_id": 1,
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "selector": "0x095ea7b3",
+    "version": "v1",
+    "transaction_info": {
+      "version": 1,
+      "chain_id": 1,
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "selector": "0x095ea7b3",
+      "hash": "38b7f147d31c19c7dfc847584b8901c1d5f345a539cd6b5544e8cc56137055d4",
+      "operation_type": "Approve",
+      "creator_name": "Tether_USD",
+      "contract_name": "Tether_USD",
+      "descriptor": "000101010800000000000000010214dac17f958d2ee523a2206206994597c13d831ec70304095ea7b3042038b7f147d31c19c7dfc847584b8901c1d5f345a539cd6b5544e8cc56137055d40507417070726f7665060a5465746865725f555344090a5465746865725f555344"
+    },
+    "enums": [],
+    "maps": [],
+    "fields": [
+      {
+        "version": 1,
+        "name": "Spender",
+        "param": {
+          "version": 1,
+          "value": {
+            "version": 1,
+            "type_family": "ADDRESS",
+            "type_size": 20,
+            "type": "path",
+            "abi_path": {
+              "type": "data",
+              "absolute": true,
+              "elements": [
+                {
+                  "type": "field",
+                  "identifier": "_spender"
+                }
+              ]
+            },
+            "binary_path": {
+              "version": 1,
+              "type": "DATA",
+              "elements": [
+                {
+                  "type": "TUPLE",
+                  "offset": 0
+                },
+                {
+                  "type": "LEAF",
+                  "leaf_type": "STATIC_LEAF"
+                }
+              ]
+            }
+          },
+          "type": "TRUSTED_NAME",
+          "types": [
+            "eoa",
+            "smart_contract"
+          ],
+          "sources": [
+            "ens",
+            "unstoppable_domain",
+            "freename",
+            "crypto_asset_list"
+          ]
+        },
+        "visibility": "ALWAYS",
+        "descriptor": "00010101075370656e64657202010803240001010115000101010105020114030a0001010102000004010302020102030402030401"
+      },
+      {
+        "version": 1,
+        "name": "Amount",
+        "param": {
+          "version": 1,
+          "value": {
+            "version": 1,
+            "type_family": "UINT",
+            "type_size": 32,
+            "type": "path",
+            "abi_path": {
+              "type": "data",
+              "absolute": true,
+              "elements": [
+                {
+                  "type": "field",
+                  "identifier": "_value"
+                }
+              ]
+            },
+            "binary_path": {
+              "version": 1,
+              "type": "DATA",
+              "elements": [
+                {
+                  "type": "TUPLE",
+                  "offset": 1
+                },
+                {
+                  "type": "LEAF",
+                  "leaf_type": "STATIC_LEAF"
+                }
+              ]
+            }
+          },
+          "type": "TOKEN_AMOUNT",
+          "token": {
+            "version": 1,
+            "type_family": "ADDRESS",
+            "type_size": 20,
+            "type": "path",
+            "abi_path": {
+              "type": "container",
+              "field": "to"
+            },
+            "binary_path": {
+              "version": 1,
+              "type": "CONTAINER",
+              "value": "TO"
+            }
+          },
+          "threshold": "0x8000000000000000000000000000000000000000000000000000000000000000"
+        },
+        "visibility": "ALWAYS",
+        "descriptor": "0001010106416d6f756e74020102034a0001010115000101010101020120030a00010101020001040103020c00010101010502011404010104208000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ]
+  },
+  {
+    "type": "calldata",
+    "network": "ethereum",
+    "chain_id": 1,
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "selector": "0xa9059cbb",
+    "version": "v1",
+    "transaction_info": {
+      "version": 1,
+      "chain_id": 1,
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "selector": "0xa9059cbb",
+      "hash": "173fc796f80266830f34f19c936938555ea51af2f18010388e90ec29c01702c3",
+      "operation_type": "Send",
+      "creator_name": "Tether_USD",
+      "contract_name": "Tether_USD",
+      "descriptor": "000101010800000000000000010214dac17f958d2ee523a2206206994597c13d831ec70304a9059cbb0420173fc796f80266830f34f19c936938555ea51af2f18010388e90ec29c01702c3050453656e64060a5465746865725f555344090a5465746865725f555344"
+    },
+    "enums": [],
+    "maps": [],
+    "fields": [
+      {
+        "version": 1,
+        "name": "Amount",
+        "param": {
+          "version": 1,
+          "value": {
+            "version": 1,
+            "type_family": "UINT",
+            "type_size": 32,
+            "type": "path",
+            "abi_path": {
+              "type": "data",
+              "absolute": true,
+              "elements": [
+                {
+                  "type": "field",
+                  "identifier": "_value"
+                }
+              ]
+            },
+            "binary_path": {
+              "version": 1,
+              "type": "DATA",
+              "elements": [
+                {
+                  "type": "TUPLE",
+                  "offset": 1
+                },
+                {
+                  "type": "LEAF",
+                  "leaf_type": "STATIC_LEAF"
+                }
+              ]
+            }
+          },
+          "type": "TOKEN_AMOUNT",
+          "token": {
+            "version": 1,
+            "type_family": "ADDRESS",
+            "type_size": 20,
+            "type": "path",
+            "abi_path": {
+              "type": "container",
+              "field": "to"
+            },
+            "binary_path": {
+              "version": 1,
+              "type": "CONTAINER",
+              "value": "TO"
+            }
+          }
+        },
+        "visibility": "ALWAYS",
+        "descriptor": "0001010106416d6f756e7402010203280001010115000101010101020120030a00010101020001040103020c000101010105020114040101"
+      },
+      {
+        "version": 1,
+        "name": "To",
+        "param": {
+          "version": 1,
+          "value": {
+            "version": 1,
+            "type_family": "ADDRESS",
+            "type_size": 20,
+            "type": "path",
+            "abi_path": {
+              "type": "data",
+              "absolute": true,
+              "elements": [
+                {
+                  "type": "field",
+                  "identifier": "_to"
+                }
+              ]
+            },
+            "binary_path": {
+              "version": 1,
+              "type": "DATA",
+              "elements": [
+                {
+                  "type": "TUPLE",
+                  "offset": 0
+                },
+                {
+                  "type": "LEAF",
+                  "leaf_type": "STATIC_LEAF"
+                }
+              ]
+            }
+          },
+          "type": "TRUSTED_NAME",
+          "types": [
+            "eoa"
+          ],
+          "sources": [
+            "ens",
+            "unstoppable_domain",
+            "freename",
+            "local_address_book",
+            "multisig_address_book"
+          ]
+        },
+        "visibility": "ALWAYS",
+        "descriptor": "0001010102546f02010803240001010115000101010105020114030a0001010102000004010302010103050203040007"
+      }
+    ]
+  }
+]

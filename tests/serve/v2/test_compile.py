@@ -1,0 +1,178 @@
+import json
+from typing import Any
+
+import pytest
+
+from erc7730.common import client
+from erc7730.serve.v2.compile import compile_json
+from erc7730.serve.v2.model import Compiled, ConversionFailed, InvalidDescriptor
+from tests.files import TEST_RESOURCES
+from tests.io import load_json_file
+
+RESOURCES = TEST_RESOURCES / "serve"
+
+
+def _descriptor(**changes: Any) -> dict[str, Any]:
+    return load_json_file(RESOURCES / "usdt-descriptor.json") | changes
+
+
+def _with_label(label: str) -> dict[str, Any]:
+    descriptor = _descriptor()
+    next(iter(descriptor["display"]["formats"].values()))["fields"][0]["label"] = label
+    return descriptor
+
+
+@pytest.mark.parametrize("token", ["usdc", "usdt"])
+def test_compile_json_matches_reference_output(token: str) -> None:
+    result = compile_json((RESOURCES / f"{token}-descriptor.json").read_bytes())
+
+    assert isinstance(result, Compiled)
+    assert sorted(result.descriptors, key=lambda d: d["selector"]) == load_json_file(RESOURCES / f"{token}.json")
+    assert result.diagnostics == ()
+
+
+@pytest.mark.parametrize(
+    "body, message",
+    [
+        (b"{not json", "Invalid JSON"),
+        (json.dumps(_descriptor(display="not an object")).encode(), "display:"),
+        (b"\xff", "Invalid JSON"),
+        (
+            json.dumps(_descriptor(metadata={"owner": "Café"})).encode(),
+            "calldata descriptors: ASCII text only, found 'é'",
+        ),
+        (json.dumps(_with_label("Café"), ensure_ascii=False).encode(), "display: ASCII text only, found 'é'"),
+        (json.dumps(_descriptor(metadata={"owner": "A" * 256})).encode(), "too long for the calldata TLV encoding"),
+    ],
+    ids=[
+        "not json",
+        "not a descriptor",
+        "not utf-8",
+        "escaped non-ascii owner",
+        "raw non-ascii label",
+        "owner too long",
+    ],
+)
+def test_compile_json_rejects_invalid_descriptors(body: bytes, message: str) -> None:
+    result = compile_json(body)
+
+    assert isinstance(result, InvalidDescriptor)
+    assert message in result.message
+
+
+def test_compile_json_accepts_non_ascii_text_outside_the_tlv() -> None:
+    descriptor = _descriptor()
+    descriptor["metadata"]["token"]["name"] = "USD₮0"
+
+    assert isinstance(compile_json(json.dumps(descriptor, ensure_ascii=False).encode()), Compiled)
+
+
+@pytest.mark.parametrize(
+    "changes, message",
+    [
+        ({"includes": "common.json"}, "includes: not supported, send the merged descriptor"),
+        (
+            {"metadata": {"owner": "Test Owner", "enums": {"mode": "https://example.com/enum.json"}}},
+            "metadata.enums: remote enums are not supported: mode",
+        ),
+    ],
+    ids=["includes", "remote enum"],
+)
+def test_compile_json_refuses_external_resources(
+    changes: dict[str, Any], message: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def no_network(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("no request expected")
+
+    monkeypatch.setattr(client, "get", no_network)
+
+    assert compile_json(json.dumps(_descriptor(**changes)).encode()) == InvalidDescriptor(message)
+
+
+def _expanding(deployments: int, formats: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+    return _descriptor(
+        context={
+            "$id": "x",
+            "contract": {"deployments": [{"chainId": 1, "address": f"0x{i:040x}"} for i in range(1, deployments + 1)]},
+        },
+        metadata={"owner": "x", **metadata},
+        display={"formats": formats},
+    )
+
+
+RAW_FIELD = {"path": "a", "label": "A", "format": "raw"}
+LITERAL_FIELD = {"value": "x", "label": "A", "format": "raw"}
+MAP_FIELD = {
+    "path": "assets",
+    "label": "Amount",
+    "format": "tokenAmount",
+    "params": {"token": {"map": "$.metadata.maps.tokens", "keyPath": "#.marketId"}},
+}
+
+
+@pytest.mark.parametrize(
+    "descriptor, items",
+    [
+        (
+            _expanding(
+                10,
+                {f"f{i}(uint256 a)": {"intent": "x", "fields": [RAW_FIELD]} for i in range(100)},
+                {"enums": {f"e{n}": {str(i): f"v{i}" for i in range(32)} for n in range(7)}},
+            ),
+            226_000,
+        ),
+        (_expanding(100, {"f(uint256 a)": {"intent": "x", "fields": [RAW_FIELD] * 1600}}, {}), 160_100),
+        (
+            _expanding(
+                100,
+                {"deposit(uint256 assets, uint32 marketId)": {"intent": "x", "fields": [MAP_FIELD]}},
+                {"maps": {"tokens": {"values": {str(i): f"0x{i + 1:040x}" for i in range(1500)}}}},
+            ),
+            150_200,
+        ),
+        (_expanding(100, {"f(uint256 a)": {"intent": "x", "fields": [LITERAL_FIELD] * 1600}}, {}), 160_100),
+        (
+            _expanding(
+                100,
+                {"deposit(uint256 assets, uint32 marketId)": {"intent": "x", "fields": [MAP_FIELD, MAP_FIELD]}},
+                {"maps": {"tokens": {"values": {str(i): f"0x{i + 1:040x}" for i in range(400)}}}},
+            ),
+            160_300,
+        ),
+    ],
+    ids=["formats x enum entries", "fields", "map entries", "literal fields", "repeated map lookups"],
+)
+def test_compile_json_refuses_descriptors_that_expand_too_much(descriptor: dict[str, Any], items: int) -> None:
+    result = compile_json(json.dumps(descriptor).encode())
+
+    assert result == InvalidDescriptor(f"descriptor too large: it would generate {items} items, the limit is 150000")
+
+
+def test_compile_json_returns_conversion_errors() -> None:
+    # a map key that cannot be encoded as a uint32 makes the selector fail to convert
+    descriptor = _descriptor(
+        metadata={
+            "owner": "Test Owner",
+            "maps": {"tokens": {"values": {"4294967296": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"}}},
+        },
+        display={
+            "formats": {
+                "deposit(uint256 assets, uint32 marketId)": {
+                    "intent": "Deposit",
+                    "fields": [
+                        {
+                            "path": "assets",
+                            "label": "Amount",
+                            "format": "tokenAmount",
+                            "params": {"token": {"map": "$.metadata.maps.tokens", "keyPath": "#.marketId"}},
+                        }
+                    ],
+                }
+            }
+        },
+    )
+
+    result = compile_json(json.dumps(descriptor).encode())
+
+    assert isinstance(result, ConversionFailed)
+    assert [(d.level, d.title) for d in result.diagnostics] == [("error", "Invalid map key")]
