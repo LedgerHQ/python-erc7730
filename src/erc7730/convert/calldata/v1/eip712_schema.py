@@ -276,11 +276,17 @@ def _check_value_tree_depth(primary_type: str, types: dict[str, list[tuple[str, 
     """
     depths: dict[str, int] = {}
 
-    def depth(struct: str, path: tuple[str, ...]) -> int:
-        if struct in depths:
-            return depths[struct]
+    def depth(struct: str, path: tuple[str, ...], parent_depth: int) -> int:
         if struct in path:
             raise ValueError(f"{struct} holds itself, so no message of it is finite")
+        if struct in depths:
+            deepest = depths[struct]
+            if parent_depth + deepest > MAX_VALUE_TREE_DEPTH:
+                raise ValueError(
+                    f"the message of {primary_type} is more than {MAX_VALUE_TREE_DEPTH} levels deep, "
+                    f"the device accepts at most {MAX_VALUE_TREE_DEPTH}"
+                )
+            return deepest
         deepest = 0
         for type_str, _ in types[struct]:
             parsed = parse_solidity_type(type_str)
@@ -292,12 +298,23 @@ def _check_value_tree_depth(primary_type: str, types: dict[str, list[tuple[str, 
                     break
             else:
                 if parsed.struct_name is not None:
-                    levels += 1 + depth(parsed.struct_name, (*path, struct))
+                    nested_depth = parent_depth + levels + 1
+                    if nested_depth > MAX_VALUE_TREE_DEPTH:
+                        raise ValueError(
+                            f"the message of {primary_type} is more than {MAX_VALUE_TREE_DEPTH} levels deep, "
+                            f"the device accepts at most {MAX_VALUE_TREE_DEPTH}"
+                        )
+                    levels += 1 + depth(parsed.struct_name, (*path, struct), nested_depth)
+            if parent_depth + levels > MAX_VALUE_TREE_DEPTH:
+                raise ValueError(
+                    f"the message of {primary_type} is more than {MAX_VALUE_TREE_DEPTH} levels deep, "
+                    f"the device accepts at most {MAX_VALUE_TREE_DEPTH}"
+                )
             deepest = max(deepest, levels)
         depths[struct] = deepest
         return deepest
 
-    if (levels := depth(primary_type, ())) > MAX_VALUE_TREE_DEPTH:
+    if (levels := depth(primary_type, (), 0)) > MAX_VALUE_TREE_DEPTH:
         raise ValueError(
             f"the message of {primary_type} is {levels} levels deep, the device accepts at most {MAX_VALUE_TREE_DEPTH}"
         )

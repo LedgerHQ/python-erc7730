@@ -1345,6 +1345,7 @@ _CHAIN_DEPENDENT_FORMATS = (
     FieldFormat.TOKEN_AMOUNT,
     FieldFormat.TOKEN_TICKER,
     FieldFormat.NFT_NAME,
+    FieldFormat.ADDRESS_NAME,
 )
 
 
@@ -1354,7 +1355,7 @@ def _chain_dependent_formats(fields: list[ResolvedFieldDescription | ResolvedFie
     for field in fields:
         if isinstance(field, ResolvedFieldGroup):
             formats |= _chain_dependent_formats(field.fields)
-        elif field.format in _CHAIN_DEPENDENT_FORMATS:
+        elif field.visible != "never" and field.format in _CHAIN_DEPENDENT_FORMATS:
             formats.add(str(field.format))
     return formats
 

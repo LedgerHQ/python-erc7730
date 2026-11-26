@@ -615,6 +615,14 @@ def test_eip712_value_tree_depth(encode_type: str, valid: bool) -> None:
     assert _errors(out) == ([] if valid else ["Unsupported EIP-712 type"])
 
 
+def test_eip712_value_tree_depth_stops_at_device_limit() -> None:
+    encode_type = "S0(S1 a)" + "".join(f"S{i}(S{i + 1} a)" for i in range(1, 1100)) + "S1100(uint8 v)"
+    out = ListOutputAdder()
+
+    assert reconstruct_schema(encode_type, None, False, out) is None
+    assert _errors(out) == ["Unsupported EIP-712 type"]
+
+
 @pytest.mark.parametrize(
     "type_str,path",
     [
@@ -671,3 +679,38 @@ def test_eip712_chain_dependent_format_needs_the_chain_of_the_domain(format: str
 
     assert descriptors == []
     assert _errors(out) == ["Missing chain id"]
+
+
+def test_eip712_address_name_needs_the_chain_of_the_domain() -> None:
+    out = ListOutputAdder()
+    descriptors = _convert_all(
+        PERMIT_TYPE,
+        [{"path": "owner", "label": "Owner", "format": "addressName", "params": {"types": ["wallet"]}}],
+        domain={"name": "Test"},
+        deployments=[],
+        domain_separator=_domain_separator([("string", "name", keccak(text="Test"))]),
+        out=out,
+    )
+
+    assert descriptors == []
+    assert _errors(out) == ["Missing chain id"]
+
+
+def test_eip712_chain_dependent_formats_ignore_never_visible_nested_fields() -> None:
+    out = ListOutputAdder()
+    descriptors = _convert_all(
+        PERMIT_TYPE,
+        [
+            {"path": "owner", "label": "Owner", "format": "raw"},
+            {"fields": [{"path": "value", "label": "Hidden", "format": "amount", "visible": "never"}]},
+        ],
+        domain={"name": "Test"},
+        deployments=[],
+        domain_separator=_domain_separator([("string", "name", keccak(text="Test"))]),
+        out=out,
+    )
+
+    assert len(descriptors) == 1
+    assert isinstance(descriptors[0], CalldataDescriptorEIP712V1)
+    assert [field.name for field in descriptors[0].fields] == ["Owner"]
+    assert not out.has_errors
