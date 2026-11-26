@@ -7,7 +7,7 @@ from pydantic_string_url import HttpUrl
 from erc7730.common.output import ListOutputAdder, Output
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import erc7730_v2_descriptor_to_calldata_descriptors
 from erc7730.model.calldata.descriptor import CalldataDescriptor
-from erc7730.model.input.v2.context import InputContractContext
+from erc7730.model.input.v2.context import InputContractContext, InputEIP712Context
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.serve.v2.model import Compiled, CompileResult, ConversionFailed, Diagnostic, InvalidDescriptor
 
@@ -55,11 +55,11 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
     )
     if out.has_errors:
         return ConversionFailed(diagnostics)
-    # the TLV is only encoded during serialization, with one-byte lengths and ASCII text
+    # the TLV is only encoded during serialization, and only supports ASCII text
     try:
         payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
     except OverflowError:
-        return InvalidDescriptor("a text is too long for the calldata TLV encoding")
+        return InvalidDescriptor("calldata descriptors: a value is out of the range of the calldata TLV encoding")
     except UnicodeEncodeError as e:
         return InvalidDescriptor(f"calldata descriptors: ASCII text only, found {e.object[e.start : e.end]!r}")
     return Compiled(tuple(payload), diagnostics)
@@ -68,13 +68,23 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
 # per deployment, the converter rebuilds each format with every enum entry, and each field with its map lookups
 def _generated_items(descriptor: InputERC7730Descriptor) -> int:
     context = descriptor.context
-    deployments = len(context.contract.deployments) if isinstance(context, InputContractContext) else 0
+    if isinstance(context, InputContractContext):
+        deployments = len(context.contract.deployments)
+    elif isinstance(context, InputEIP712Context):
+        # a descriptor without deployment is converted once, for the domain it declares
+        deployments = max(len(context.eip712.deployments or []), 1)
+    else:
+        deployments = 0
     formats = descriptor.display.formats.values()
     fields = sum(_nodes(f.model_dump(by_alias=True, exclude_none=True), {"path", "$ref", "value"}) for f in formats)
     map_lookups = _nodes(descriptor.display.model_dump(by_alias=True, exclude_none=True), {"map"})
     enum_entries = sum(len(enum) for enum in (descriptor.metadata.enums or {}).values() if isinstance(enum, dict))
     map_entries = sum(len(m.values) for m in (descriptor.metadata.maps or {}).values())
-    return deployments * (len(formats) * (1 + enum_entries) + fields * (1 + map_lookups * map_entries))
+    # an EIP-712 format key lists the members of the schema it is generated with, one per comma separated field
+    members = (
+        sum(key.count(",") + 1 for key in descriptor.display.formats) if isinstance(context, InputEIP712Context) else 0
+    )
+    return deployments * (len(formats) * (1 + enum_entries) + members + fields * (1 + map_lookups * map_entries))
 
 
 def _nodes(node: Any, keys: set[str]) -> int:

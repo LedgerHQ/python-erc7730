@@ -6,9 +6,9 @@ See documentation in https://github.com/LedgerHQ/app-ethereum for specifications
 """
 
 from enum import IntEnum
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import Discriminator, Field
+from pydantic import Discriminator, Field, model_validator
 
 from erc7730.common.pydantic import pydantic_enum_by_name
 from erc7730.model.base import Model
@@ -17,6 +17,9 @@ from erc7730.model.calldata.v1.struct import (
 )
 from erc7730.model.resolved.path import ResolvedPath
 from erc7730.model.types import HexStr, ScalarType
+
+# maximum number of elements of an EIP712_PATH (doc/eip712.md#implementation-limits in app-ethereum-dev)
+MAX_EIP712_PATH_ELEMENTS = 17
 
 
 @pydantic_enum_by_name
@@ -224,11 +227,136 @@ class CalldataDescriptorDataPathV1(CalldataDescriptorStructV1):
     )
 
 
+class CalldataDescriptorEIP712PathElementStructFieldV1(Model):
+    """Descriptor for the EIP712_STRUCT_FIELD path element (descend into a struct field by declaration index)."""
+
+    type: Literal["struct_field"] = Field(
+        default="struct_field",
+        title="Element type",
+        description="Type of the EIP-712 path element",
+    )
+
+    index: int = Field(
+        title="Field index",
+        description="Index of the field in the struct declaration order",
+        ge=0,
+        le=255,
+    )
+
+
+class CalldataDescriptorEIP712PathElementArraySliceV1(Model):
+    """Descriptor for the EIP712_ARRAY_SLICE path element (select an array segment)."""
+
+    type: Literal["array_slice"] = Field(
+        default="array_slice",
+        title="Element type",
+        description="Type of the EIP-712 path element",
+    )
+
+    start: int | None = Field(
+        default=None,
+        title="Start",
+        description="Start index in array (inclusive). If not provided, lower bound is array start.",
+        ge=-32768,
+        le=32767,
+    )
+
+    end: int | None = Field(
+        default=None,
+        title="End",
+        description="End index in array (exclusive). If not provided, upper bound is array end.",
+        ge=-32768,
+        le=32767,
+    )
+
+
+class CalldataDescriptorEIP712PathElementLeafSliceV1(Model):
+    """
+    Descriptor for the EIP712_LEAF_SLICE path element (keep some bytes of the leaf).
+
+    Only valid as last element, on a bytesN, bytes or string leaf. A negative bound counts back from the end of the
+    leaf.
+    """
+
+    type: Literal["leaf_slice"] = Field(
+        default="leaf_slice",
+        title="Element type",
+        description="Type of the EIP-712 path element",
+    )
+
+    start: int | None = Field(
+        default=None,
+        title="Start",
+        description="First byte kept (inclusive). If not provided, the slice starts at the first byte of the leaf.",
+        ge=-32768,
+        le=32767,
+    )
+
+    end: int | None = Field(
+        default=None,
+        title="End",
+        description="End of the bytes kept (exclusive). If not provided, the slice ends at the end of the leaf.",
+        ge=-32768,
+        le=32767,
+    )
+
+
+CalldataDescriptorEIP712PathElementV1 = Annotated[
+    CalldataDescriptorEIP712PathElementStructFieldV1
+    | CalldataDescriptorEIP712PathElementArraySliceV1
+    | CalldataDescriptorEIP712PathElementLeafSliceV1,
+    Field(
+        title="EIP-712 path element",
+        description="Path element to reach the target value in the EIP-712 value tree",
+        discriminator="type",
+    ),
+]
+
+
+class CalldataDescriptorEIP712PathV1(CalldataDescriptorStructV1):
+    """
+    Descriptor for the EIP712_PATH struct.
+
+    Path into the EIP-712 value tree, navigated by struct field index and array slices (as opposed to DATA_PATH which
+    navigates serialized transaction calldata by byte offsets). Referred to as "EIP712 v2" in the Ethereum app
+    specifications.
+    """
+
+    version: Literal[1] = Field(
+        default=1,
+        title="Struct version",
+        description="Version of the EIP712_PATH struct",
+    )
+
+    type: Literal["EIP712"] = Field(
+        default="EIP712",
+        title="Path type",
+        description="Type of the path",
+    )
+
+    elements: list[CalldataDescriptorEIP712PathElementV1] = Field(
+        title="Elements",
+        description="Interleaved struct field / array slice elements to reach the target value in the value tree, "
+        "optionally followed by a leaf slice",
+        min_length=1,
+        max_length=MAX_EIP712_PATH_ELEMENTS,
+    )
+
+    @model_validator(mode="after")
+    def _validate_elements(self) -> Self:
+        if not isinstance(self.elements[0], CalldataDescriptorEIP712PathElementStructFieldV1):
+            raise ValueError("An EIP-712 path must begin with a struct field.")
+        if any(isinstance(e, CalldataDescriptorEIP712PathElementLeafSliceV1) for e in self.elements[:-1]):
+            raise ValueError("A leaf slice can only be the last element of an EIP-712 path.")
+        return self
+
+
 CalldataDescriptorPathV1 = Annotated[
-    CalldataDescriptorContainerPathV1 | CalldataDescriptorDataPathV1,
+    CalldataDescriptorContainerPathV1 | CalldataDescriptorDataPathV1 | CalldataDescriptorEIP712PathV1,
     Field(
         title="Path",
-        description="Data or container path to reach the target value in the serialized transaction",
+        description="Data, container or EIP-712 path to reach the target value in the serialized transaction or "
+        "message value tree",
         discriminator="type",
     ),
 ]

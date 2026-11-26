@@ -5,15 +5,21 @@ The device reads the key from the transaction and matches it byte for byte again
 be encodable as the value at the key path (for instance, a uint32 key must fit in 4 bytes).
 """
 
+from collections.abc import Callable
 from typing import assert_never, final, override
 
-from erc7730.common.output import OutputAdder
-from erc7730.convert.calldata.v1.abi import function_to_abi_tree
+from erc7730.common.output import ListOutputAdder, OutputAdder
+from erc7730.convert.calldata.v1.abi import ABITree, function_to_abi_tree
+from erc7730.convert.calldata.v1.eip712_path import convert_eip712_data_path
+from erc7730.convert.calldata.v1.eip712_schema import ReconstructedSchema, reconstruct_schema
 from erc7730.convert.calldata.v1.map import encode_map_keys
+from erc7730.convert.calldata.v1.path import convert_data_path
 from erc7730.convert.resolved.v2.values import is_deployment_key
 from erc7730.lint.v2 import ERC7730Linter
 from erc7730.lint.v2.lint_validate_display_fields import parse_declared_abis
+from erc7730.model.calldata.v1.value import CalldataDescriptorValuePathV1
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
+from erc7730.model.paths import DataPath
 from erc7730.model.resolved.v2.context import ResolvedContractContext, ResolvedEIP712Context
 from erc7730.model.resolved.v2.descriptor import ResolvedERC7730Descriptor
 from erc7730.model.resolved.v2.display import (
@@ -30,8 +36,8 @@ class ValidateMapKeysLinter(ERC7730Linter):
     Validates that the keys of maps looked up with a key read from the transaction can be encoded as the key value.
 
     Maps keyed on the chain id or the target contract address are resolved for each deployment and validated during
-    resolution. Only contract descriptors with function signatures as format keys are validated: the ABI is needed to
-    know how the key is encoded.
+    resolution. Contract descriptors are only validated with function signatures as format keys: the ABI is needed to
+    know how the key is encoded. EIP-712 descriptors use the schema rebuilt from their format keys.
     """
 
     @override
@@ -39,8 +45,18 @@ class ValidateMapKeysLinter(ERC7730Linter):
         self, input_descriptor: InputERC7730Descriptor, descriptor: ResolvedERC7730Descriptor, out: OutputAdder
     ) -> None:
         match descriptor.context:
-            case ResolvedEIP712Context():
-                pass  # map lookups are not supported for EIP-712 messages by the device
+            case ResolvedEIP712Context() as context:
+                for encode_type_key, fmt in descriptor.display.formats.items():
+                    if not (value_maps := [value_map for field in fmt.fields for value_map in _value_maps(field)]):
+                        continue
+                    # a format that cannot be converted is reported by the converter
+                    schema = reconstruct_schema(
+                        str(encode_type_key), context.eip712.domain, bool(context.eip712.deployments), ListOutputAdder()
+                    )
+                    if schema is None:
+                        continue
+                    for value_map in value_maps:
+                        encode_map_keys(value_map, _eip712_path_converter(schema), out)
             case ResolvedContractContext():
                 abis = parse_declared_abis(input_descriptor)
                 for selector, fmt in descriptor.display.formats.items():
@@ -51,7 +67,7 @@ class ValidateMapKeysLinter(ERC7730Linter):
                     # only built when needed: some ABI types (fixed point numbers) cannot be converted to a tree
                     abi_tree = function_to_abi_tree(abi)
                     for value_map in value_maps:
-                        encode_map_keys(value_map, abi_tree, out)
+                        encode_map_keys(value_map, _path_converter(abi_tree), out)
             case _:
                 assert_never(descriptor.context)
 
@@ -71,3 +87,19 @@ def _value_maps(field: ResolvedField) -> list[ResolvedValueMap]:
             return [value_map for sub_field in field.fields for value_map in _value_maps(sub_field)]
         case _:
             assert_never(field)
+
+
+def _eip712_path_converter(
+    schema: ReconstructedSchema,
+) -> Callable[[DataPath, OutputAdder], CalldataDescriptorValuePathV1 | None]:
+    def convert_path(data_path: DataPath, out: OutputAdder) -> CalldataDescriptorValuePathV1 | None:
+        return convert_eip712_data_path(data_path, schema.primary_type, schema.types, out)
+
+    return convert_path
+
+
+def _path_converter(abi_tree: ABITree) -> Callable[[DataPath, OutputAdder], CalldataDescriptorValuePathV1 | None]:
+    def convert_path(data_path: DataPath, out: OutputAdder) -> CalldataDescriptorValuePathV1 | None:
+        return convert_data_path(data_path, abi_tree, out)
+
+    return convert_path

@@ -1,4 +1,5 @@
 import json
+from collections.abc import Mapping
 
 import pytest
 
@@ -11,7 +12,20 @@ TOKEN_A = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
 TOKEN_B = "0xdAC17F958D2ee523a2206206994597C13D831ec7"
 
 
-def lint(key_path: str, keys: list[str], signature: str = "deposit(uint256 assets, uint32 marketId)") -> list[str]:
+EIP712_CONTEXT = {
+    "eip712": {
+        "deployments": [{"chainId": 1, "address": "0x0000000000000000000000000000000000000001"}],
+        "domain": {"name": "Test"},
+    }
+}
+
+
+def lint(
+    key_path: str,
+    keys: list[str],
+    signature: str = "deposit(uint256 assets, uint32 marketId)",
+    context: Mapping[str, object] | None = None,
+) -> list[str]:
     """Lint a descriptor looking up a token amount token in a map, with the given keys."""
     descriptor = InputERC7730Descriptor.model_validate_json(
         json.dumps(
@@ -19,9 +33,14 @@ def lint(key_path: str, keys: list[str], signature: str = "deposit(uint256 asset
                 "$schema": "specs/erc7730-v2.schema.json",
                 "context": {
                     "$id": "test",
-                    "contract": {
-                        "deployments": [{"chainId": 1, "address": "0x0000000000000000000000000000000000000001"}]
-                    },
+                    **(
+                        context
+                        or {
+                            "contract": {
+                                "deployments": [{"chainId": 1, "address": "0x0000000000000000000000000000000000000001"}]
+                            }
+                        }
+                    ),
                 },
                 "metadata": {
                     "owner": "Test Owner",
@@ -114,3 +133,19 @@ def test_format_without_map_lookup_not_converted_to_abi_tree() -> None:
     assert resolved is not None, out.outputs
     ValidateMapKeysLinter().lint(descriptor, resolved, out)
     assert out.outputs == []
+
+
+@pytest.mark.parametrize(
+    "keys,expected",
+    [
+        (["1", "4294967296"], 'Key "4294967296" of map $.metadata.maps.tokens cannot be matched'),
+        (["1", "foo"], 'Key "foo" of map $.metadata.maps.tokens cannot be matched'),
+    ],
+)
+def test_invalid_eip712_keys(keys: list[str], expected: str) -> None:
+    messages = lint("#.marketId", keys, "Deposit(uint256 assets,uint32 marketId)", EIP712_CONTEXT)
+    assert any(expected in message for message in messages), messages
+
+
+def test_valid_eip712_keys() -> None:
+    assert lint("#.marketId", ["1", "4294967295"], "Deposit(uint256 assets,uint32 marketId)", EIP712_CONTEXT) == []
