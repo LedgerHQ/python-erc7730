@@ -42,7 +42,6 @@ def test_compile_json_matches_reference_output(token: str) -> None:
             "calldata descriptors: ASCII text only, found 'é'",
         ),
         (json.dumps(_with_label("Café"), ensure_ascii=False).encode(), "display: ASCII text only, found 'é'"),
-        (json.dumps(_descriptor(metadata={"owner": "A" * 256})).encode(), "too long for the calldata TLV encoding"),
     ],
     ids=[
         "not json",
@@ -50,7 +49,6 @@ def test_compile_json_matches_reference_output(token: str) -> None:
         "not utf-8",
         "escaped non-ascii owner",
         "raw non-ascii label",
-        "owner too long",
     ],
 )
 def test_compile_json_rejects_invalid_descriptors(body: bytes, message: str) -> None:

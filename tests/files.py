@@ -56,6 +56,7 @@ ERC7730_EXPECTED_CALLDATA_FAILURES = {
     # visibility conditions on formats other than raw/addressName (#335)
     "gondi/eip712-LoanOffer-v3_1.json",
     "gondi/eip712-LoanOffer-v3_2.json",
+    "ophis/eip712-Ophis-GPv2Settlement.json",
     "paraswap/eip712-paraswap.json",
     "permit/eip712-permit-ethereum-dai.json",
     "permit/eip712-permit-polygon-dai.json",

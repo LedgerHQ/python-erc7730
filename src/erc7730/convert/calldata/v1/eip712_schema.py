@@ -88,6 +88,13 @@ def bind_domain(
     return EIP712DomainBinding(chain_id=deployment.chainId, address=deployment.address)
 
 
+def _integer_size(base: str, width: str) -> int:
+    """Size in bytes of an integer type, which has to be written in its canonical form (``uint256`` not ``uint``)."""
+    if not width or int(width) % 8 != 0 or not 8 <= int(width) <= 256 or width != str(int(width)):
+        raise ValueError(f"{base} is not a valid type, an integer is written with its width, 8 to 256 by steps of 8")
+    return int(width) // 8
+
+
 def parse_solidity_type(type_str: str) -> ParsedSolidityType:
     """
     Parse a Solidity type string into base type, size and array dimensions.
@@ -111,10 +118,10 @@ def parse_solidity_type(type_str: str) -> ParsedSolidityType:
 
     if (match := re.fullmatch(r"uint(\d*)", base)) is not None:
         sol_type = CalldataDescriptorEIP712SolType.UINT
-        type_size = (int(match.group(1)) if match.group(1) else 256) // 8
+        type_size = _integer_size(base, match.group(1))
     elif (match := re.fullmatch(r"int(\d*)", base)) is not None:
         sol_type = CalldataDescriptorEIP712SolType.INT
-        type_size = (int(match.group(1)) if match.group(1) else 256) // 8
+        type_size = _integer_size(base, match.group(1))
     elif base == "address":
         sol_type = CalldataDescriptorEIP712SolType.ADDRESS
     elif base == "bool":
@@ -126,6 +133,8 @@ def parse_solidity_type(type_str: str) -> ParsedSolidityType:
     elif (match := re.fullmatch(r"bytes(\d+)", base)) is not None:
         sol_type = CalldataDescriptorEIP712SolType.BYTES_FIX
         type_size = int(match.group(1))
+        if not 1 <= type_size <= 32:
+            raise ValueError(f"{base} is not a valid type, bytesN is 1 to 32 bytes")
     else:
         # TODO fixed/ufixed Solidity types are not handled (rare in EIP-712); anything else is treated as a struct
         sol_type = CalldataDescriptorEIP712SolType.STRUCT
@@ -208,19 +217,26 @@ def reconstruct_schema(
             message=f"Failed to parse format key as encodeType: {e}",
         )
 
-    types: dict[str, list[tuple[str, str]]] = {}
-    structs: list[CalldataDescriptorEIP712StructV1] = []
-
     domain_fields = reconstruct_domain_fields(domain, has_deployments)
-    types["EIP712Domain"] = domain_fields
 
-    for type_name, type_fields in raw_types.items():
-        types[type_name] = type_fields
+    # the domain is described by the descriptor: a message type of the same name is the same type or a conflict
+    if raw_types.get("EIP712Domain", domain_fields) != domain_fields:
+        return out.error(
+            title="Conflicting EIP712Domain",
+            message=f"Format key '{encode_type_key}' defines EIP712Domain differently from the domain of the "
+            "descriptor.",
+        )
+
+    types: dict[str, list[tuple[str, str]]] = {"EIP712Domain": domain_fields, **raw_types}
+    structs: list[CalldataDescriptorEIP712StructV1] = []
 
     # a type outside the limits of the device is reported for this format only
     try:
-        structs.append(_build_struct("EIP712Domain", domain_fields))
-        structs.extend(_build_struct(type_name, type_fields) for type_name, type_fields in raw_types.items())
+        structs.extend(_build_struct(type_name, type_fields) for type_name, type_fields in types.items())
+        for type_name, type_fields in types.items():
+            for type_str, field_name in type_fields:
+                if (struct_name := parse_solidity_type(type_str).struct_name) is not None and struct_name not in types:
+                    raise ValueError(f"{type_name}.{field_name} refers to the undefined struct {struct_name}")
     except ValueError as e:
         return out.error(
             title="Unsupported EIP-712 type",

@@ -55,11 +55,9 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
     )
     if out.has_errors:
         return ConversionFailed(diagnostics)
-    # the TLV is only encoded during serialization, with one-byte lengths and ASCII text
+    # the TLV is only encoded during serialization, and only supports ASCII text
     try:
         payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
-    except OverflowError:
-        return InvalidDescriptor("a text is too long for the calldata TLV encoding")
     except UnicodeEncodeError as e:
         return InvalidDescriptor(f"calldata descriptors: ASCII text only, found {e.object[e.start : e.end]!r}")
     return Compiled(tuple(payload), diagnostics)
