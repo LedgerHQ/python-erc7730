@@ -746,13 +746,15 @@ def test_eip712_out_of_range_chain_id_is_rejected_but_other_deployments_are_kept
 def test_eip712_map_key_slice_crossing_the_end_is_rejected() -> None:
     out = ListOutputAdder()
 
-    _convert_all(
-        "Msg(bytes ks)",
-        [{"path": "ks.[-1:0]", "label": "K", "format": "raw"}],
+    descriptors = _convert_all(
+        "Msg(uint256[] ids,uint256 value)",
+        [_token_amount("#.ids.[-1:0]")],
+        maps={"tokens": {"0": TOKEN}},
         out=out,
     )
 
-    assert not out.has_errors or _errors(out)  # slice is not a single element: no crash
+    assert descriptors == []
+    assert "Unsupported map key" in _errors(out)
 
 
 def test_eip712_oversized_operation_info_overflows() -> None:
