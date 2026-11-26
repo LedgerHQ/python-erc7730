@@ -153,6 +153,7 @@ def get_functions(abis: list[ABI], *, include_read_only: bool = False) -> Functi
 
 
 _ENCODE_TYPE_RE = re.compile(r"([\w:$]+)\(([^)]*)\)")
+_ENCODE_TYPES_RE = re.compile(r"(?:[\w:$]+\([^)]*\))+")
 
 
 def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, str]]]]:
@@ -166,14 +167,16 @@ def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, 
     :return: a tuple of (primaryType, types) where types is a dict mapping type names to lists of (type, name) tuples
     :raises ValueError: if the string cannot be parsed
     """
-    matches = _ENCODE_TYPE_RE.findall(encode_type)
-    if not matches:
+    if _ENCODE_TYPES_RE.fullmatch(encode_type) is None:
         raise ValueError(f"Invalid encodeType string: {encode_type}")
+    matches = _ENCODE_TYPE_RE.findall(encode_type)
 
     primary_type = matches[0][0]
     types: dict[str, list[tuple[str, str]]] = {}
 
     for type_name, fields_str in matches:
+        if type_name in types:
+            raise ValueError(f"Type '{type_name}' is defined more than once in encodeType '{encode_type}'")
         fields: list[tuple[str, str]] = []
         if fields_str.strip():
             for field in fields_str.split(","):

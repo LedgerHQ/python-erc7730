@@ -47,6 +47,7 @@ def _convert_all(
     domain_separator: str | None = None,
     maps: dict[str, Any] | None = None,
     out: OutputAdder | None = None,
+    all_chains: bool = False,
 ) -> list[CalldataDescriptor]:
     """Build a minimal EIP-712 v2 descriptor and return the converted calldata descriptors."""
     descriptor = InputERC7730Descriptor.model_validate_json(
@@ -72,7 +73,7 @@ def _convert_all(
         )
     )
 
-    return erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=chain_id, out=out)
+    return erc7730_v2_descriptor_to_calldata_descriptors(descriptor, chain_id=None if all_chains else chain_id, out=out)
 
 
 def _convert(encode_type: str, fields: list[dict[str, Any]], **kwargs: Any) -> CalldataDescriptorEIP712V1:
@@ -525,6 +526,8 @@ def test_eip712_chain_filter_does_not_report_conflicts_of_other_chains() -> None
         ("Msg(uint256[17] values)", "values.[]"),
         ("Msg(uint256[17] values)", "values.[0:17]"),
         ("Msg(uint256[] values)", "values.[0:17]"),
+        ("Msg(uint256[] values)", "values.[-17:]"),
+        ("Msg(uint256[] values)", "values.[-18:-1]"),
         ("Msg(uint256[4][5] values)", "values.[].[]"),
         ("Msg(" + ",".join(f"uint8 f{i}" for i in range(257)) + ")", "f256"),
     ],
@@ -714,3 +717,56 @@ def test_eip712_chain_dependent_formats_ignore_never_visible_nested_fields() -> 
     assert isinstance(descriptors[0], CalldataDescriptorEIP712V1)
     assert [field.name for field in descriptors[0].fields] == ["Owner"]
     assert not out.has_errors
+
+
+@pytest.mark.parametrize(("path", "width"), [("key.[:4]", 4), ("key.[-4:]", 4), ("key.[2:6]", 4), ("key.[-6:-2]", 4)])
+def test_eip712_leaf_slice_of_a_dynamic_leaf_has_a_derived_width(path: str, width: int) -> None:
+    descriptor = _convert("Msg(bytes key)", [{"path": path, "label": "K", "format": "raw"}])
+
+    value = descriptor.fields[0].param.value
+    assert isinstance(value, CalldataDescriptorValuePathV1)
+    assert value.type_size == width
+
+
+@pytest.mark.parametrize("chain_id", [0x7FFFFFFFFFFFFFDC, 2**64])
+def test_eip712_out_of_range_chain_id_is_rejected_but_other_deployments_are_kept(chain_id: int) -> None:
+    out = ListOutputAdder()
+    descriptors = _convert_all(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": "amount"}],
+        deployments=[{"chainId": chain_id, "address": DEFAULT_ADDRESS}, {"chainId": 1, "address": DEFAULT_ADDRESS}],
+        out=out,
+        all_chains=True,
+    )
+
+    assert len(descriptors) == 1
+    assert _errors(out) == ["Invalid chain id"]
+
+
+def test_eip712_map_key_slice_crossing_the_end_is_rejected() -> None:
+    out = ListOutputAdder()
+
+    _convert_all(
+        "Msg(bytes ks)",
+        [{"path": "ks.[-1:0]", "label": "K", "format": "raw"}],
+        out=out,
+    )
+
+    assert not out.has_errors or _errors(out)  # slice is not a single element: no crash
+
+
+def test_eip712_oversized_operation_info_overflows() -> None:
+    descriptor = InputERC7730Descriptor.model_validate_json(
+        json.dumps(
+            {
+                "$schema": "specs/erc7730-v2.schema.json",
+                "context": {"$id": "test", "eip712": {"deployments": [{"chainId": 1, "address": DEFAULT_ADDRESS}]}},
+                "metadata": {"owner": "A" * 16384},
+                "display": {"formats": {PERMIT_TYPE: {"intent": "I", "fields": [{"path": "value", "label": "V"}]}}},
+            }
+        )
+    )
+    descriptors = erc7730_v2_descriptor_to_calldata_descriptors(descriptor, out=ListOutputAdder())
+
+    with pytest.raises(OverflowError):
+        descriptors[0].model_dump(mode="json")

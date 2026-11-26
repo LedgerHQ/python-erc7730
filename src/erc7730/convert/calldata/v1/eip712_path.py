@@ -43,6 +43,7 @@ _MIN_BOUND = -32768
 _MAX_BOUND = 32767
 _MAX_FIELD_INDEX = 255
 _MAX_SELECTED_VALUES = 16
+_MAX_TYPE_SIZE = 255
 
 _SLICEABLE_LEAVES = (
     CalldataDescriptorEIP712SolType.BYTES_FIX,
@@ -83,9 +84,22 @@ def _selected_count(dimension: int | None, start: int | None, end: int | None) -
     """Number of elements of an array dimension a slice selects at the least, whatever the array it is applied to."""
     if dimension is not None:
         return max(_resolve_bound(end, dimension, dimension) - _resolve_bound(start, dimension, 0), 0)
-    if (start is None or start >= 0) and end is not None and end >= 0:
-        return max(end - (start or 0), 0)
-    return 0
+    return _relative_width(start, end) or 0
+
+
+def _relative_width(start: int | None, end: int | None) -> int | None:
+    """
+    Number of elements a slice selects of a sequence of unknown length, when its bounds determine it.
+
+    Bounds counted from the same side (both from the start, or both from the end, an omitted end being the end of the
+    sequence) have a known distance, bounds of opposite sides depend on the length.
+    """
+    first = 0 if start is None else start
+    if first >= 0 and end is not None and end >= 0:
+        return max(end - first, 0)
+    if first < 0 and (end is None or end < 0):
+        return max((0 if end is None else end) - first, 0)
+    return None
 
 
 def _leaf_type_family_size(parsed: ParsedSolidityType) -> tuple[CalldataDescriptorTypeFamily, int | None]:
@@ -237,6 +251,9 @@ def convert_eip712_data_path(
                             message=f"Leaf slice [{start}:{end}] is empty, the device refuses a slice with no byte.",
                         )
                     slice_width = last - first
+                elif (width := _relative_width(start, end)) is not None and width <= _MAX_TYPE_SIZE:
+                    # a valid slice of a dynamic leaf always holds this many bytes
+                    slice_width = width
                 elements.append(CalldataDescriptorEIP712PathElementLeafSliceV1(start=start, end=end))
                 leaf_sliced = True
 

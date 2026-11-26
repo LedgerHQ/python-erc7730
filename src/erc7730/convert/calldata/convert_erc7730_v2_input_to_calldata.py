@@ -1018,12 +1018,14 @@ def _convert_v2_param(
             selector_val = _convert_resolved_value(field.params.selector, ABIDataType.STRING)
             amount_val = _convert_resolved_value(field.params.amount, ABIDataType.UINT)
             spender_val = _convert_resolved_value(field.params.spender, ABIDataType.ADDRESS)
+            chain_id_val = _convert_resolved_value(field.params.chainId, ABIDataType.UINT)
 
             # an optional parameter that is set but fails to convert must reject the field, not be omitted
             if (
                 (field.params.selector is not None and selector_val is None)
                 or (field.params.amount is not None and amount_val is None)
                 or (field.params.spender is not None and spender_val is None)
+                or (field.params.chainId is not None and chain_id_val is None)
             ):
                 return None
 
@@ -1031,7 +1033,7 @@ def _convert_v2_param(
                 value=value,
                 callee=callee,
                 selector=selector_val,
-                chain_id=None,  # v2 calldata parameters have no chain id
+                chain_id=chain_id_val,
                 amount=amount_val,
                 spender=spender_val,
             )

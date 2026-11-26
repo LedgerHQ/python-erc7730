@@ -80,7 +80,11 @@ def _generated_items(descriptor: InputERC7730Descriptor) -> int:
     map_lookups = _nodes(descriptor.display.model_dump(by_alias=True, exclude_none=True), {"map"})
     enum_entries = sum(len(enum) for enum in (descriptor.metadata.enums or {}).values() if isinstance(enum, dict))
     map_entries = sum(len(m.values) for m in (descriptor.metadata.maps or {}).values())
-    return deployments * (len(formats) * (1 + enum_entries) + fields * (1 + map_lookups * map_entries))
+    # an EIP-712 format key lists the members of the schema it is generated with, one per comma separated field
+    members = (
+        sum(key.count(",") + 1 for key in descriptor.display.formats) if isinstance(context, InputEIP712Context) else 0
+    )
+    return deployments * (len(formats) * (1 + enum_entries) + members + fields * (1 + map_lookups * map_entries))
 
 
 def _nodes(node: Any, keys: set[str]) -> int:

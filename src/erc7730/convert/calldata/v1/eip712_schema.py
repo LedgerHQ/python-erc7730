@@ -49,6 +49,9 @@ class ReconstructedSchema:
     structs: list[CalldataDescriptorEIP712StructV1] = field(default_factory=list)
 
 
+_MAX_CHAIN_ID = 0x7FFFFFFFFFFFFFDB
+
+
 @dataclass(frozen=True)
 class EIP712DomainBinding:
     """Chain id and verifying contract of the domain of the messages, either of which may be unknown."""
@@ -74,6 +77,12 @@ def bind_domain(
     """
     domain_chain_id = domain.chainId if domain is not None else None
     domain_address = domain.verifyingContract if domain is not None else None
+    for chain_id in (domain_chain_id, deployment.chainId if deployment is not None else None):
+        if chain_id is not None and not 0 <= chain_id <= _MAX_CHAIN_ID:
+            return out.error(
+                title="Invalid chain id",
+                message=f"The chain id {chain_id} is not one the device accepts (0 to {_MAX_CHAIN_ID}).",
+            )
     if deployment is None:
         return EIP712DomainBinding(chain_id=domain_chain_id, address=domain_address)
 

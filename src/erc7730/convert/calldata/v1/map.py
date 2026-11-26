@@ -245,7 +245,8 @@ def _is_single_element(
     """Whether an array path element selects a single array element."""
     match element.start, element.end:
         case int(start), int(end):
-            return end == start + 1
+            # bounds of opposite signs are resolved against the array, so they cannot be told apart statically
+            return end == start + 1 and (start < 0) == (end < 0)
         case -1, None:
             return True
         case _:

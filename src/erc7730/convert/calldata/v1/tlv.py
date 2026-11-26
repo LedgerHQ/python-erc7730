@@ -294,6 +294,18 @@ class CalldataDescriptorPathSliceElementTag(IntEnum):
     END = 0x02
 
 
+# the Ethereum app parses an OPERATION_INFO in its 16 KB heap
+MAX_OPERATION_INFO_SIZE = 16384
+
+
+def _check_operation_info_size(out: bytes | bytearray) -> bytes | bytearray:
+    if len(out) >= MAX_OPERATION_INFO_SIZE:
+        raise OverflowError(
+            f"operation info of {len(out)} bytes does not fit the {MAX_OPERATION_INFO_SIZE} bytes limit"
+        )
+    return out
+
+
 def _tlv_operation_info_body(obj: CalldataDescriptorInstructionTransactionInfoBaseV1) -> bytes:
     """
     Encode the tags TRANSACTION_INFO and EIP712_MESSAGE_INFO have in common, which are all but the VERSION and the tags
@@ -338,7 +350,7 @@ def tlv_transaction_info(obj: CalldataDescriptorInstructionTransactionInfoV1) ->
     out += tlv(CalldataDescriptorTransactionInfoTag.CONTRACT_ADDR, from_hex(obj.address))
     out += tlv(CalldataDescriptorTransactionInfoTag.SELECTOR, from_hex(obj.selector))
     out += _tlv_operation_info_body(obj)
-    return out
+    return _check_operation_info_size(out)
 
 
 def tlv_eip712_message_info(obj: CalldataDescriptorInstructionEIP712MessageInfoV1) -> bytes:
@@ -356,7 +368,7 @@ def tlv_eip712_message_info(obj: CalldataDescriptorInstructionEIP712MessageInfoV
     out += _tlv_operation_info_body(obj)
     out += tlv(CalldataDescriptorTransactionInfoTag.DOMAIN_SEPARATOR, from_hex(obj.domain_separator))
     out += tlv(CalldataDescriptorTransactionInfoTag.PRIMARY_TYPE_HASH, from_hex(obj.primary_type_hash))
-    return out
+    return _check_operation_info_size(out)
 
 
 def tlv_eip712_schema(obj: CalldataDescriptorInstructionEIP712SchemaV1) -> bytes:
