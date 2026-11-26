@@ -276,7 +276,7 @@ def test_eip712_domain_separator_with_salt_and_without_contract() -> None:
     out = ListOutputAdder()
     descriptor = _convert(
         PERMIT_TYPE,
-        [{"path": "value", "label": "Value", "format": "amount"}],
+        [{"path": "value", "label": "Value", "format": "raw"}],
         domain={"name": "Test", "salt": salt},
         deployments=[],
         domain_separator=expected,
@@ -291,7 +291,7 @@ def test_eip712_domain_separator_with_salt_and_without_contract() -> None:
 def test_eip712_descriptor_without_deployment_is_not_bound_to_a_chain() -> None:
     descriptor = _convert(
         PERMIT_TYPE,
-        [{"path": "value", "label": "Value", "format": "amount"}],
+        [{"path": "value", "label": "Value", "format": "raw"}],
         domain={"name": "Test"},
         deployments=[],
         domain_separator=_domain_separator([("string", "name", keccak(text="Test"))]),
@@ -387,9 +387,11 @@ def test_eip712_message_keyed_map_does_not_need_a_deployment() -> None:
     descriptor = _convert(
         PERMIT_TYPE,
         [_token_amount("#.nonce")],
-        domain={"name": "Test"},
+        domain={"name": "Test", "chainId": 1},
         deployments=[],
-        domain_separator=_domain_separator([("string", "name", keccak(text="Test"))]),
+        domain_separator=_domain_separator(
+            [("string", "name", keccak(text="Test")), ("uint256", "chainId", (1).to_bytes(32))]
+        ),
         maps={"tokens": {"0": TOKEN}},
         out=out,
     )
@@ -514,6 +516,16 @@ def test_eip712_chain_filter_does_not_report_conflicts_of_other_chains() -> None
         ("Msg(bytes key)", "key.[0:32768]"),
         ("Msg(bytes32 key)", "key.[32:40]"),
         ("Msg(bytes32 key)", "key.[-1:0]"),
+        ("Msg(bytes key)", "key.[:0]"),
+        ("Msg(bytes key)", "key.[-1:0]"),
+        ("Msg(bytes32 key)", "key.[0:40]"),
+        ("Msg(bytes32 key)", "key.[-40:]"),
+        ("Batch(uint256[2] values)", "values.[0:3]"),
+        ("Batch(uint256[2] values)", "values.[-3:]"),
+        ("Msg(uint256[17] values)", "values.[]"),
+        ("Msg(uint256[17] values)", "values.[0:17]"),
+        ("Msg(uint256[] values)", "values.[0:17]"),
+        ("Msg(uint256[4][5] values)", "values.[].[]"),
         ("Msg(" + ",".join(f"uint8 f{i}" for i in range(257)) + ")", "f256"),
     ],
 )
@@ -524,7 +536,9 @@ def test_eip712_paths_the_device_cannot_represent_are_reported(type_str: str, pa
     assert _errors(out) == ["Invalid EIP-712 path"]
 
 
-@pytest.mark.parametrize("type_str", ["uint9", "uint", "int", "uint0", "uint264", "uint08", "bytes0", "bytes33"])
+@pytest.mark.parametrize(
+    "type_str", ["uint9", "uint", "int", "uint0", "uint264", "uint08", "bytes0", "bytes33", "bytes04", "uint8[02]"]
+)
 def test_eip712_non_canonical_types_are_rejected(type_str: str) -> None:
     out = ListOutputAdder()
 
@@ -556,3 +570,104 @@ def test_eip712_undefined_referenced_struct_is_rejected() -> None:
 
     assert reconstruct_schema("Msg(uint256 value,Missing other)", None, False, out) is None
     assert _errors(out) == ["Unsupported EIP-712 type"]
+
+
+def test_eip712_message_type_referring_to_the_domain_must_define_it() -> None:
+    out = ListOutputAdder()
+
+    assert reconstruct_schema("Msg(EIP712Domain d)", ResolvedDomain(name="Test"), False, out) is None
+    assert _errors(out) == ["Unsupported EIP-712 type"]
+
+
+def test_eip712_primary_type_hash_ignores_unreferenced_types() -> None:
+    schema = reconstruct_schema("Msg(uint256 v)Extra(uint256 x)", None, False, ListOutputAdder())
+
+    assert schema is not None
+    assert schema.primary_type_hash == "0x" + keccak(text="Msg(uint256 v)").hex()
+
+
+def test_eip712_primary_type_hash_covers_transitively_referenced_types() -> None:
+    schema = reconstruct_schema("A(B[] b)C(uint256 c)B(C c)Z(uint256 z)", None, False, ListOutputAdder())
+
+    assert schema is not None
+    assert schema.primary_type_hash == "0x" + keccak(text="A(B[] b)B(C c)C(uint256 c)").hex()
+
+
+@pytest.mark.parametrize(
+    "encode_type,valid",
+    [
+        # 17 mandatory levels below the message
+        ("S0(S1 a)" + "".join(f"S{i}(S{i + 1} a)" for i in range(1, 17)) + "S17(uint8 v)", False),
+        ("S0(S1 a)" + "".join(f"S{i}(S{i + 1} a)" for i in range(1, 16)) + "S16(uint8 v)", True),
+        # array dimensions are levels too
+        ("S0(uint8[1][1][1][1][1][1][1][1] a,S1 b)S1(uint8[1][1][1][1][1][1][1][1] a,S2 b)S2(uint8 v)", True),
+        ("S0(S1[1][1][1][1][1][1][1][1] a)" + "".join(f"S{i}(S{i + 1} a)" for i in range(1, 9)) + "S9(uint8 v)", False),
+        ("S0(S1[1][1][1][1][1][1][1][1] a)" + "".join(f"S{i}(S{i + 1} a)" for i in range(1, 8)) + "S8(uint8 v)", True),
+        # a dynamic array can be empty, a struct holding itself through one has finite values
+        ("S0(S1[] a)S1(S1[] a)", True),
+        ("S0(S1 a)S1(S1 a)", False),
+    ],
+)
+def test_eip712_value_tree_depth(encode_type: str, valid: bool) -> None:
+    out = ListOutputAdder()
+
+    assert (reconstruct_schema(encode_type, None, False, out) is not None) is valid
+    assert _errors(out) == ([] if valid else ["Unsupported EIP-712 type"])
+
+
+@pytest.mark.parametrize(
+    "type_str,path",
+    [
+        ("Msg(uint256[16] values)", "values.[]"),
+        ("Msg(uint256[2] values)", "values.[2:]"),
+        ("Msg(uint256[2] values)", "values.[-2:]"),
+        ("Msg(uint256[2] values)", "values.[0:2]"),
+        ("Msg(uint256[] values)", "values.[]"),
+        ("Msg(uint256[] values)", "values.[0:16]"),
+        ("Msg(uint256[17] values)", "values.[3:5]"),
+        ("Msg(uint256[17] values)", "values.[-1]"),
+        ("Msg(bytes32 key)", "key.[0:32]"),
+        ("Msg(bytes32 key)", "key.[-4:]"),
+        ("Msg(bytes key)", "key.[-4:]"),
+        ("Msg(bytes key)", "key.[:4]"),
+    ],
+)
+def test_eip712_paths_the_device_accepts(type_str: str, path: str) -> None:
+    out = ListOutputAdder()
+
+    assert len(_convert_all(type_str, [{"path": path, "label": "V", "format": "raw"}], out=out)) == 1
+    assert not out.has_errors
+
+
+def test_eip712_container_reads_need_the_chain_and_the_contract_of_the_domain() -> None:
+    fields = [{"path": "@.chainId", "label": "Chain", "format": "chainId"}, {"path": "@.to", "label": "To"}]
+    for field, error in zip(fields, ["Missing chain id", "Missing contract"], strict=True):
+        out = ListOutputAdder()
+        descriptors = _convert_all(
+            PERMIT_TYPE,
+            [field],
+            domain={"name": "Test"},
+            deployments=[],
+            domain_separator=_domain_separator([("string", "name", keccak(text="Test"))]),
+            out=out,
+        )
+        assert descriptors == []
+        assert _errors(out) == [error]
+
+    assert len(_convert_all(PERMIT_TYPE, fields)) == 1
+
+
+@pytest.mark.parametrize("format", ["amount", "tokenAmount", "tokenTicker"])
+def test_eip712_chain_dependent_format_needs_the_chain_of_the_domain(format: str) -> None:
+    out = ListOutputAdder()
+    descriptors = _convert_all(
+        PERMIT_TYPE,
+        [{"path": "value", "label": "Value", "format": format}],
+        domain={"name": "Test"},
+        deployments=[],
+        domain_separator=_domain_separator([("string", "name", keccak(text="Test"))]),
+        out=out,
+    )
+
+    assert descriptors == []
+    assert _errors(out) == ["Missing chain id"]

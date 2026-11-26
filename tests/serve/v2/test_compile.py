@@ -4,7 +4,7 @@ from typing import Any
 import pytest
 
 from erc7730.common import client
-from erc7730.serve.v2.compile import compile_json
+from erc7730.serve.v2.compile import MAX_GENERATED_ITEMS, compile_json
 from erc7730.serve.v2.model import Compiled, ConversionFailed, InvalidDescriptor
 from tests.files import TEST_RESOURCES
 from tests.io import load_json_file
@@ -174,3 +174,41 @@ def test_compile_json_returns_conversion_errors() -> None:
 
     assert isinstance(result, ConversionFailed)
     assert [(d.level, d.title) for d in result.diagnostics] == [("error", "Invalid map key")]
+
+
+def _eip712_descriptor(deployments: int) -> dict[str, Any]:
+    return {
+        "$schema": "specs/erc7730-v2.schema.json",
+        "context": {
+            "$id": "test",
+            "eip712": {
+                "deployments": [{"chainId": 1 + i, "address": "0x" + "00" * 19 + "01"} for i in range(deployments)],
+                "domain": {"name": "Test"},
+            },
+        },
+        "metadata": {"owner": "Test Owner"},
+        "display": {
+            "formats": {"Msg(uint256 v)": {"intent": "Test", "fields": [{"path": "v", "label": "V", "format": "raw"}]}}
+        },
+    }
+
+
+def test_compile_json_limits_the_items_generated_for_eip712_deployments() -> None:
+    result = compile_json(json.dumps(_eip712_descriptor(MAX_GENERATED_ITEMS)).encode())
+    assert isinstance(result, InvalidDescriptor)
+    assert "descriptor too large" in result.message
+
+    assert isinstance(compile_json(json.dumps(_eip712_descriptor(2)).encode()), Compiled)
+
+
+def test_compile_json_rejects_a_value_out_of_the_range_of_the_tlv_encoding() -> None:
+    descriptor = _descriptor()
+    descriptor["metadata"] = {
+        **descriptor["metadata"],
+        "info": {"deploymentDate": "1960-01-01T00:00:00Z", "url": "https://example.com"},
+    }
+
+    result = compile_json(json.dumps(descriptor).encode())
+
+    assert isinstance(result, InvalidDescriptor)
+    assert "out of the range" in result.message

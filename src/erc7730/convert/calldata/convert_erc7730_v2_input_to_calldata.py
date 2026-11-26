@@ -1278,11 +1278,30 @@ def _convert_eip712_message(
             return None
         fields.extend(output_fields)
 
-    # the device refuses a descriptor reading the value of the container, which a typed message does not have
-    if any(_reads_container_value(field) for field in fields):
+    # the device refuses a descriptor reading the value of the container, which a typed message does not have, and one
+    # needing a chain or a contract the domain does not give
+    containers = _container_values(fields)
+    if CalldataDescriptorContainerPathValueV1.VALUE in containers:
         return out.error(
             title="Unsupported container path",
             message="@.value cannot be used in an EIP-712 message, the device refuses it.",
+        )
+    if CalldataDescriptorContainerPathValueV1.CHAIN_ID in containers and chain_id is None:
+        return out.error(
+            title="Missing chain id",
+            message="@.chainId is read, but the domain has no chain id: declare a deployment or set it in the domain.",
+        )
+    if CalldataDescriptorContainerPathValueV1.TO in containers and address is None:
+        return out.error(
+            title="Missing contract",
+            message="@.to is read, but the domain has no verifying contract: declare a deployment or set it in the "
+            "domain.",
+        )
+    if chain_id is None and (formats := _chain_dependent_formats(format.fields)):
+        return out.error(
+            title="Missing chain id",
+            message=f"The {', '.join(sorted(formats))} format needs the chain of the message, but the domain has no "
+            "chain id: declare a deployment or set it in the domain.",
         )
 
     hash = hashlib.sha3_256()
@@ -1320,14 +1339,34 @@ def _convert_eip712_message(
     )
 
 
-def _reads_container_value(model: Any) -> bool:
-    """Whether a serialized instruction holds a CONTAINER path reading the VALUE of the container."""
+# formats the device resolves with the chain of the message
+_CHAIN_DEPENDENT_FORMATS = (
+    FieldFormat.AMOUNT,
+    FieldFormat.TOKEN_AMOUNT,
+    FieldFormat.TOKEN_TICKER,
+    FieldFormat.NFT_NAME,
+)
+
+
+def _chain_dependent_formats(fields: list[ResolvedFieldDescription | ResolvedFieldGroup]) -> set[str]:
+    """Formats of the fields (nested ones included) the device resolves with the chain of the message."""
+    formats: set[str] = set()
+    for field in fields:
+        if isinstance(field, ResolvedFieldGroup):
+            formats |= _chain_dependent_formats(field.fields)
+        elif field.format in _CHAIN_DEPENDENT_FORMATS:
+            formats.add(str(field.format))
+    return formats
+
+
+def _container_values(model: Any) -> set[CalldataDescriptorContainerPathValueV1]:
+    """What a serialized instruction reads of the container: the values of its CONTAINER paths."""
     match model:
-        case CalldataDescriptorContainerPathV1(value=CalldataDescriptorContainerPathValueV1.VALUE):
-            return True
+        case CalldataDescriptorContainerPathV1(value=value):
+            return {value}
         case BaseModel():
-            return any(_reads_container_value(getattr(model, name)) for name in type(model).model_fields)
+            return set().union(*(_container_values(getattr(model, name)) for name in type(model).model_fields))
         case list():
-            return any(_reads_container_value(item) for item in model)
+            return set().union(*(_container_values(item) for item in model))
         case _:
-            return False
+            return set()

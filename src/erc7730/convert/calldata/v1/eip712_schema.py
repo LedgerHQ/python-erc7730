@@ -24,6 +24,9 @@ from erc7730.model.calldata.v1.eip712 import (
 from erc7730.model.resolved.v2.context import ResolvedDeployment, ResolvedDomain
 from erc7730.model.types import HexStr
 
+# depth of the value tree the device holds (doc/eip712.md#implementation-limits in app-ethereum)
+MAX_VALUE_TREE_DEPTH = 16
+
 
 @dataclass(frozen=True)
 class ParsedSolidityType:
@@ -107,6 +110,8 @@ def parse_solidity_type(type_str: str) -> ParsedSolidityType:
     while base.endswith("]"):
         open_index = base.rfind("[")
         inner = base[open_index + 1 : -1]
+        if inner and re.fullmatch(r"0|[1-9][0-9]*", inner) is None:
+            raise ValueError(f"{type_str} is not a valid type, the array size {inner} is not written canonically")
         dimensions.append(int(inner) if inner else None)
         base = base[:open_index]
     # collected outermost first, but the spec wants innermost first
@@ -133,7 +138,7 @@ def parse_solidity_type(type_str: str) -> ParsedSolidityType:
     elif (match := re.fullmatch(r"bytes(\d+)", base)) is not None:
         sol_type = CalldataDescriptorEIP712SolType.BYTES_FIX
         type_size = int(match.group(1))
-        if not 1 <= type_size <= 32:
+        if match.group(1) != str(type_size) or not 1 <= type_size <= 32:
             raise ValueError(f"{base} is not a valid type, bytesN is 1 to 32 bytes")
     else:
         # TODO fixed/ufixed Solidity types are not handled (rare in EIP-712); anything else is treated as a struct
@@ -233,10 +238,14 @@ def reconstruct_schema(
     # a type outside the limits of the device is reported for this format only
     try:
         structs.extend(_build_struct(type_name, type_fields) for type_name, type_fields in types.items())
-        for type_name, type_fields in types.items():
+        # the types of the format key are the ones the primary type hash covers, the domain one cannot be assumed
+        for type_name, type_fields in raw_types.items():
             for type_str, field_name in type_fields:
-                if (struct_name := parse_solidity_type(type_str).struct_name) is not None and struct_name not in types:
+                if (
+                    struct_name := parse_solidity_type(type_str).struct_name
+                ) is not None and struct_name not in raw_types:
                     raise ValueError(f"{type_name}.{field_name} refers to the undefined struct {struct_name}")
+        _check_value_tree_depth(primary_type, types)
     except ValueError as e:
         return out.error(
             title="Unsupported EIP-712 type",
@@ -253,6 +262,45 @@ def reconstruct_schema(
         types=types,
         structs=structs,
     )
+
+
+def _check_value_tree_depth(primary_type: str, types: dict[str, list[tuple[str, str]]]) -> None:
+    """
+    Check the value tree of a message can be as shallow as the device accepts.
+
+    The device holds a value tree of at most ``MAX_VALUE_TREE_DEPTH`` levels, struct instances and array dimensions
+    together, below the message. Only the levels every message has are counted: a dynamic array or a struct reached
+    through one can be empty. A struct holding itself without any such array has no finite value.
+
+    :raises ValueError: if every message of the schema is deeper than the device accepts
+    """
+    depths: dict[str, int] = {}
+
+    def depth(struct: str, path: tuple[str, ...]) -> int:
+        if struct in depths:
+            return depths[struct]
+        if struct in path:
+            raise ValueError(f"{struct} holds itself, so no message of it is finite")
+        deepest = 0
+        for type_str, _ in types[struct]:
+            parsed = parse_solidity_type(type_str)
+            levels = 0
+            # outermost dimension first: each one is a level, and only a fixed non empty one guarantees the next
+            for dimension in reversed(parsed.array_dimensions):
+                levels += 1
+                if not dimension:
+                    break
+            else:
+                if parsed.struct_name is not None:
+                    levels += 1 + depth(parsed.struct_name, (*path, struct))
+            deepest = max(deepest, levels)
+        depths[struct] = deepest
+        return deepest
+
+    if (levels := depth(primary_type, ())) > MAX_VALUE_TREE_DEPTH:
+        raise ValueError(
+            f"the message of {primary_type} is {levels} levels deep, the device accepts at most {MAX_VALUE_TREE_DEPTH}"
+        )
 
 
 def compute_domain_separator(

@@ -7,7 +7,7 @@ from pydantic_string_url import HttpUrl
 from erc7730.common.output import ListOutputAdder, Output
 from erc7730.convert.calldata.convert_erc7730_v2_input_to_calldata import erc7730_v2_descriptor_to_calldata_descriptors
 from erc7730.model.calldata.descriptor import CalldataDescriptor
-from erc7730.model.input.v2.context import InputContractContext
+from erc7730.model.input.v2.context import InputContractContext, InputEIP712Context
 from erc7730.model.input.v2.descriptor import InputERC7730Descriptor
 from erc7730.serve.v2.model import Compiled, CompileResult, ConversionFailed, Diagnostic, InvalidDescriptor
 
@@ -58,6 +58,8 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
     # the TLV is only encoded during serialization, and only supports ASCII text
     try:
         payload = RootModel[list[CalldataDescriptor]](descriptors).model_dump(mode="json", exclude_none=True)
+    except OverflowError:
+        return InvalidDescriptor("calldata descriptors: a value is out of the range of the calldata TLV encoding")
     except UnicodeEncodeError as e:
         return InvalidDescriptor(f"calldata descriptors: ASCII text only, found {e.object[e.start : e.end]!r}")
     return Compiled(tuple(payload), diagnostics)
@@ -66,7 +68,13 @@ def compile_calldata(descriptor: InputERC7730Descriptor) -> CompileResult:
 # per deployment, the converter rebuilds each format with every enum entry, and each field with its map lookups
 def _generated_items(descriptor: InputERC7730Descriptor) -> int:
     context = descriptor.context
-    deployments = len(context.contract.deployments) if isinstance(context, InputContractContext) else 0
+    if isinstance(context, InputContractContext):
+        deployments = len(context.contract.deployments)
+    elif isinstance(context, InputEIP712Context):
+        # a descriptor without deployment is converted once, for the domain it declares
+        deployments = max(len(context.eip712.deployments or []), 1)
+    else:
+        deployments = 0
     formats = descriptor.display.formats.values()
     fields = sum(_nodes(f.model_dump(by_alias=True, exclude_none=True), {"path", "$ref", "value"}) for f in formats)
     map_lookups = _nodes(descriptor.display.model_dump(by_alias=True, exclude_none=True), {"map"})

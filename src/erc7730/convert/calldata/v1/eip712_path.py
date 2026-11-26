@@ -42,6 +42,7 @@ _SOL_TYPE_TO_FAMILY: dict[CalldataDescriptorEIP712SolType, CalldataDescriptorTyp
 _MIN_BOUND = -32768
 _MAX_BOUND = 32767
 _MAX_FIELD_INDEX = 255
+_MAX_SELECTED_VALUES = 16
 
 _SLICEABLE_LEAVES = (
     CalldataDescriptorEIP712SolType.BYTES_FIX,
@@ -55,14 +56,36 @@ def _unrepresentable_bound(*bounds: int | None) -> int | None:
     return next((bound for bound in bounds if bound is not None and not _MIN_BOUND <= bound <= _MAX_BOUND), None)
 
 
-def _leaf_slice_width(parsed: ParsedSolidityType, start: int | None, end: int | None) -> int | None:
-    """Width in bytes of a slice of a leaf, only known when the leaf has a fixed size (``bytesN``), 0 if empty."""
-    if parsed.sol_type != CalldataDescriptorEIP712SolType.BYTES_FIX or parsed.type_size is None:
-        return None
-    size = parsed.type_size
-    first = min(max((start or 0) + (size if start is not None and start < 0 else 0), 0), size)
-    last = size if end is None else min(max(end + (size if end < 0 else 0), 0), size)
-    return max(last - first, 0)
+def _resolve_bound(bound: int | None, size: int, default: int) -> int:
+    """Resolve a bound against the size of what it slices: a negative bound counts back from the end."""
+    if bound is None:
+        return default
+    return bound + size if bound < 0 else bound
+
+
+def _is_inside(start: int | None, end: int | None, size: int) -> bool:
+    """Whether a slice reaches neither before nor past what it slices, an empty selection being valid."""
+    return _resolve_bound(start, size, 0) >= 0 and 0 <= _resolve_bound(end, size, size) <= size
+
+
+def _current_dimension(parsed: ParsedSolidityType | None, remaining_dims: int) -> int | None:
+    """Size of the array dimension a selector applies to (outermost first), None when it is dynamic."""
+    return parsed.array_dimensions[remaining_dims - 1] if parsed is not None else None
+
+
+def _is_empty_leaf_slice(start: int | None, end: int | None) -> bool:
+    """Whether a leaf slice selects no byte whatever the length of the leaf (which the device refuses)."""
+    first = 0 if start is None else start
+    return end is not None and (end == 0 or ((first < 0) == (end < 0) and end <= first))
+
+
+def _selected_count(dimension: int | None, start: int | None, end: int | None) -> int:
+    """Number of elements of an array dimension a slice selects at the least, whatever the array it is applied to."""
+    if dimension is not None:
+        return max(_resolve_bound(end, dimension, dimension) - _resolve_bound(start, dimension, 0), 0)
+    if (start is None or start >= 0) and end is not None and end >= 0:
+        return max(end - (start or 0), 0)
+    return 0
 
 
 def _leaf_type_family_size(parsed: ParsedSolidityType) -> tuple[CalldataDescriptorTypeFamily, int | None]:
@@ -103,6 +126,8 @@ def convert_eip712_data_path(
     remaining_dims = 0
     leaf_sliced = False
     slice_width: int | None = None
+    # values the path selects at the least, the device refuses a path that necessarily selects more than it holds
+    selected = 1
 
     last_index = len(data_path.elements) - 1
     for position, element in enumerate(data_path.elements):
@@ -154,6 +179,7 @@ def convert_eip712_data_path(
                         title="Invalid EIP-712 path",
                         message="Array selector applied to a non-array value.",
                     )
+                selected *= _selected_count(_current_dimension(current_parsed, remaining_dims), None, None)
                 elements.append(CalldataDescriptorEIP712PathElementArraySliceV1())
                 remaining_dims -= 1
 
@@ -163,8 +189,7 @@ def convert_eip712_data_path(
                         title="Invalid EIP-712 path",
                         message="Array index applied to a non-array value.",
                     )
-                # the dimension this selector applies to, outermost first
-                dimension = current_parsed.array_dimensions[remaining_dims - 1] if current_parsed else None
+                dimension = _current_dimension(current_parsed, remaining_dims)
                 if dimension is not None and not -dimension <= array_index < dimension:
                     return out.error(
                         title="Invalid EIP-712 path",
@@ -186,7 +211,7 @@ def convert_eip712_data_path(
                 and current_parsed is not None
                 and current_parsed.sol_type in _SLICEABLE_LEAVES
             ):
-                if start is not None and end is not None and start >= 0 and end >= 0 and end <= start:
+                if _is_empty_leaf_slice(start, end):
                     return out.error(
                         title="Invalid EIP-712 path",
                         message=f"Leaf slice [{start}:{end}] is empty, the device refuses a slice with no byte.",
@@ -196,12 +221,22 @@ def convert_eip712_data_path(
                         title="Invalid EIP-712 path",
                         message=f"Leaf slice [{start}:{end}] is not supported, the device cannot represent {bound}.",
                     )
-                slice_width = _leaf_slice_width(current_parsed, start, end)
-                if slice_width == 0:
-                    return out.error(
-                        title="Invalid EIP-712 path",
-                        message=f"Leaf slice [{start}:{end}] is empty, the device refuses a slice with no byte.",
-                    )
+                if current_parsed.sol_type == CalldataDescriptorEIP712SolType.BYTES_FIX and current_parsed.type_size:
+                    # the length of the leaf is known: the slice has to be inside it and keep a byte
+                    size = current_parsed.type_size
+                    first = _resolve_bound(start, size, 0)
+                    last = _resolve_bound(end, size, size)
+                    if first < 0 or last > size:
+                        return out.error(
+                            title="Invalid EIP-712 path",
+                            message=f"Leaf slice [{start}:{end}] is not inside the {size} bytes of the leaf.",
+                        )
+                    if last <= first:
+                        return out.error(
+                            title="Invalid EIP-712 path",
+                            message=f"Leaf slice [{start}:{end}] is empty, the device refuses a slice with no byte.",
+                        )
+                    slice_width = last - first
                 elements.append(CalldataDescriptorEIP712PathElementLeafSliceV1(start=start, end=end))
                 leaf_sliced = True
 
@@ -216,6 +251,13 @@ def convert_eip712_data_path(
                         title="Invalid EIP-712 path",
                         message=f"Array slice [{start}:{end}] is not supported, the device cannot represent {bound}.",
                     )
+                dimension = _current_dimension(current_parsed, remaining_dims)
+                if dimension is not None and not _is_inside(start, end, dimension):
+                    return out.error(
+                        title="Invalid EIP-712 path",
+                        message=f"Array slice [{start}:{end}] is out of bounds for array of dimension {dimension}.",
+                    )
+                selected *= _selected_count(dimension, start, end)
                 elements.append(CalldataDescriptorEIP712PathElementArraySliceV1(start=start, end=end))
                 remaining_dims -= 1
 
@@ -242,6 +284,13 @@ def convert_eip712_data_path(
             title="Invalid EIP-712 path",
             message=f"EIP-712 path {data_path} has {len(elements)} elements, the device accepts at most "
             f"{MAX_EIP712_PATH_ELEMENTS}.",
+        )
+
+    if selected > _MAX_SELECTED_VALUES:
+        return out.error(
+            title="Invalid EIP-712 path",
+            message=f"EIP-712 path {data_path} selects at least {selected} values, the device accepts at most "
+            f"{_MAX_SELECTED_VALUES}.",
         )
 
     type_family, type_size = _leaf_type_family_size(current_parsed)

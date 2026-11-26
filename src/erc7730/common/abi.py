@@ -187,11 +187,30 @@ def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, 
     return primary_type, types
 
 
+def referenced_types(primary_type: str, types: dict[str, list[tuple[str, str]]]) -> set[str]:
+    """Names of the struct types reachable from a primary type, the primary type excluded.
+
+    :param primary_type: the primary (root) struct type name
+    :param types: struct name -> ordered list of (type, name) field tuples
+    :return: the defined struct types the primary type refers to, directly or not
+    """
+    reachable: set[str] = set()
+    pending = [primary_type]
+    while pending:
+        for field_type, _ in types.get(pending.pop(), []):
+            name = field_type.split("[", 1)[0]
+            if name in types and name != primary_type and name not in reachable:
+                reachable.add(name)
+                pending.append(name)
+    return reachable
+
+
 def to_encode_type(primary_type: str, types: dict[str, list[tuple[str, str]]]) -> str:
     """Build the canonical EIP-712 ``encodeType`` string for a primary type.
 
-    Per EIP-712, the primary type is encoded first, followed by all referenced struct types sorted alphabetically by
-    name. This is the inverse of :func:`parse_encode_type` and normalizes the ordering of the input.
+    Per EIP-712, the primary type is encoded first, followed by the struct types it references (directly or not),
+    sorted alphabetically by name. Types that are not referenced are not part of the encoding. This is the inverse of
+    :func:`parse_encode_type` and normalizes the ordering of the input.
 
     :param primary_type: the primary (root) struct type name
     :param types: struct name -> ordered list of (type, name) field tuples, including the primary type
@@ -202,8 +221,9 @@ def to_encode_type(primary_type: str, types: dict[str, list[tuple[str, str]]]) -
     def encode_one(name: str) -> str:
         return f"{name}(" + ",".join(f"{typ} {field_name}" for typ, field_name in types[name]) + ")"
 
-    dependencies = sorted(name for name in types if name != primary_type)
-    return encode_one(primary_type) + "".join(encode_one(name) for name in dependencies)
+    return encode_one(primary_type) + "".join(
+        encode_one(name) for name in sorted(referenced_types(primary_type, types))
+    )
 
 
 class ABIDataType(StrEnum):
