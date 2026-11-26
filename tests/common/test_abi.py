@@ -2,6 +2,7 @@ import pytest
 
 from erc7730.common.abi import (
     compute_signature,
+    parse_encode_type,
     reduce_signature,
     signature_to_selector,
 )
@@ -132,3 +133,9 @@ def test_signature_to_selector() -> None:
     signature = "transfer(address,uint256)"
     expected = "0xa9059cbb"
     assert signature_to_selector(signature) == expected
+
+
+@pytest.mark.parametrize("encode_type", ["Msg(uint256 v)junk", "Msg(uint256 v)Msg(uint256 w)"])
+def test_parse_encode_type_rejects_trailing_junk_and_duplicates(encode_type: str) -> None:
+    with pytest.raises(ValueError):
+        parse_encode_type(encode_type)

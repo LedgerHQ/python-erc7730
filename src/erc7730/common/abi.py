@@ -152,7 +152,8 @@ def get_functions(abis: list[ABI], *, include_read_only: bool = False) -> Functi
     return functions
 
 
-_ENCODE_TYPE_RE = re.compile(r"([\w:]+)\(([^)]*)\)")
+_ENCODE_TYPE_RE = re.compile(r"([\w:$]+)\(([^)]*)\)")
+_ENCODE_TYPES_RE = re.compile(r"(?:[\w:$]+\([^)]*\))+")
 
 
 def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, str]]]]:
@@ -166,14 +167,16 @@ def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, 
     :return: a tuple of (primaryType, types) where types is a dict mapping type names to lists of (type, name) tuples
     :raises ValueError: if the string cannot be parsed
     """
-    matches = _ENCODE_TYPE_RE.findall(encode_type)
-    if not matches:
+    if _ENCODE_TYPES_RE.fullmatch(encode_type) is None:
         raise ValueError(f"Invalid encodeType string: {encode_type}")
+    matches = _ENCODE_TYPE_RE.findall(encode_type)
 
     primary_type = matches[0][0]
     types: dict[str, list[tuple[str, str]]] = {}
 
     for type_name, fields_str in matches:
+        if type_name in types:
+            raise ValueError(f"Type '{type_name}' is defined more than once in encodeType '{encode_type}'")
         fields: list[tuple[str, str]] = []
         if fields_str.strip():
             for field in fields_str.split(","):
@@ -185,6 +188,45 @@ def parse_encode_type(encode_type: str) -> tuple[str, dict[str, list[tuple[str, 
         types[type_name] = fields
 
     return primary_type, types
+
+
+def referenced_types(primary_type: str, types: dict[str, list[tuple[str, str]]]) -> set[str]:
+    """Names of the struct types reachable from a primary type, the primary type excluded.
+
+    :param primary_type: the primary (root) struct type name
+    :param types: struct name -> ordered list of (type, name) field tuples
+    :return: the defined struct types the primary type refers to, directly or not
+    """
+    reachable: set[str] = set()
+    pending = [primary_type]
+    while pending:
+        for field_type, _ in types.get(pending.pop(), []):
+            name = field_type.split("[", 1)[0]
+            if name in types and name != primary_type and name not in reachable:
+                reachable.add(name)
+                pending.append(name)
+    return reachable
+
+
+def to_encode_type(primary_type: str, types: dict[str, list[tuple[str, str]]]) -> str:
+    """Build the canonical EIP-712 ``encodeType`` string for a primary type.
+
+    Per EIP-712, the primary type is encoded first, followed by the struct types it references (directly or not),
+    sorted alphabetically by name. Types that are not referenced are not part of the encoding. This is the inverse of
+    :func:`parse_encode_type` and normalizes the ordering of the input.
+
+    :param primary_type: the primary (root) struct type name
+    :param types: struct name -> ordered list of (type, name) field tuples, including the primary type
+    :return: the canonical ``encodeType`` string
+    :raises KeyError: if ``primary_type`` is not present in ``types``
+    """
+
+    def encode_one(name: str) -> str:
+        return f"{name}(" + ",".join(f"{typ} {field_name}" for typ, field_name in types[name]) + ")"
+
+    return encode_one(primary_type) + "".join(
+        encode_one(name) for name in sorted(referenced_types(primary_type, types))
+    )
 
 
 class ABIDataType(StrEnum):
