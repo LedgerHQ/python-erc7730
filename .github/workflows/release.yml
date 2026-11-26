@@ -1,5 +1,6 @@
 name: ✨ release
 
+# RC: `gh release create vX.Y.Z-rcN --prerelease --target <branch>` publishes the image only, not the wheel
 on:
   release:
     types: [published]
@@ -12,6 +13,7 @@ permissions:
 jobs:
   publish:
     name: publish artifacts
+    if: ${{ !github.event.release.prerelease }}
     timeout-minutes: 60
     runs-on: public-ledgerhq-shared-small
     steps:
@@ -60,3 +62,54 @@ jobs:
         uses: LedgerHQ/actions-security/actions/sign-blob@actions/sign-blob-1
         with:
           path: dist
+
+  image:
+    name: publish image
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        timeout-minutes: 10
+        uses: actions/checkout@v7
+
+      - name: Setup mise
+        timeout-minutes: 10
+        uses: jdx/mise-action@v5.2.7
+
+      - name: Get versions
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          {
+            echo "version=${TAG#v}"
+            echo "pdm=$(mise current pdm)"
+            echo "python=$(mise current python)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Login to GitHub Container Registry
+        timeout-minutes: 10
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup buildx
+        timeout-minutes: 10
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push image
+        timeout-minutes: 20
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            PDM_VERSION=${{ steps.version.outputs.pdm }}
+            PYTHON_VERSION=${{ steps.version.outputs.python }}
+          tags: ghcr.io/ledgerhq/python-erc7730:${{ steps.version.outputs.version }}
+          push: true
