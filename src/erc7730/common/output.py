@@ -204,15 +204,24 @@ class GithubAnnotationsAdder(OutputAdder):
 
         log = f"::{lvl} "
         if output.file is not None:
-            log += f"file={output.file}"
+            log += f"file={_escape_property(str(output.file))}"
         if output.line is not None:
             log += f",line={output.line}"
         if output.title is not None:
-            log += f",title={output.title}"
-        message = output.message.replace("\n", "%0A")
-        log += f"::{message}"
+            log += f",title={_escape_property(output.title)}"
+        log += f"::{_escape_data(output.message)}"
 
         builtin_print(log)
+
+
+def _escape_data(value: str) -> str:
+    """Escape a Github workflow command message, as done by @actions/core."""
+    return value.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
+
+def _escape_property(value: str) -> str:
+    """Escape a Github workflow command property value, as done by @actions/core."""
+    return _escape_data(value).replace(":", "%3A").replace(",", "%2C")
 
 
 class AddFileOutputAdder(OutputAdder):
